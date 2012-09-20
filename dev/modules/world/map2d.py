@@ -172,6 +172,8 @@ class Map_generator_2D():
         ---------------------------------------------------------
         Step 2...iters | smooth and increase square, by mode
                        | new_size = old_size * mode
+        ---------------------------------------------------------
+        Step iters     | alias coasts
     """
     params = {}
     def __init__(self, seed = 0, iters = 6, min_land = 25, max_land = 45,

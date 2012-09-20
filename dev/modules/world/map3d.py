@@ -8,6 +8,7 @@ Map 3d
 
 import random
 import copy
+from PIL import Image
 
 class Map3d(dict):
     """
@@ -36,24 +37,51 @@ class Map3d(dict):
         return size
 
     def get_cont_count(self):
-        continents = 0
-        cont_found = False
+        continents = []
         for x in xrange(self.size):
-            land_found = False
             for y in xrange(self.size):
                 if self[(x, y)] > 0:
                     land_found = True
                     break
-            if land_found:
-                if not cont_found:
-                    cont_found = True
-                    continents += 1
-            else:
-                cont_found = False
         return continents
 
+    def create_image(self, filename):
+        """
+        Create image of map and save to filename
+        """
+        size = self.size
+        image = Image.new("RGB", (size, size), (0,0,0,0))
+        for coords in self:
+            # water
+            if self[coords] <= 0:
+                image.putpixel(coords, (0, 0, self[coords]+256))
+            # land
+            else:
+                image.putpixel(coords, (0, self[coords], 0))
+        image.save(filename, 'PNG')
+        del image
+
+    def create_height_map(self, filename):
+        """
+        Create image of map and save to filename
+        """
+        size = self.size
+        image = Image.new("RGB", (size, size), (0,0,0,0))
+        for coords in self:
+            image.putpixel(coords, (self[coords]+128, self[coords]+128, self[coords]+128))
+        image.save(filename, 'PNG')
+        del image
 
 
+    def gen_random_heights(self):
+        """
+        docstring for gen_random_heights
+        """
+        for coords in self:
+            if self[coords] == 0:
+                self[coords] = random.randint(self[coords]-128, self[coords])
+            if self[coords] == 1:
+                self[coords] = random.randint(self[coords], self[coords]+128)
 
 class Generate_Heights():
     """
@@ -64,16 +92,21 @@ class Generate_Heights():
         docstring for __init__
         """
         self.map3d = Map3d(map2d.size, map2d.copy())
-        random.seed(seed)
+        self.seed = seed
 
     def start(self):
         """
         docstring for start
         """
+        random.seed(self.seed)
         yield 0, 'GO!!!!'
         land_size = self.map3d.get_land_size()
-        cont_count = self.map3d.get_cont_count()
-        yield 0, 'size {0}, conts: {1}'.format(land_size, cont_count)
+        yield 0, 'size of planet: {0}, size of land: {1}, '\
+                 'size of water: {2}'.format(self.map3d.size ** 2,
+                                             land_size,
+                                             self.map3d.size ** 2 - land_size)
+
+        self.map3d.gen_random_heights()
 
 
 if __name__ == '__main__':
@@ -87,6 +120,9 @@ if __name__ == '__main__':
     gen_heights = Generate_Heights(map2d = gen2d.maps[iters], seed = seed)
     for i, desc in gen_heights.start():
         print i, desc
+
+    gen_heights.map3d.create_image('/tmp/3dmap.png')
+    gen_heights.map3d.create_height_map('/tmp/heightmap.png')
 
 # vi: ft=python:tw=0:ts=4
 

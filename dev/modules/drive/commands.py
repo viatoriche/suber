@@ -6,7 +6,7 @@
 import random, pickle
 from modules.world.map2d import Map_generator_2D
 from modules.drive.support import ThreadDo
-from modules.drive.world import generate_map_texture
+from modules.drive.world import generate_map_texture, show_terrain
 from modules.drive.textures import textures
 
 class Command_Handler():
@@ -71,6 +71,11 @@ class Command_Handler():
         """
         self.game.process.screen_images.del_image('world_map')
 
+    def cmd_show_terrain(self, params = []):
+        """
+        """
+        show_terrain()
+
     def cmd_save(self, params = []):
         """
         docstring for cmd_save
@@ -106,6 +111,7 @@ class Command_Handler():
                 'hidemap': cmd_hide_map,
                 'save': cmd_save,
                 'load': cmd_load,
+                'showterrain': cmd_show_terrain,
               }
 # vi: ts=4 sw=4
 
