@@ -1,5 +1,3 @@
-import demobase
-
 from pandac.PandaModules import Filename, CardMaker
 from pandac.PandaModules import NodePath, WindowProperties,TextureStage, Texture
 from pandac.PandaModules import Vec3,Vec4,Point3
@@ -11,9 +9,8 @@ from pandac.PandaModules import RenderState
 from pandac.PandaModules import ShaderAttrib, TransparencyAttrib
 
 
-class WaterNode(demobase.Att_base):
+class WaterNode():
     def __init__(self, x1, y1, x2, y2, z):
-        demobase.Att_base.__init__(self, False, "Water1")
         # Water surface
         maker = CardMaker( 'water' )
         maker.setFrame( x1, x2, y1, y2 )
@@ -22,7 +19,7 @@ class WaterNode(demobase.Att_base):
         self.waterNP.setHpr(0,-90,0)
         self.waterNP.setPos(0,0,z)
         self.waterNP.setTransparency(TransparencyAttrib.MAlpha )
-        self.waterNP.setShader(loader.loadShader( 'shaders/water1.sha' ))
+        self.waterNP.setShader(loader.loadShader( 'res/shaders/water1.sha' ))
         # offset, strength, refraction factor (0=perfect mirror, 1=total refraction), refractivity
         #self.waterNP.setShaderInput('waterdistort', Vec4( 0.4, 4.0, 0.4, 0.45 ))
 
@@ -48,7 +45,7 @@ class WaterNode(demobase.Att_base):
         self.watercamNP.reparentTo(render)
 
         sa = ShaderAttrib.make()
-        sa = sa.setShader(loader.loadShader('shaders/splut3Clipped.sha') )
+        sa = sa.setShader(loader.loadShader('res/shaders/splut3Clipped.sha') )
 
         self.cam = self.watercamNP.node()
         self.cam.getLens( ).setFov( base.camLens.getFov( ) )
@@ -69,7 +66,7 @@ class WaterNode(demobase.Att_base):
         self.waterNP.setTexture( ts0, tex0 )
 
         # distortion texture
-        tex1 = loader.loadTexture('textures/water.png')
+        tex1 = loader.loadTexture('res/textures/water.png')
         #tex1 = loader.loadTexture('textures/waves200.tga')
         ts1 = TextureStage('distortion')
         self.waterNP.setTexture(ts1, tex1)
@@ -99,24 +96,6 @@ class WaterNode(demobase.Att_base):
     def changeParams(self, object):
         self.setParams(self.att_offset.v,self.att_strength.v,self.att_refractionfactor.v,self.att_refractivity.v,
                 self.att_vx.v, self.att_vy.v, self.att_scale.v)
-
-    def setStandardControl(self):
-        self.att_offset = demobase.Att_FloatRange(False, "Water:Offset", 0.0, 1.0, 0.4)
-        self.att_strength = demobase.Att_FloatRange(False, "Water:Strength", 0.0, 100.0, 4)
-        self.att_refractionfactor = demobase.Att_FloatRange(False, "Water:Refraction Factor", 0.0, 1.0, 0.2)
-        self.att_refractivity = demobase.Att_FloatRange(False, "Water:Refractivity", 0.0, 1.0, 0.45)
-        self.att_vx = demobase.Att_FloatRange(False, "Water:Speed X", -1.0, 1.0, 0.1)
-        self.att_vy = demobase.Att_FloatRange(False, "Water:Speed Y", -1.0, 1.0, -0.1)
-        self.att_scale = demobase.Att_FloatRange(False, "Water:Scale", 1.0, 200.0, 64.0,0)
-        self.att_offset.setNotifier(self.changeParams)
-        self.att_strength.setNotifier(self.changeParams)
-        self.att_refractionfactor.setNotifier(self.changeParams)
-        self.att_refractivity.setNotifier(self.changeParams)
-        self.att_vx.setNotifier(self.changeParams)
-        self.att_vy.setNotifier(self.changeParams)
-        self.att_scale.setNotifier(self.changeParams)
-        self.changeParams(None)
-
 
     def hide(self):
         self.waterNP.hide()

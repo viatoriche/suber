@@ -176,7 +176,7 @@ class Map_generator_2D():
         Step iters     | alias coasts
     """
     params = {}
-    def __init__(self, seed = 0, iters = 6, min_land = 25, max_land = 45,
+    def __init__(self, seed = 0, iters = 5, min_land = 25, max_land = 45,
                                     min_continents = 4, max_continents = 6):
         """
         Initialization of generator

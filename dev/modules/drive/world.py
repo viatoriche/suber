@@ -11,17 +11,20 @@ from pandac.PandaModules import AmbientLight, PointLight
 
 from pandac.PandaModules import Vec4
 from pandac.PandaModules import Texture, PNMImage
+from modules.drive.waterplane1 import WaterNode
 
 class gameLocation():
     def __init__(self):
         self.terrain=GeoMipTerrain("Terrain")
         taskMgr.add(self.update,'location_update')
+        self._water_level = Vec4(0.0, 0.0, 12.0, 1.0)
 
-    def loadTerrain(self,hfFile):
-        self.terrain.setHeightfield(Filename(hfFile))
-        self.terrain.setBlockSize(32)
-        self.terrain.setFactor(64)
-        self.terrain.setMinLevel(2)
+    def loadTerrain(self, heights_file):
+        #self.terrain.setHeightfield(heights_file)
+        self.terrain.setHeightfield(heights_file)
+        self.terrain.setBlockSize(16)
+        self.terrain.setFactor(32)
+        #self.terrain.setMinLevel(2)
         self.terrain.getRoot().reparentTo(render)
         self.terrain.getRoot().setSz (30)
         self.terrain.generate()
@@ -29,6 +32,16 @@ class gameLocation():
         gnodes=self.terrain.getRoot().findAllMatches("+GeomNode")
         for gnode in gnodes:
             gnode.node().setIntoCollideMask(BitMask32.bit(1))
+
+        self.att_water = WaterNode(0,0,256,256, self._water_level.getZ())
+
+        #self.att_water.changeParams(None)
+        wl=self._water_level
+        wl.setZ(wl.getZ()-0.05)    # add some leeway (gets rid of some mirroring artifacts)
+        root = self.terrain.getRoot()
+        root.setShaderInput('waterlevel', self._water_level)
+
+        render.setShaderInput('time', 0)
 
     def setTexture(self,texFile,sx,sy):
         self.terrain.getRoot().setTexture(loader.loadTexture(texFile))
@@ -53,22 +66,32 @@ class World():
     docstring for World
     """
     map_2d = None
+    map_3d = None
 
 def show_terrain(heightmap):
     loc=gameLocation()
     loc.loadTerrain(heightmap)
-    loc.setTexture('res/textures/grass.png',20,20)
+    loc.setTexture('res/textures/dirt.png',20,20)
     loc.setLights(Vec4(0.6,0.6,0.6,1), Vec4(1,1,1,1))
+
+def generate_heights_image(map_world):
+    size = map_world.size
+    image = PNMImage(size, size)
+    image.fill(0,0,0)
+    for x, y in map_world:
+        val = map_world[(x, y)]
+        image.setPixel(x, y, (val, val, val))
+    return image
 
 def generate_map_texture(map_world):
     size = map_world.size
     image = PNMImage(size, size)
     image.fill(0,0,0)
     for x, y in map_world:
-        if map_world[(x,y)] == 0:
-            image.setPixel(x, y, (0, 0, 128))
+        if map_world[(x, y)] <= map_world.water_z:
+            image.setPixel(x, y, (0, 0, 255-map_world[(x, y)]))
         else:
-            image.setPixel(x, y, (0, 200, 0))
+            image.setPixel(x, y, (0, 255-map_world[(x, y)], 0))
     texture = Texture()
     texture.load(image)
     return texture

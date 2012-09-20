@@ -14,12 +14,15 @@ class Map3d(dict):
     """
     docstring for Map3d
     """
-    def __init__(self, size, *args, **params):
+    def __init__(self, size, min_z, max_z, water_z, *args, **params):
         """
         docstring for __init__
         """
         dict.__init__(self, *args, **params)
         self.size = size
+        self.min_z = min_z
+        self.max_z = max_z
+        self.water_z = water_z
 
     def fill(self):
         """
@@ -27,22 +30,23 @@ class Map3d(dict):
         """
         for x in xrange(self.size):
             for y in xrange(self.size):
-                self[(x,y)] = 0
+                self[(x,y)] = self.min_z
 
     def get_land_size(self):
         size = 0
         for type_land in self.values():
-            if type_land > 0:
+            if type_land > self.water_z:
                 size += 1
         return size
 
+    # TODO: create!
     def get_cont_count(self):
         continents = []
-        for x in xrange(self.size):
-            for y in xrange(self.size):
-                if self[(x, y)] > 0:
-                    land_found = True
-                    break
+        #for x in xrange(self.size):
+            #for y in xrange(self.size):
+                #if self[(x, y)] > 0:
+                    #land_found = True
+                    #break
         return continents
 
     def create_image(self, filename):
@@ -53,11 +57,11 @@ class Map3d(dict):
         image = Image.new("RGB", (size, size), (0,0,0,0))
         for coords in self:
             # water
-            if self[coords] <= 0:
-                image.putpixel(coords, (0, 0, self[coords]+256))
+            if self[coords] <= self.water_z:
+                image.putpixel(coords, (0, 0, 256-self[coords]))
             # land
-            else:
-                image.putpixel(coords, (0, self[coords], 0))
+            elif self[coords] > self.water_z:
+                image.putpixel(coords, (0, 256-self[coords], 0))
         image.save(filename, 'PNG')
         del image
 
@@ -68,7 +72,7 @@ class Map3d(dict):
         size = self.size
         image = Image.new("RGB", (size, size), (0,0,0,0))
         for coords in self:
-            image.putpixel(coords, (self[coords]+128, self[coords]+128, self[coords]+128))
+            image.putpixel(coords, (self[coords], self[coords], self[coords]))
         image.save(filename, 'PNG')
         del image
 
@@ -79,9 +83,9 @@ class Map3d(dict):
         """
         for coords in self:
             if self[coords] == 0:
-                self[coords] = random.randint(self[coords]-128, self[coords])
-            if self[coords] == 1:
-                self[coords] = random.randint(self[coords], self[coords]+128)
+                self[coords] = random.randint(self.min_z, self.water_z)
+            elif self[coords] == 1:
+                self[coords] = random.randint(self.water_z+1, self.max_z)
 
 class Generate_Heights():
     """
@@ -91,7 +95,11 @@ class Generate_Heights():
         """
         docstring for __init__
         """
-        self.map3d = Map3d(map2d.size, map2d.copy())
+        min_z = 0
+        # realism =\
+        water_z = map2d.size / 64
+        max_z = water_z * 2
+        self.map3d = Map3d(map2d.size, min_z, max_z, water_z, map2d.copy())
         self.seed = seed
 
     def start(self):
@@ -110,13 +118,14 @@ class Generate_Heights():
 
 
 if __name__ == '__main__':
-    maps = __import__('maps')
-    iters = 5
+    maps = __import__('map2d')
+    iters = 4
     seed = 6754
     gen2d = maps.Map_generator_2D(seed = seed, iters = iters)
     for i, desc in gen2d.start():
         print i, desc
     print gen2d.maps.get_ascii(3)
+    print 'size line: ', gen2d.maps[iters].size
     gen_heights = Generate_Heights(map2d = gen2d.maps[iters], seed = seed)
     for i, desc in gen_heights.start():
         print i, desc
