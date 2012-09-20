@@ -84,8 +84,9 @@ class WaterNode():
     #    self.bottomNP.setColor(color)
 
     def setParams(self, offset, strength, refractionfactor, refractivity, vx, vy, scale):
-        self.waterNP.setShaderInput('waterdistort', Vec4( offset, strength, refractionfactor, refractivity ))
-        self.waterNP.setShaderInput('wateranim', Vec4( vx, vy, scale, 0 )) # vx, vy, scale, skip
+        #self.waterNP.setShaderInput('waterdistort', Vec4( offset, strength, refractionfactor, refractivity ))
+        #self.waterNP.setShaderInput('wateranim', Vec4( vx, vy, scale, 0 )) # vx, vy, scale, skip
+        pass
 
     def changeCameraPos(self, pos, mc=None):
         if mc != None:
@@ -93,9 +94,9 @@ class WaterNode():
             mf = self.waterPlane.getReflectionMat( )
             self.watercamNP.setMat(mc * mf)
 
-    def changeParams(self, object):
-        self.setParams(self.att_offset.v,self.att_strength.v,self.att_refractionfactor.v,self.att_refractivity.v,
-                self.att_vx.v, self.att_vy.v, self.att_scale.v)
+    #def changeParams(self, object):
+        #self.setParams(self.att_offset.v,self.att_strength.v,self.att_refractionfactor.v,self.att_refractivity.v,
+                #self.att_vx.v, self.att_vy.v, self.att_scale.v)
 
     def hide(self):
         self.waterNP.hide()
