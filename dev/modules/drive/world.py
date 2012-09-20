@@ -17,7 +17,7 @@ class gameLocation():
     def __init__(self):
         self.terrain=GeoMipTerrain("Terrain")
         taskMgr.add(self.update,'location_update')
-        self._water_level = Vec4(0.0, 0.0, 12.0, 1.0)
+        self._water_level = Vec4(0.0, 0.0, 0.45, 1.0)
 
     def loadTerrain(self, heights_file):
         #self.terrain.setHeightfield(heights_file)
@@ -36,12 +36,12 @@ class gameLocation():
         self.att_water = WaterNode(0,0,256,256, self._water_level.getZ())
 
         #self.att_water.changeParams(None)
-        wl=self._water_level
-        wl.setZ(wl.getZ()-0.05)    # add some leeway (gets rid of some mirroring artifacts)
-        root = self.terrain.getRoot()
-        root.setShaderInput('waterlevel', self._water_level)
+        #wl=self._water_level
+        #wl.setZ(wl.getZ()-0.05)    # add some leeway (gets rid of some mirroring artifacts)
+        #root = self.terrain.getRoot()
+        #root.setShaderInput('waterlevel', self._water_level)
 
-        render.setShaderInput('time', 0)
+        #render.setShaderInput('time', 0)
 
     def setTexture(self,texFile,sx,sy):
         self.terrain.getRoot().setTexture(loader.loadTexture(texFile))

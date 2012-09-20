@@ -19,7 +19,7 @@ class WaterNode():
         self.waterNP.setHpr(0,-90,0)
         self.waterNP.setPos(0,0,z)
         self.waterNP.setTransparency(TransparencyAttrib.MAlpha )
-        self.waterNP.setShader(loader.loadShader( 'res/shaders/water1.sha' ))
+        #self.waterNP.setShader(loader.loadShader( 'res/shaders/water1.sha' ))
         # offset, strength, refraction factor (0=perfect mirror, 1=total refraction), refractivity
         #self.waterNP.setShaderInput('waterdistort', Vec4( 0.4, 4.0, 0.4, 0.45 ))
 
@@ -44,8 +44,8 @@ class WaterNode():
         self.watercamNP = base.makeCamera( self.buffer )
         self.watercamNP.reparentTo(render)
 
-        sa = ShaderAttrib.make()
-        sa = sa.setShader(loader.loadShader('res/shaders/splut3Clipped.sha') )
+        #sa = ShaderAttrib.make()
+        #sa = sa.setShader(loader.loadShader('res/shaders/splut3Clipped.sha') )
 
         self.cam = self.watercamNP.node()
         self.cam.getLens( ).setFov( base.camLens.getFov( ) )
@@ -53,23 +53,23 @@ class WaterNode():
         self.cam.getLens().setFar(5000)
         self.cam.setInitialState( rs )
         self.cam.setTagStateKey('Clipped')
-        self.cam.setTagState('True', RenderState.make(sa))
+        #self.cam.setTagState('True', RenderState.make(sa))
 
 
         # ---- water textures ---------------------------------------------
 
         # reflection texture, created in realtime by the 'water camera'
-        tex0 = self.buffer.getTexture( )
-        tex0.setWrapU(Texture.WMClamp)
-        tex0.setWrapV(Texture.WMClamp)
-        ts0 = TextureStage( 'reflection' )
-        self.waterNP.setTexture( ts0, tex0 )
+        #tex0 = self.buffer.getTexture( )
+        #tex0.setWrapU(Texture.WMClamp)
+        #tex0.setWrapV(Texture.WMClamp)
+        #ts0 = TextureStage( 'reflection' )
+        #self.waterNP.setTexture( ts0, tex0 )
 
         # distortion texture
         tex1 = loader.loadTexture('res/textures/water.png')
         #tex1 = loader.loadTexture('textures/waves200.tga')
-        ts1 = TextureStage('distortion')
-        self.waterNP.setTexture(ts1, tex1)
+        #ts1 = TextureStage('distortion')
+        self.waterNP.setTexture(tex1)
 
 
     def Destroy(self):
