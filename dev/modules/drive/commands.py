@@ -3,7 +3,7 @@
 # Author:       Viator (viator@via-net.org)
 # License:      GPL (see http://www.gnu.org/licenses/gpl.txt)
 """Commands handlers modul"""
-import random, pickle
+import random, pickle, sys
 from modules.world.map2d import Map_generator_2D
 from modules.world.map3d import Generate_Heights
 from modules.drive.support import ThreadDo
@@ -29,25 +29,28 @@ class Command_Handler():
         Generate global map template and show it
         """
         if len(params) >0:
-            seed = params[0]
+            seed = int(params[0])
         else:
-            seed = random.randint(1,65535)
+            seed = random.randint(0, sys.maxint)
+
+        self.game.world.seed = seed
 
         def doit():
             global_map_gen = Map_generator_2D(seed = seed)
             complete_i = 0
             for e, (i, desc) in enumerate(global_map_gen.start()):
-                self.game.write('{0} * step: {1} / {2}'.format(e, i,desc))
-                #if self.game.mode == 'GUI':
-                    #self.game.write('Generate and show map')
-                    #world = global_map_gen.maps[complete_i]
-                    #textures['world_map'] = generate_map_texture(world)
-                    #self.cmd_show_map()
+                self.cmd_write(['{0} * step: {1} / {2}'.format(e, i,desc)])
+                if self.game.mode == 'GUI':
+                    self.game.write('Generate and show map')
+                    world = global_map_gen.maps[complete_i]
+                    world.water_z = 0
+                    textures['world_map'] = generate_map_texture(world)
+                    self.cmd_show_map()
                 complete_i = i
             if self.game.mode == 'console':
-                self.game.write(global_map_gen.maps.show_acii())
+                self.cmd_write([global_map_gen.maps.show_acii()])
             elif self.game.mode == 'GUI':
-                self.game.write('Start generation 3d heights')
+                self.cmd_write(['Start generation 3d heights'])
                 self.game.world.map_2d = global_map_gen.maps[complete_i]
 
                 gen3d = Generate_Heights(map2d = self.game.world.map_2d,
@@ -56,17 +59,21 @@ class Command_Handler():
                     self.game.write('{0} * step: {1} / {2}'.format(e, i,desc))
 
                 self.game.world.map_3d = gen3d.map3d
-                self.game.write('Start generation textures of map')
+                self.cmd_write(['Start generation textures of map'])
                 textures['world_map'] = generate_map_texture(self.game.world.map_3d)
                 self.cmd_show_map()
-                self.game.write('Start generation heights of map')
-                self.game.world.map_3d.create_height_map('/tmp/heights.png')
-                textures['world_heights'] = '/tmp/heights.png'
-            self.game.write('Map generation process has been completed')
+                #self.cmd_write(['Start generation heights of map'])
+                #self.game.world.map_3d.create_height_map('/tmp/heights.png')
+                #textures['world_heights'] = generate_heights_image(self.game.world.map_3d)
+                self.cmd_hide_map()
+                self.cmd_show_terrain()
+            self.cmd_write(['Map generation process has been completed. Seed: {0}'.format(\
+                                                self.game.world.seed)])
 
         ThreadDo(doit).start()
 
-        self.game.write('Map generation process has been started')
+
+        self.cmd_write(['Map generation process has been started'])
 
     def cmd_show_map(self, params = []):
         """
@@ -98,13 +105,18 @@ class Command_Handler():
     def cmd_show_terrain(self, params = []):
         """
         """
-        show_terrain(textures['world_heights'])
+        show_terrain(self.game.world.map_3d)
 
     def cmd_save(self, params = []):
         """
         docstring for cmd_save
         """
         pickle.dump(self.game.world.map_2d, open('saves/map_2d.sav', 'w'))
+
+    def cmd_seed(self, params = []):
+        """
+        """
+        self.cmd_write([str(self.game.world.seed)])
 
     def cmd_load(self, params):
         """
@@ -114,7 +126,7 @@ class Command_Handler():
         textures['world_map'] = generate_map_texture(self.game.world.map_2d)
         self.cmd_show_map()
 
-    def handle(self, raw_cmd):
+    def cmd_handle(self, raw_cmd):
         if raw_cmd == '':
             return
         name_cmd = raw_cmd.split()[0]
@@ -138,6 +150,7 @@ class Command_Handler():
                 'showterrain': cmd_show_terrain,
                 'showheights': cmd_show_heights,
                 'hideheights': cmd_hide_heights,
+                'seed': cmd_seed,
               }
 # vi: ts=4 sw=4
 

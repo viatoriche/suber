@@ -7,12 +7,14 @@ License: GPL (see http://www.gnu.org/licenses/gpl.txt)
 Grap modul, for render and show all >_<
 """
 import hashlib, random
+import math
 from direct.gui.OnscreenImage import OnscreenImage
 from direct.showbase.ShowBase import ShowBase
 from direct.gui.DirectGui import DirectButton, DirectEntry, DirectLabel
 from direct.gui.OnscreenText import OnscreenText
 from panda3d.core import TextNode, GeomPrimitive
 from modules.drive.support import generate_hash
+from modules.drive.camera import CamFree
 
 class OnscreenImages(dict):
     """
@@ -101,6 +103,10 @@ class GUI():
         """
         self.game = game
         self.app = PandaApp()
+        self.app.disableMouse()
+        self.app.camera.setPos(0, 0, 100)
+        self.app.camera.setHpr(0, -90, 0)
+        CamFree()
         self.screen_images = OnscreenImages()
         self.screen_texts = OnscreenTexts()
         self.buttons = DirectButtons()
@@ -111,9 +117,17 @@ class GUI():
         self.screen_texts.add_text(name = 'status',
                                         text = 'Hello! Suber was started!',
                                         pos = (-1.3, -0.95), scale = 0.07)
-        self.entries.add_entry(name = 'console',text = "" , pos = (-1.29, 0, -0.85), scale=0.07,command=self.game.handle,
-            initialText="", width = 37, numLines = 1,focus=1)
+        self.entries.add_entry(name = 'console',text = "" , pos = (-1.29, 0, -0.85), scale=0.07,command=self.game.cmd_handle,
+            initialText="", width = 37, numLines = 1,focus=0)
 
+        #self.app.taskMgr.add(self.spin_camera_task, "SpinCameraTask")
+
+    #def spin_camera_task(self, task):
+        #angledegrees = task.time * 6.0
+        #angleradians = angledegrees * (math.pi / 180.0)
+        #base.camera.setPos(20*math.sin(angleradians),-20.0*math.cos(angleradians),3)
+        #base.camera.setHpr(angledegrees, 0, 0)
+        #return Task.cont
 
     def write(self, text):
         """
@@ -125,6 +139,7 @@ class GUI():
         """
         run GUI
         """
+        self.game.cmd_handle('createmap')
         self.app.run()
 
 # vi: ft=python:tw=0:ts=4

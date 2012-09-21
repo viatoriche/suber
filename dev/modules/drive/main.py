@@ -48,23 +48,24 @@ class Game(Root):
     prompt = 'Suber> '
     tick = 1
     live = True
-    world = World()
 
     def __init__(self, mode = 'console', cheat_enable = True):
         Root.__init__(self)
         self.mode = mode
+        self.command_handler = Command_Handler(self)
         if self.mode == 'console':
             self.process = Console_UI(self)
         elif self.mode == 'GUI':
             self.process = GUI(self)
 
-        self.command_handler = Command_Handler(self)
+        self.world = World()
+
         self.cheat_enable = cheat_enable
         signal.signal(signal.SIGINT, self.signal_stop)
         signal.signal(signal.SIGTERM, self.signal_stop)
 
-    def handle(self, cmd):
-        self.command_handler.handle(cmd)
+    def cmd_handle(self, cmd):
+        self.command_handler.cmd_handle(cmd)
 
     def write(self, text):
         self.process.write(text)
