@@ -131,9 +131,7 @@ class GUI():
 
 
     def show_terrain(self, level):
-        if textures.has_key('world_map'):
-            #print self.game.world.chank_changed, self.game.world.level
-            show_terrain(self.game, base.camera.getPos(), level, textures['world_map'])
+        show_terrain(self.game, base.camera.getPos(), level)
 
     def write(self, text):
         """

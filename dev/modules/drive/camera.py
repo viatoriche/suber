@@ -4,7 +4,7 @@ from pandac.PandaModules import Vec3, WindowProperties
 import math
 
 class CamFree(DirectObject.DirectObject):
-    def __init__(self, limit_Z = (16,128),
+    def __init__(self, limit_Z = (16,32),
                        min_level = 1, max_level = 16, showterrain = lambda x: x):
         base.disableMouse()
 
@@ -12,6 +12,7 @@ class CamFree(DirectObject.DirectObject):
         self.min_level = min_level
         self.max_level = max_level
         camera.setPos(0, 0, limit_Z[1])
+        base.camLens.setFar(128)
 
         self.keyMap = {"FORWARD":0, "BACK":0, "RIGHT":0,
                        "LEFT":0, "Mouse3":0, "LSHIFT":0,

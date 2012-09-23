@@ -25,30 +25,46 @@ class Chank(RigidBodyCombiner):
         RigidBodyCombiner.__init__(self, name)
         self.types = types
         self.node = NodePath(self)
-        if not lod_node:
-            self.node.reparentTo(render)
-        else:
-            lod.addSwitch(10.0, 5.0)
-            self.node.reparentTo(lod_node)
+
+        self.node.reparentTo(render)
+        # Why dont work? =(
+        #if not lod_node:
+            #self.node.reparentTo(render)
+        #else:
+            #lod.addSwitch(10.0, 5.0)
+            #self.node.reparentTo(lod_node)
         self.node.flattenLight()
+        self.active = False
 
     def new(self, cubes):
         for cube in cubes:
             f = self.types[cubes[cube]].copyTo(self.node)
             f.setPos(cube)
+        self.collect()
+        self.active = True
 
     def show(self):
-        self.collect()
-        self.node.show()
+        if not self.active:
+            self.node.show()
+            self.active = True
 
     def hide(self):
-        self.node.hide()
+        if self.active:
+            self.node.hide()
+            self.active = False
 
     def setPos(self, *args, **params):
         self.node.setPos(*args, **params)
 
-    def destroy():
+    def setX(self, *args, **params):
+        self.node.setX(*args, **params)
+
+    def setY(self, *args, **params):
+        self.node.setY(*args, **params)
+
+    def destroy(self):
         self.node.removeNode()
+        self.active = False
 
 class LandNode():
     def __init__(self, x1, y1, x2, y2, z):
