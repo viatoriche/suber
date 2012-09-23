@@ -54,6 +54,11 @@ class World():
         self.types['water'] = CubeModel(self.cube_size, self.cube_size, self.cube_size)
         self.types['water'].setTexture(textures['sand'],1)
 
+        #self.megacube = CubeModel(16, 16, 128)
+        #self.megacube.setTexture(textures['dirt'], 1)
+        #self.megacube.reparentTo(render)
+        #self.megacube.setPos(0,0,0)
+
         for i in xrange(1,17):
             self.chanks_map[i] = {}
 
@@ -162,7 +167,7 @@ def show_terrain(game, cam_coords, level):
     cube_size = game.world.cube_size
     types = game.world.types
 
-    chanks = 3
+    chanks = 4
 
     dx = ((X / size_chank) - chanks) * size_chank
     for xcount in xrange(chanks * 2):

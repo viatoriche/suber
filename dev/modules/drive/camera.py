@@ -4,7 +4,7 @@ from pandac.PandaModules import Vec3, WindowProperties
 import math
 
 class CamFree(DirectObject.DirectObject):
-    def __init__(self, limit_Z = (16,32),
+    def __init__(self, limit_Z = (16,64),
                        min_level = 1, max_level = 16, showterrain = lambda x: x):
         base.disableMouse()
 
@@ -37,7 +37,7 @@ class CamFree(DirectObject.DirectObject):
         self.accept("wheel_down", self.CamSpeed, [0.9])
 
         self.SpeedRot = 0.05 # Скорость врашения камеры
-        self.SpeedMult = 3 # Множитель скорости камеры при нажатии lshift
+        self.SpeedMult = 5 # Множитель скорости камеры при нажатии lshift
         self.limit_Z = limit_Z
 
         #self.textSpeed = OnscreenText(pos = (0.9, -0.9), scale = 0.1)
@@ -71,7 +71,7 @@ class CamFree(DirectObject.DirectObject):
             y = md.getY()
             z = camera.getZ()
 
-            self.SpeedCam = z/256.0
+            self.SpeedCam = z/64.0
 
             Speed = self.SpeedCam
 

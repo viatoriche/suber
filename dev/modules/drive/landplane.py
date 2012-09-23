@@ -13,6 +13,7 @@ from pandac.PandaModules import CullFaceAttrib
 from pandac.PandaModules import RenderState
 from pandac.PandaModules import ShaderAttrib, TransparencyAttrib
 from panda3d.core import RigidBodyCombiner, NodePath, Vec3
+import time
 
 class Chank(RigidBodyCombiner):
     """
@@ -33,14 +34,18 @@ class Chank(RigidBodyCombiner):
         #else:
             #lod.addSwitch(10.0, 5.0)
             #self.node.reparentTo(lod_node)
-        self.node.flattenLight()
+        #self.node.flattenLight()
         self.active = False
 
     def new(self, cubes):
+        #tim = time.time()
         for cube in cubes:
             f = self.types[cubes[cube]].copyTo(self.node)
             f.setPos(cube)
+        #print 'copy: ', time.time() - tim
+        #tim = time.time()
         self.collect()
+        #print 'collect: ', time.time() - tim
         self.active = True
 
     def show(self):

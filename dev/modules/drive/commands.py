@@ -43,16 +43,17 @@ class Command_Handler():
                 self.cmd_write(['{0} * step: {1} / {2}'.format(e, i,desc)])
                 if self.game.mode == 'GUI':
                     self.game.write('Generate and show map')
-                    world = global_map_gen.maps[complete_i]
-                    world.water_z = 0
-                    textures['world_map'] = generate_map_texture(world)
-                    self.cmd_show_map()
+                    #world = global_map_gen.maps[complete_i]
+                    #world.water_z = 0
+                    #textures['world_map'] = generate_map_texture(world)
+                    #self.cmd_show_map()
                 complete_i = i
             if self.game.mode == 'console':
                 self.cmd_write([global_map_gen.maps.show_acii()])
             elif self.game.mode == 'GUI':
                 self.cmd_write(['Start generation 3d heights'])
                 self.game.world.map_2d = global_map_gen.maps[complete_i]
+                self.game.world.map_2d.water_z = 0
                 self.game.world.maps = {16: {(0,0): map2d_to_3d(self.game.world.map_2d)}}
                 #gen3d = Generate_Heights(map)
                 #for e, (i, desc) in enumerate(gen3d.start()):
@@ -61,23 +62,29 @@ class Command_Handler():
                 #self.game.world.map_3d = gen3d.map3d
                 self.cmd_write(['Start generation textures of map'])
                 textures['world_map'] = generate_map_texture(self.game.world.map_2d)
-                self.cmd_show_map()
+                #self.cmd_show_map()
                 #self.cmd_write(['Start generation heights of map'])
                 #self.game.world.map_3d.create_height_map('/tmp/heights.png')
                 #textures['world_heights'] = generate_heights_image(self.game.world.map_3d)
-                self.cmd_hide_map()
+                #self.cmd_hide_map()
                 self.game.world.chank_changed = True
                 self.game.world.level = 16
                 self.game.map_coords = (0, 0, 0)
                 self.game.process.default_cam()
-                #self.cmd_show_terrain()
+                show_terrain(self.game, base.camera.getPos(), 16)
             self.cmd_write(['Map generation process has been completed. Seed: {0}'.format(\
                                                 self.game.world.seed)])
 
-        ThreadDo(doit).start()
+        #ThreadDo(doit).start()
+        doit()
 
 
         self.cmd_write(['Map generation process has been started'])
+
+    def cmd_minimap(self, params = []):
+        """
+        """
+        pass
 
     def cmd_show_map(self, params = []):
         """
@@ -105,11 +112,6 @@ class Command_Handler():
         docstring for cmd_hide_map
         """
         self.game.process.screen_images.del_image('world_map')
-
-    def cmd_show_terrain(self, params = []):
-        """
-        """
-        #show_terrain(self.game, base.camera.getPos(), 16, textures['world_map'])
 
     def cmd_save(self, params = []):
         """
@@ -152,9 +154,9 @@ class Command_Handler():
                 'hidemap': cmd_hide_map,
                 'save': cmd_save,
                 'load': cmd_load,
-                'showterrain': cmd_show_terrain,
                 'showheights': cmd_show_heights,
                 'hideheights': cmd_hide_heights,
+                'minimap': cmd_minimap,
                 'seed': cmd_seed,
               }
 # vi: ts=4 sw=4
