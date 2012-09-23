@@ -166,8 +166,6 @@ class Map_generator_2D():
     """
     Generator of map, without relief, 2D
 
-        seed - number for generate (random factor)
-
         Step 1.        | create mini square, random continents etc
         ---------------------------------------------------------
         Step 2...iters | smooth and increase square, by mode
@@ -176,12 +174,11 @@ class Map_generator_2D():
         Step iters     | alias coasts
     """
     params = {}
-    def __init__(self, seed = 0, iters = 5, min_land = 25, max_land = 45,
+    def __init__(self, iters = 5, min_land = 25, max_land = 45,
                                     min_continents = 4, max_continents = 6):
         """
         Initialization of generator
         """
-        self.seed = seed
         self.size = 8
         # create dict of MapDict2D
         self.maps = Maps2D()
@@ -338,7 +335,6 @@ class Map_generator_2D():
         """
         Generator of zero map, begin options
         """
-        random.seed(self.seed)
         # generate map 0 - ocean, 1 - land
         # number of continents / count of start points
         continents = random.randint(self.min_continents, self.max_continents)
@@ -409,9 +405,10 @@ class Map_generator_2D():
 
 # Testing ^--^
 if __name__ == '__main__':
-    iters = 6
+    iters = 5
     seed = random.randint(1,65535)
-    global_map_gen = Map_generator_2D(seed = seed, iters = iters)
+    random.seed(seed)
+    global_map_gen = Map_generator_2D(iters = iters)
     for i, desc in global_map_gen.start():
         print i, desc
     for i in xrange(global_map_gen.iters+1):

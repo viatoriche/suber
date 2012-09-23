@@ -6,10 +6,9 @@
 
 from modules.drive.main import Game
 
-def go():
-    #game = Game(mode = 'console')
-    game = Game(mode = 'GUI')
-    game.start()
+#game = Game(mode = 'console')
+game = Game(mode = 'GUI')
+#game.start()
 
 # vi: ts=4 sw=4
 

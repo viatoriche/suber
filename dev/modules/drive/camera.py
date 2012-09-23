@@ -4,10 +4,18 @@ from pandac.PandaModules import Vec3, WindowProperties
 import math
 
 class CamFree(DirectObject.DirectObject):
-    def __init__(self, limit_XY=(3,253), limit_Z = (1.2,480)):
+    def __init__(self, limit_Z = (16,128),
+                       min_level = 1, max_level = 16, showterrain = lambda x: x):
         base.disableMouse()
 
-        self.keyMap = {"FORWARD":0, "BACK":0, "RIGHT":0, "LEFT":0, "Mouse3":0, "LSHIFT":0, "UPWARDS":0, "DOWNWARDS":0}
+        self.level = max_level
+        self.min_level = min_level
+        self.max_level = max_level
+        camera.setPos(0, 0, limit_Z[1])
+
+        self.keyMap = {"FORWARD":0, "BACK":0, "RIGHT":0,
+                       "LEFT":0, "Mouse3":0, "LSHIFT":0,
+                       "UPWARDS":0, "DOWNWARDS":0}
         self.accept("w", self.setKey, ["FORWARD",1])
         self.accept("w-up", self.setKey, ["FORWARD",0])
         self.accept("s", self.setKey, ["BACK",1])
@@ -27,11 +35,9 @@ class CamFree(DirectObject.DirectObject):
         self.accept("wheel_up", self.CamSpeed, [1.1])
         self.accept("wheel_down", self.CamSpeed, [0.9])
 
-        self.SpeedCam = 1 # Скорость перемещения камеры
         self.SpeedRot = 0.05 # Скорость врашения камеры
         self.SpeedMult = 3 # Множитель скорости камеры при нажатии lshift
         self.limit_Z = limit_Z
-        self.limit_XY = limit_XY
 
         #self.textSpeed = OnscreenText(pos = (0.9, -0.9), scale = 0.1)
 
@@ -40,6 +46,7 @@ class CamFree(DirectObject.DirectObject):
         self.props = WindowProperties()
 
         taskMgr.add(self.CamControl, 'CamControl') #менеджер для запуска функции
+        self.showterrain = showterrain
 
     def setKey(self, key, value): # Функция для перезаписи в словарь "keyMap" ключа и значения
         self.keyMap[key] = value
@@ -61,9 +68,11 @@ class CamFree(DirectObject.DirectObject):
             md = base.win.getPointer(0)
             x = md.getX()
             y = md.getY()
+            z = camera.getZ()
+
+            self.SpeedCam = z/256.0
 
             Speed = self.SpeedCam
-            z = camera.getZ()
 
             if (self.keyMap["LSHIFT"]!=0):
                 Speed = self.SpeedCam*self.SpeedMult
@@ -85,19 +94,17 @@ class CamFree(DirectObject.DirectObject):
                 camera.setZ(camera.getZ()-Speed)
 
             if camera.getZ() < self.limit_Z[0]:
-                camera.setZ(self.limit_Z[0])
-            if camera.getZ() > self.limit_Z[1]:
-                camera.setZ(self.limit_Z[1])
-
-            if camera.getX() < self.limit_XY[0]:
-                camera.setX(self.limit_XY[0])
-            if camera.getX() > self.limit_XY[1]:
-                camera.setX(self.limit_XY[1])
-
-            if camera.getY() < self.limit_XY[0]:
-                camera.setY(self.limit_XY[0])
-            if camera.getY() > self.limit_XY[1]:
-                camera.setY(self.limit_XY[1])
+                if self.level > self.min_level:
+                    camera.setZ(self.limit_Z[1])
+                    self.level -= 1
+                else:
+                    camera.setZ(self.limit_Z[0])
+            elif camera.getZ() > self.limit_Z[1]:
+                if self.level < self.max_level:
+                    camera.setZ(self.limit_Z[0])
+                    self.level += 1
+                else:
+                    camera.setZ(self.limit_Z[1])
 
             if base.win.movePointer(0, base.win.getXSize()/2, base.win.getYSize()/2):
                 camera.setH(camera.getH() -  (x - base.win.getXSize()/2)*self.SpeedRot)
@@ -106,6 +113,9 @@ class CamFree(DirectObject.DirectObject):
                     camera.setP(-90)
                 if (camera.getP()>=90.1):
                     camera.setP(90)
+
+            #print self.level
+            self.showterrain(self.level)
 
         else:
             self.CursorOffOn = 'On'

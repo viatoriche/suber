@@ -14,69 +14,66 @@ from pandac.PandaModules import RenderState
 from pandac.PandaModules import ShaderAttrib, TransparencyAttrib
 from panda3d.core import RigidBodyCombiner, NodePath, Vec3
 
-
-class CubesView(dict):
+class Chank(RigidBodyCombiner):
     """
-        self[(x,y,z)] = name of type, or 'NULL'
+        self.cubes[(x,y,z)] = name of type, or 'NULL'
 
         types:
             {'name': model}
     """
-    def __init__(self, name, types, *args, **params):
-        dict.__init__(self, *args, **params)
-        self.rbc = RigidBodyCombiner(name)
-        self.node = NodePath(self.rbc)
-        self.node.reparentTo(render)
+    def __init__(self, name, types, lod_node = None, lod = None):
+        RigidBodyCombiner.__init__(self, name)
         self.types = types
+        self.node = NodePath(self)
+        if not lod_node:
+            self.node.reparentTo(render)
+        else:
+            lod.addSwitch(10.0, 5.0)
+            self.node.reparentTo(lod_node)
+        self.node.flattenLight()
+
+    def new(self, cubes):
+        for cube in cubes:
+            f = self.types[cubes[cube]].copyTo(self.node)
+            f.setPos(cube)
 
     def show(self):
-        for cube in self:
-            if self[cube] == 'NULL':
-                continue
-            f = self.types[self[cube]].copyTo(self.node)
-            f.setPos(cube)
-        #f.detachNode()
-        self.rbc.collect()
+        self.collect()
+        self.node.show()
 
-#class LandNode():
-    #def __init__(self, x1, y1, x2, y2, z):
-        #maker = CardMaker( 'land' )
-        #maker.setFrame( x1, x2, y1, y2 )
+    def hide(self):
+        self.node.hide()
 
-        #self.landNP = render.attachNewNode(maker.generate())
-        #self.landNP.setHpr(0,-90,0)
-        #self.landNP.setPos(0,0,z)
-        #self.landNP.setTransparency(TransparencyAttrib.MAlpha )
+    def setPos(self, *args, **params):
+        self.node.setPos(*args, **params)
 
+    def destroy():
+        self.node.removeNode()
 
-        #self.landPlane = Plane( Vec3( 0, 0, z+1 ), Point3( 0, 0, z ) )
+class LandNode():
+    def __init__(self, x1, y1, x2, y2, z):
+        maker = CardMaker( 'land' )
+        maker.setFrame( x1, x2, y1, y2 )
 
-        #planeNode = PlaneNode( 'landPlane' )
-        #planeNode.setPlane( self.landPlane )
+        self.landNP = render.attachNewNode(maker.generate())
+        self.landNP.setHpr(0,-90,0)
+        self.landNP.setPos(0,0,z)
+        self.landNP.setTransparency(TransparencyAttrib.MAlpha )
 
-        ## Buffer and reflection camera
-        #self.buffer = base.win.makeTextureBuffer( 'landBuffer', 256, 256 )
-        #self.buffer.setClearColor( Vec4( 0, 0, 0, 1 ) )
-
-        #cfa = CullFaceAttrib.makeReverse( )
-        #rs = RenderState.make(cfa)
-
-        ##self.landNP.setTexture(tex1)
-
-    #def Destroy(self):
-        #base.graphicsEngine.removeWindow(self.buffer)
-        #self.cam.setInitialState(RenderState.makeEmpty())
-        #self.watercamNP.removeNode()
-        #self.landNP.clearShader()
-        ##self.bottomNP.removeNode()
-        #self.landNP.removeNode()
+    def Destroy(self):
+        base.graphicsEngine.removeWindow(self.buffer)
+        self.cam.setInitialState(RenderState.makeEmpty())
+        self.watercamNP.removeNode()
+        self.landNP.clearShader()
+        #self.bottomNP.removeNode()
+        self.landNP.removeNode()
 
 
-    #def hide(self):
-        #self.landNP.hide()
+    def hide(self):
+        self.landNP.hide()
 
-    #def show(self):
-        #self.landNP.show()
+    def show(self):
+        self.landNP.show()
 
 
 # vi: ft=python:tw=0:ts=4

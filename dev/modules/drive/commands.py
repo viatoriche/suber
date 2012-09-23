@@ -5,9 +5,9 @@
 """Commands handlers modul"""
 import random, pickle, sys
 from modules.world.map2d import Map_generator_2D
-from modules.world.map3d import Generate_Heights
+from modules.world.map3d import Generate_Heights, map2d_to_3d
 from modules.drive.support import ThreadDo
-from modules.drive.world import generate_map_texture, show_terrain, generate_heights_image
+from modules.drive.world import generate_map_texture, show_terrain
 from modules.drive.textures import textures
 from pandac.PandaModules import Texture
 
@@ -34,9 +34,10 @@ class Command_Handler():
             seed = random.randint(0, sys.maxint)
 
         self.game.world.seed = seed
+        random.seed(seed)
 
         def doit():
-            global_map_gen = Map_generator_2D(seed = seed)
+            global_map_gen = Map_generator_2D()
             complete_i = 0
             for e, (i, desc) in enumerate(global_map_gen.start()):
                 self.cmd_write(['{0} * step: {1} / {2}'.format(e, i,desc)])
@@ -52,21 +53,24 @@ class Command_Handler():
             elif self.game.mode == 'GUI':
                 self.cmd_write(['Start generation 3d heights'])
                 self.game.world.map_2d = global_map_gen.maps[complete_i]
+                self.game.world.maps = {16: {(0,0): map2d_to_3d(self.game.world.map_2d)}}
+                #gen3d = Generate_Heights(map)
+                #for e, (i, desc) in enumerate(gen3d.start()):
+                    #self.game.write('{0} * step: {1} / {2}'.format(e, i,desc))
 
-                gen3d = Generate_Heights(map2d = self.game.world.map_2d,
-                                                          seed = seed)
-                for e, (i, desc) in enumerate(gen3d.start()):
-                    self.game.write('{0} * step: {1} / {2}'.format(e, i,desc))
-
-                self.game.world.map_3d = gen3d.map3d
+                #self.game.world.map_3d = gen3d.map3d
                 self.cmd_write(['Start generation textures of map'])
-                textures['world_map'] = generate_map_texture(self.game.world.map_3d)
+                textures['world_map'] = generate_map_texture(self.game.world.map_2d)
                 self.cmd_show_map()
                 #self.cmd_write(['Start generation heights of map'])
                 #self.game.world.map_3d.create_height_map('/tmp/heights.png')
                 #textures['world_heights'] = generate_heights_image(self.game.world.map_3d)
                 self.cmd_hide_map()
-                self.cmd_show_terrain()
+                self.game.world.chank_changed = True
+                self.game.world.level = 16
+                self.game.map_coords = (0, 0, 0)
+                self.game.process.default_cam()
+                #self.cmd_show_terrain()
             self.cmd_write(['Map generation process has been completed. Seed: {0}'.format(\
                                                 self.game.world.seed)])
 
@@ -105,13 +109,13 @@ class Command_Handler():
     def cmd_show_terrain(self, params = []):
         """
         """
-        show_terrain(self.game.world.map_3d)
+        #show_terrain(self.game, base.camera.getPos(), 16, textures['world_map'])
 
     def cmd_save(self, params = []):
         """
         docstring for cmd_save
         """
-        pickle.dump(self.game.world.map_2d, open('saves/map_2d.sav', 'w'))
+        pickle.dump(self.game.world, open('world.sav', 'w'))
 
     def cmd_seed(self, params = []):
         """
@@ -122,7 +126,8 @@ class Command_Handler():
         """
         docstring for cmd_load
         """
-        self.game.world.map_2d = pickle.load(open('saves/map_2d.sav', 'r'))
+        self.game.world = pickle.load(open('world.sav', 'r'))
+        random.seed(self.game.world.seed)
         textures['world_map'] = generate_map_texture(self.game.world.map_2d)
         self.cmd_show_map()
 
