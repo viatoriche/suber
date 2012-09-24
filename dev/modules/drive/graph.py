@@ -17,6 +17,9 @@ from modules.drive.support import generate_hash
 from modules.drive.camera import CamFree
 from modules.drive.textures import textures
 from modules.drive.world import show_terrain
+from pandac.PandaModules import loadPrcFileData
+
+loadPrcFileData("editor-startup", "show-frame-rate-meter #t")
 
 class OnscreenImages(dict):
     """
@@ -107,7 +110,8 @@ class GUI():
         self.app = PandaApp()
         self.app.disableMouse()
         self.camFree = CamFree(showterrain = self.show_terrain)
-        self.default_cam()
+        self.app.camera.setHpr(0, -90, 0)
+        self.default_cam(16)
         self.screen_images = OnscreenImages()
         self.screen_texts = OnscreenTexts()
         self.buttons = DirectButtons()
@@ -125,9 +129,8 @@ class GUI():
             initialText="", width = 37, numLines = 1,focus=0)
 
 
-    def default_cam(self):
-        self.app.camera.setHpr(0, -90, 0)
-        self.camFree.level = 16
+    def default_cam(self, level):
+        self.camFree.level = level
 
 
     def show_terrain(self, level):

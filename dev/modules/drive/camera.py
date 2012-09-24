@@ -4,8 +4,8 @@ from pandac.PandaModules import Vec3, WindowProperties
 import math
 
 class CamFree(DirectObject.DirectObject):
-    def __init__(self, limit_Z = (16,64),
-                       min_level = 1, max_level = 16, showterrain = lambda x: x):
+    def __init__(self, limit_Z = (8,64),
+                       min_level = 10, max_level = 16, showterrain = lambda x: x):
         base.disableMouse()
 
         self.level = max_level

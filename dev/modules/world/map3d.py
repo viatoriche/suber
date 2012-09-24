@@ -8,21 +8,25 @@ Map 3d
 
 import random
 import copy
+import sys
 from PIL import Image
 
 class Map3d(dict):
     """
     docstring for Map3d
     """
-    def __init__(self, size, *args, **params):
+    def __init__(self, size, seed, *args, **params):
         """
         docstring for __init__
         """
         dict.__init__(self, *args, **params)
         self.size = size
-        self.water_z = 8
-        self.max_z = 16
-        self.min_z = 0
+        self.water_z = 0
+        self.max_z = 1
+        self.min_z = 1
+        self.seed = seed
+        # 16x16 [n, m] = seed
+        self.land_seeds = {}
 
     def fill(self):
         """
@@ -78,9 +82,9 @@ class Map3d(dict):
         del image
 
 
-    def get_round_xy_land(self, target_coord):
+    def get_round_xy_land(self, target_coord, start = -1):
         """
-        Get 3x3 square, where target location in center
+        Get NxM square, where target location in center
             target_coord = (targ_x, targ_y) or [targ_x, targ_y]
             size = size of target map
 
@@ -90,19 +94,20 @@ class Map3d(dict):
         targ_x, targ_y = target_coord
         coords = []
         size = self.size
+        end = abs(start)+1
         # from -1/-1 to 1/1
-        for iter_x in xrange(targ_x-1, targ_x+2):
+        for iter_x in xrange(start, end):
             round_x = iter_x
-            if iter_x == -1:
-                round_x = size-1
+            if iter_x < 0:
+                round_x = size+iter_x
             if iter_x > size-1:
-                round_x = 0
-            for iter_y in xrange(targ_y-1, targ_y+2):
+                round_x = size-1-iter_x
+            for iter_y in xrange(start, end):
                 round_y = iter_y
-                if iter_y == -1:
-                    round_y = size-1
+                if iter_y < 0:
+                    round_y = size+iter_y
                 if iter_y > size-1:
-                    round_y = 0
+                    round_y = size-1-iter_y
 
                 coords.append((round_x, round_y))
 
@@ -114,25 +119,40 @@ class Map3d(dict):
         docstring for gen_random_heights
         """
 
-        for coords in self:
+        random.seed(self.seed)
 
-            if self[coords] <= self.water_z:
-                self[coords] = random.randint(self.min_z-self[coords], self.water_z)
-            elif self[coords] > self.water_z:
-                self[coords] = random.randint(self.water_z+1, self[coords]+self.max_z)
+        lols = 256
+        for lol in xrange(lols):
+            x = random.randint(0, self.size-1)
+            y = random.randint(0, self.size-1)
+            z = random.randint(-18, 18)
+            size = random.randint(-16,-1)
+            land = self.get_round_xy_land((x, y), size)
+            for coords in land:
+                self[coords] = z
 
-        for coords in self:
-            col = 0
-            for round_coords in self.get_round_xy_land(coords):
-                col += self[round_coords]
-            self[coords] = int(round(col/9.0))
 
 
-def map2d_to_3d(map2d):
+        #for coords in self:
+            #col = 0
+            #xy_rounds = self.get_round_xy_land(coords, -1)
+            #for round_coords in xy_rounds:
+                #col += self[round_coords]
+            #self[coords] = int(round(col/float(len(xy_rounds))))
+#        #for coords in self:
+            #col = 0
+            #for round_coords in self.get_round_xy_land(coords):
+                #col += self[round_coords]
+            #self[coords] = int(round(col/9.0))
+        for x in xrange(16):
+            for y in xrange(16):
+                self.land_seeds[x,y] = random.randint(0, sys.maxint)
+
+def map2d_to_3d(map2d, seed):
     """docstring for map2d_to_3d
 
     """
-    map3d = Map3d(map2d.size)
+    map3d = Map3d(map2d.size, seed)
     for coords in map2d:
         # if water
         mount = random.randint(0, map2d.size)
@@ -143,10 +163,12 @@ def map2d_to_3d(map2d):
         else:
             mount = 0
         if map2d[coords] == 0:
-            map3d[coords] = 8+mount
+            map3d[coords] = map3d.water_z+mount
         else:
-            map3d[coords] = 9+mount
-
+            map3d[coords] = map3d.water_z+1+mount
+    for x in xrange(16):
+        for y in xrange(16):
+            map3d.land_seeds[x, y] = random.randint(0, sys.maxint)
     return map3d
 
 
@@ -158,7 +180,8 @@ class Generate_Heights():
         """
         docstring for __init__
         """
-        self.map3d = Map3d(map3d.size)
+        seed = map3d.land_seeds[start_x, start_y]
+        self.map3d = Map3d(map3d.size, seed)
         for x in xrange(start_x, start_x + 16):
             sx = (x - start_x) * 16
             for y in xrange(start_y, start_y + 16):
@@ -193,10 +216,10 @@ if __name__ == '__main__':
         print i, desc
     print gen2d.maps.get_ascii(3)
     print 'size line: ', gen2d.maps[iters].size
-    main3d = map2d_to_3d(gen2d.maps[iters])
+    main3d = map2d_to_3d(gen2d.maps[iters], seed)
     for x in xrange(0, 2):
         for y in xrange(0, 2):
-            gen_heights = Generate_Heights(main3d, start_x = x * 16, start_y = y * 16)
+            gen_heights = Generate_Heights(main3d, main3d.land_seeds[x, y], start_x = x * 16, start_y = y * 16)
             for i, desc in gen_heights.start():
                 print i, desc
             gen_heights.map3d.create_height_map('/tmp/maps/{0}_{1}_3dmap.png'.format(x, y))
