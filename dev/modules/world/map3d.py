@@ -214,7 +214,7 @@ class Generate_Heights():
                         if map3d[(x, y)] <= map3d.water_z:
                             self.map3d[(my_x, my_y)] = map3d[(x,y)] - 4
                         else:
-                            self.map3d[(my_x, my_y)] = map3d[(x,y)] - 4
+                            self.map3d[(my_x, my_y)] = map3d[(x,y)] + 4
 
     def start(self):
         """
