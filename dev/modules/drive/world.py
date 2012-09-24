@@ -50,9 +50,9 @@ class MapTree():
         x = x / 16
         y = y / 16
         name = x, y
-        if name not in childs:
-            childs[name] = MapTree(self, name)
-        return childs[name]
+        if name not in self.childs:
+            self.childs[name] = MapTree(self, name)
+        return self.childs[name]
 
     def change_parent_coords(self):
         if self.parent:
