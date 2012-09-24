@@ -211,7 +211,10 @@ class Generate_Heights():
                 dy = sy + 16
                 for my_x in xrange(sx, dx):
                     for my_y in xrange(sy, dy):
-                        self.map3d[(my_x, my_y)] = int(round(map3d[(x,y)]))
+                        if map3d[(x, y)] <= map3d.water_z:
+                            self.map3d[(my_x, my_y)] = map3d[(x,y)-4]
+                        else:
+                            self.map3d[(my_x, my_y)] = map3d[(x,y)+4]
 
     def start(self):
         """
