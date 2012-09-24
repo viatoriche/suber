@@ -156,7 +156,7 @@ class Map3d(dict):
             diamond_it(F[0], F[1], dsize)
             diamond_it(E[0], E[1], dsize)
 
-        #diamond_it(0, 0, self.size)
+        diamond_it(0, 0, self.size)
 
         #for coords in self:
             #col = 0
