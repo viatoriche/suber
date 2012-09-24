@@ -140,9 +140,9 @@ class Map3d(dict):
             def RAND(X):
                 z = self[X]
                 if z <= self.water_z:
-                    return random.randint(-1, 0)
+                    return random.randint(-2, 0)
                 else:
-                    return random.randint(0, 1)
+                    return random.randint(0, 2)
 
             self[E] = (self[A] + self[B] + self[C] + self[D]) / 4 + RAND(E)
 
@@ -212,9 +212,9 @@ class Generate_Heights():
                 for my_x in xrange(sx, dx):
                     for my_y in xrange(sy, dy):
                         if map3d[(x, y)] <= map3d.water_z:
-                            self.map3d[(my_x, my_y)] = map3d[(x,y)-4]
+                            self.map3d[(my_x, my_y)] = map3d[(x,y)] - 4
                         else:
-                            self.map3d[(my_x, my_y)] = map3d[(x,y)+4]
+                            self.map3d[(my_x, my_y)] = map3d[(x,y)] - 4
 
     def start(self):
         """
