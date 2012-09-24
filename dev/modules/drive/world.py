@@ -24,47 +24,61 @@ class MapTree():
     # map_tree
     map3d = None
     coords = (0, 0, 64)
-    def __init__(self, parent = None):
+    childs = {}
+    def __init__(self, parent = None, name = None):
         # map_tree
         self.parent = parent
+        self.name = name
         if self.parent:
             x, y, z = self.parent.coords
-            self.start_x = x / 16
-            self.start_y = y / 16
+            start_x, start_y = name
             # x - (start_x * 16) == cur_x / 16
             # →
             # x == (cur_x / 16) + (start_x * 16)
-            cur_x = (x - (self.start_x * 16)) * 16
-            cur_y = (y - (self.start_y * 16)) * 16
+            cur_x = (x - (start_x * 16)) * 16
+            cur_y = (y - (start_y * 16)) * 16
             self.coords = (cur_x, cur_y, 64)
-            gh = Generate_Heights(self.parent.map3d, self.start_x, self.start_y)
+            print 'Parent: ', self.parent.coords, ' self: ', self.coords
+            t = time.time()
+            gh = Generate_Heights(self.parent.map3d, start_x, start_y)
             for i in gh.start(): pass
             self.map3d = gh.map3d
+            print 'generate map:', time.time() - t
 
     def down(self):
-        return MapTree(self)
+        x, y, z = self.coords
+        x = x / 16
+        y = y / 16
+        name = x, y
+        if name not in childs:
+            childs[name] = MapTree(self, name)
+        return childs[name]
 
     def change_parent_coords(self):
         if self.parent:
             cur_x, cur_y, cur_z = self.coords
-            x = (cur_x / 16) + (self.start_x * 16)
-            y = (cur_y / 16) + (self.start_y * 16)
+            start_x, start_y = self.name
+            x = (cur_x / 16) + (start_x * 16)
+            y = (cur_y / 16) + (start_y * 16)
             self.parent.coords = (x, y, 64)
+            #print 'Parent: ', self.parent.coords, ' self: ', self.coords
 
     # return True, if join
     # TODO: create
     def join_to_next_land(self):
         pass
 
-    def get_coords_txt(self, level):
+    def get_coords_txt(self, level, cam):
         cur_x, cur_y, cur_z = self.coords
+        x, y, z = cam
+        cam = int(x), int(y), int(z)
         if self.parent:
             par_x, par_y, par_z = self.parent.coords
-            return 'L:{8} * X: {0}, Y: {1} -> {2}:{3} * UX: {4}, UY: {5} -> {6}:{7}'.format(
-                cur_x, cur_y, cur_x/16, cur_y/16, par_x, par_y, par_x/16, par_y/16, level)
+            return 'L:{8} * X: {0}, Y: {1} -> {2}:{3} * UX: {4}, UY: {5} -> {6}:{7} | cube = {9} | {10}'.format(
+                cur_x, cur_y, cur_x/16, cur_y/16, par_x, par_y, par_x/16, par_y/16, level, self.map3d[(cur_x, cur_y)], cam)
         else:
-            return 'L:{4} * X: {0}, Y: {1} -> {2}:{3}'.format(
-                cur_x, cur_y, cur_x/16, cur_y/16, level)
+            return 'L:{4} * X: {0}, Y: {1} -> {2}:{3} | cube z = {5} | {6}'.format(
+                cur_x, cur_y, cur_x/16, cur_y/16, level, self.map3d[(cur_x, cur_y)], cam)
 
 
     #def up
@@ -99,9 +113,10 @@ class World():
         textures['sand'].setMinfilter(Texture.FTLinearMipmapLinear)
 
         self.cube_size = 1
-        self.types['land'] = CubeModel(self.cube_size, self.cube_size, self.cube_size)
+        self.cube_z = 16
+        self.types['land'] = CubeModel(self.cube_size, self.cube_size, self.cube_z)
         self.types['land'].setTexture(textures['dirt'],1)
-        self.types['water'] = CubeModel(self.cube_size, self.cube_size, self.cube_size)
+        self.types['water'] = CubeModel(self.cube_size, self.cube_size, self.cube_z)
         self.types['water'].setTexture(textures['sand'],1)
 
         self.paint_thread = False
@@ -138,8 +153,6 @@ def show_terrain(game, cam_coords, level):
 
         Z = int(camZ)
 
-        game.world.map_tree.coords = (X, Y, Z)
-        game.write(game.world.map_tree.get_coords_txt(level))
         if X > 255:
             X = X - 255
         if Y > 255:
@@ -151,13 +164,9 @@ def show_terrain(game, cam_coords, level):
 
         game.world.map_tree.coords = (X, Y, Z)
         game.world.map_tree.change_parent_coords()
-        game.write(game.world.map_tree.get_coords_txt(level))
+        game.write(game.world.map_tree.get_coords_txt(level, cam_coords))
 
-        if (lastX, lastY) != (X, Y):
-            OK = True
-
-        if not OK:
-            return
+        
 
     else:
         for ch in game.world.chanks_map[last_level]:
@@ -170,19 +179,27 @@ def show_terrain(game, cam_coords, level):
         if level < last_level:
             game.world.map_tree = game.world.map_tree.down()
         if level > last_level:
-            if level <17:
-                game.world.map_tree = game.world.map_tree.parent
+            game.world.map_tree = game.world.map_tree.parent
 
         X, Y, Z = game.world.map_tree.coords
         game.world.map_tree.change_parent_coords()
-        game.write(game.world.map_tree.get_coords_txt(level))
+        game.write(game.world.map_tree.get_coords_txt(level, cam_coords))
         lastX, lastY, lastZ = game.world.map_tree.coords
+        base.camera.setX(X)
+        base.camera.setY(Y)
+        camX, camY, camZ = X, Y, base.camera.getZ()
+        OK = True
 
+    if (lastX, lastY) != (X, Y):
+        OK = True
+
+    if not OK:
+        return
 
     cur_map = game.world.map_tree.map3d
     if (X / size_chank, Y / size_chank) != (lastX / size_chank, lastY / size_chank):
-        #for ch in game.world.chanks_map[last_level].values():
-            #ch.hide()
+        for ch in game.world.chanks_map[level].values():
+            ch.hide()
         game.world.chank_changed = True
 
     game.cmd_handle('showmap')
@@ -198,7 +215,7 @@ def show_terrain(game, cam_coords, level):
         cube_size = game.world.cube_size
         types = game.world.types
 
-        chanks = 5
+        chanks = 3
 
         dx = ((X / size_chank) - chanks) * size_chank
         for xcount in xrange(chanks * 2):
@@ -232,9 +249,9 @@ def show_terrain(game, cam_coords, level):
                         cube_X = cube_X * cube_size
                         cube_Y = cube_Y * cube_size
                         if cur_map[(cX, cY)]<=cur_map.water_z:
-                            cubes[(cube_X, cube_Y, cur_map[cX,cY] * cube_size)] = 'water'
+                            cubes[(cube_X, cube_Y, cur_map[cX,cY] - game.world.cube_z)] = 'water'
                         else:
-                            cubes[(cube_X, cube_Y, cur_map[cX,cY] * cube_size)] = 'land'
+                            cubes[(cube_X, cube_Y, cur_map[cX,cY] - game.world.cube_z)] = 'land'
 
                 #print 'time gen cubes: ', time.time() - time_gen
 
@@ -265,7 +282,7 @@ def generate_map_texture(map_tree, factor):
         for y in xrange(size):
             px = x * factor
             py = y * factor
-            if map_world[(px, py)] == map_world.water_z:
+            if map_world[(px, py)] <= map_world.water_z:
                 image.setPixel(x, y, (0, 0, 100))
             else:
                 image.setPixel(x, y, (0, 100, 0))

@@ -18,6 +18,7 @@ from modules.drive.camera import CamFree
 from modules.drive.textures import textures
 from modules.drive.world import show_terrain
 from pandac.PandaModules import loadPrcFileData
+from pandac.PandaModules import TransparencyAttrib
 
 loadPrcFileData("editor-startup", "show-frame-rate-meter #t")
 
@@ -109,7 +110,7 @@ class GUI():
         self.game = game
         self.app = PandaApp()
         self.app.disableMouse()
-        self.camFree = CamFree(showterrain = self.show_terrain)
+        self.camFree = CamFree(showterrain = self.show_terrain, game = self.game)
         self.app.camera.setHpr(0, -90, 0)
         self.default_cam(16)
         self.screen_images = OnscreenImages()
@@ -128,6 +129,11 @@ class GUI():
         self.entries.add_entry(name = 'console',text = "" , pos = (-1.29, 0, -0.85), scale=0.07,command=self.game.cmd_handle,
             initialText="", width = 37, numLines = 1,focus=0)
 
+        textures['sight'] = loader.loadTexture('res/textures/sight.png')
+        self.screen_images.add_image('sight', 
+                                            textures['sight'], 
+                                            scale = 0.05, pos = (0, 0, 0))
+        self.screen_images['sight'].setTransparency(TransparencyAttrib.MAlpha)
 
     def default_cam(self, level):
         self.camFree.level = level

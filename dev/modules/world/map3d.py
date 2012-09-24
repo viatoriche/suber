@@ -22,8 +22,6 @@ class Map3d(dict):
         dict.__init__(self, *args, **params)
         self.size = size
         self.water_z = 0
-        self.max_z = 1
-        self.min_z = 1
         self.seed = seed
         # 16x16 [n, m] = seed
         self.land_seeds = {}
@@ -120,18 +118,45 @@ class Map3d(dict):
         """
 
         random.seed(self.seed)
+        def diamond_it(sx, sy, size):
+            #print sx, sy, sx+size-1, sy+size-1, size
+            dsize = size/2
+            if dsize <= 0:
+                return
+            ex = sx+size-1
+            ey = sy+size-1
+            # lets get math style
 
-        lols = 256
-        for lol in xrange(lols):
-            x = random.randint(0, self.size-1)
-            y = random.randint(0, self.size-1)
-            z = random.randint(-18, 18)
-            size = random.randint(-16,-1)
-            land = self.get_round_xy_land((x, y), size)
-            for coords in land:
-                self[coords] = z
+            A = sx, sy
+            B = ex, sy
+            C = sx, ey
+            D = ex, ey
+            E = sx+dsize, sy+dsize
+            F = sx, sy + dsize
+            G = sx + dsize, sy
+            H = ex, sy + dsize
+            I = sx + dsize, ey
 
+            def RAND(X):
+                z = self[X]
+                if z <= self.water_z:
+                    return random.randint(-1, 0)
+                else:
+                    return random.randint(0, 1)
 
+            self[E] = (self[A] + self[B] + self[C] + self[D]) / 4 + RAND(E)
+
+            self[F] = (self[A] + self[C] + self[E] + self[E]) / 4 + RAND(F)
+            self[G] = (self[A] + self[B] + self[E] + self[E]) / 4 + RAND(G)
+            self[H] = (self[B] + self[D] + self[E] + self[E]) / 4 + RAND(H)
+            self[I] = (self[C] + self[D] + self[E] + self[E]) / 4 + RAND(I)
+
+            diamond_it(A[0], A[1], dsize)
+            diamond_it(G[0], G[1], dsize)
+            diamond_it(F[0], F[1], dsize)
+            diamond_it(E[0], E[1], dsize)
+
+        #diamond_it(0, 0, self.size)
 
         #for coords in self:
             #col = 0
@@ -139,11 +164,7 @@ class Map3d(dict):
             #for round_coords in xy_rounds:
                 #col += self[round_coords]
             #self[coords] = int(round(col/float(len(xy_rounds))))
-#        #for coords in self:
-            #col = 0
-            #for round_coords in self.get_round_xy_land(coords):
-                #col += self[round_coords]
-            #self[coords] = int(round(col/9.0))
+
         for x in xrange(16):
             for y in xrange(16):
                 self.land_seeds[x,y] = random.randint(0, sys.maxint)
@@ -190,7 +211,7 @@ class Generate_Heights():
                 dy = sy + 16
                 for my_x in xrange(sx, dx):
                     for my_y in xrange(sy, dy):
-                        self.map3d[(my_x, my_y)] = map3d[(x,y)]
+                        self.map3d[(my_x, my_y)] = int(round(map3d[(x,y)]))
 
     def start(self):
         """
@@ -219,7 +240,7 @@ if __name__ == '__main__':
     main3d = map2d_to_3d(gen2d.maps[iters], seed)
     for x in xrange(0, 2):
         for y in xrange(0, 2):
-            gen_heights = Generate_Heights(main3d, main3d.land_seeds[x, y], start_x = x * 16, start_y = y * 16)
+            gen_heights = Generate_Heights(main3d, x * 16, y * 16)
             for i, desc in gen_heights.start():
                 print i, desc
             gen_heights.map3d.create_height_map('/tmp/maps/{0}_{1}_3dmap.png'.format(x, y))

@@ -69,8 +69,8 @@ class Command_Handler():
             self.cmd_write(['Map generation process has been completed. Seed: {0}'.format(\
                                                 self.game.world.seed)])
 
-        ThreadDo(doit).start()
-        #doit()
+        #ThreadDo(doit).start()
+        doit()
 
 
         self.cmd_write(['Map generation process has been started'])
@@ -84,6 +84,8 @@ class Command_Handler():
         self.minimap = not self.minimap
         if self.minimap:
             self.cmd_show_map()
+        else:
+            self.cmd_hide_map()
 
     def cmd_show_map(self, params = []):
         """

@@ -5,12 +5,13 @@ import math
 
 class CamFree(DirectObject.DirectObject):
     def __init__(self, limit_Z = (8,64),
-                       min_level = 10, max_level = 16, showterrain = lambda x: x):
+                       min_level = 10, max_level = 16, showterrain = lambda x: x, game = None):
         base.disableMouse()
 
         self.level = max_level
         self.min_level = min_level
         self.max_level = max_level
+        self.game = game
         camera.setPos(0, 0, limit_Z[1])
         base.camLens.setFar(128)
 
