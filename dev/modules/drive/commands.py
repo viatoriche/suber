@@ -5,7 +5,7 @@
 """Commands handlers modul"""
 import random, pickle, sys
 from modules.world.map2d import Map_generator_2D
-from modules.world.map3d import Generate_Heights, map2d_to_3d
+from modules.world.map3d import generate_heights, map2d_to_3d
 from modules.drive.support import ThreadDo
 from modules.drive.world import generate_map_texture, show_terrain, MapTree, World
 from modules.drive.textures import textures
@@ -92,7 +92,7 @@ class Command_Handler():
         docstring for cmd_show_map
         """
         if self.minimap:
-            textures['world_map'] = generate_map_texture(self.game.world.map_tree, 4)
+            textures['world_map'] = generate_map_texture(self.game.world.map_tree, 1)
             self.game.process.screen_images.add_image('world_map', 
                                             textures['world_map'], 
                                             scale = 0.4, pos = (-0.92, 0, 0.58))

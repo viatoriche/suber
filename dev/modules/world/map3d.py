@@ -7,8 +7,8 @@ Map 3d
 """
 
 import random
-import copy
 import sys
+
 from PIL import Image
 
 class Map3d(dict):
@@ -138,19 +138,51 @@ class Map3d(dict):
             I = sx + dsize, ey
 
             def RAND(X):
-                z = self[X]
-                if z <= self.water_z:
-                    return random.randint(-2, 0)
+                return random.randint(-2, 2)
+
+            ### for coasts dont disappear
+
+            if self.water_z != 0:
+                print 'WATER: ', self.water_z
+            def normalize(add_z, X):
+                if self[X] <= self.water_z:
+                    if add_z > self.water_z:
+                        add_z = 0 - add_z
                 else:
-                    return random.randint(0, 2)
+                    if add_z <= self.water_z:
+                        add_z = 1 - add_z
+                return add_z
 
-            self[E] = (self[A] + self[B] + self[C] + self[D]) / 4 + RAND(E)
+            ### E
 
-            self[F] = (self[A] + self[C] + self[E] + self[E]) / 4 + RAND(F)
-            self[G] = (self[A] + self[B] + self[E] + self[E]) / 4 + RAND(G)
-            self[H] = (self[B] + self[D] + self[E] + self[E]) / 4 + RAND(H)
-            self[I] = (self[C] + self[D] + self[E] + self[E]) / 4 + RAND(I)
+            add_z = ((self[A] + self[B] + self[C] + self[D]) / 4) + RAND(E)
 
+            self[E] = normalize(add_z, E)
+
+            ### F
+
+            add_z = (self[A] + self[C] + self[E] + self[E]) / 4 + RAND(F)
+
+            self[F] = normalize(add_z, F)
+
+            ### G
+
+            add_z = (self[A] + self[B] + self[E] + self[E]) / 4 + RAND(G)
+
+            self[G] = normalize(add_z, G)
+
+            ### H
+
+            add_z = (self[B] + self[D] + self[E] + self[E]) / 4 + RAND(H)
+
+            self[H] = normalize(add_z, H)
+
+            ### I
+            add_z = (self[C] + self[D] + self[E] + self[E]) / 4 + RAND(I)
+
+            self[I] = normalize(add_z, I)
+
+            ### Start recurse for diamond alg
             diamond_it(A[0], A[1], dsize)
             diamond_it(G[0], G[1], dsize)
             diamond_it(F[0], F[1], dsize)
@@ -187,48 +219,31 @@ def map2d_to_3d(map2d, seed):
             map3d[coords] = map3d.water_z+mount
         else:
             map3d[coords] = map3d.water_z+1+mount
+
     for x in xrange(16):
         for y in xrange(16):
             map3d.land_seeds[x, y] = random.randint(0, sys.maxint)
     return map3d
 
 
-class Generate_Heights():
+def generate_heights(source_map, start_x, start_y):
     """
-    docstring for Generate_Heights
+    docstring for generate_heights
     """
-    def __init__(self, map3d, start_x, start_y):
-        """
-        docstring for __init__
-        """
-        seed = map3d.land_seeds[start_x, start_y]
-        self.map3d = Map3d(map3d.size, seed)
-        for x in xrange(start_x, start_x + 16):
-            sx = (x - start_x) * 16
-            for y in xrange(start_y, start_y + 16):
-                sy = (y - start_y) * 16
-                dx = sx + 16
-                dy = sy + 16
-                for my_x in xrange(sx, dx):
-                    for my_y in xrange(sy, dy):
-                        if map3d[(x, y)] <= map3d.water_z:
-                            self.map3d[(my_x, my_y)] = map3d[(x,y)] - 4
-                        else:
-                            self.map3d[(my_x, my_y)] = map3d[(x,y)] + 4
+    #import pdb; pdb.set_trace()
+    seed = source_map.land_seeds[start_x, start_y]
+    map3d = Map3d(source_map.size, seed)
+    for x in xrange(map3d.size):
+        for y in xrange(map3d.size):
+            sx = (x / 16) + (start_x * 16)
+            sy = (y / 16) + (start_y * 16)
+            if source_map[(sx, sy)] <= source_map.water_z:
+                map3d[(x, y)] = source_map[(sx, sy)] - 1
+            else:
+                map3d[(x, y)] = source_map[(sx, sy)] + 1
 
-    def start(self):
-        """
-        docstring for start
-        """
-        yield 0, 'GO!!!!'
-        land_size = self.map3d.get_land_size()
-        yield 0, 'size of planet: {0}, size of land: {1}, '\
-                 'size of water: {2}'.format(self.map3d.size ** 2,
-                                             land_size,
-                                             self.map3d.size ** 2 - land_size)
-
-        self.map3d.gen_random_heights()
-
+    map3d.gen_random_heights()
+    return map3d
 
 if __name__ == '__main__':
     maps = __import__('map2d')
@@ -241,12 +256,8 @@ if __name__ == '__main__':
     print gen2d.maps.get_ascii(3)
     print 'size line: ', gen2d.maps[iters].size
     main3d = map2d_to_3d(gen2d.maps[iters], seed)
-    for x in xrange(0, 2):
-        for y in xrange(0, 2):
-            gen_heights = Generate_Heights(main3d, x * 16, y * 16)
-            for i, desc in gen_heights.start():
-                print i, desc
-            gen_heights.map3d.create_height_map('/tmp/maps/{0}_{1}_3dmap.png'.format(x, y))
+    map3d = generate_heights(main3d, 5, 5)
+    map3d.create_image('/tmp/maps/{0}_{1}_3dmap.png'.format(0, 0))
 
 # vi: ft=python:tw=0:ts=4
 

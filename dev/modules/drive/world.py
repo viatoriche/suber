@@ -8,53 +8,57 @@ Drive module for World
 
 import sys, random
 import time
-from pandac.PandaModules import Filename, BitMask32
-from pandac.PandaModules import AmbientLight, PointLight, LODNode, NodePath
 
-from pandac.PandaModules import Vec4
-from pandac.PandaModules import Texture, PNMImage
-from modules.drive.landplane import Chank, LandNode
+from modules.drive.landplane import Chank
 from modules.drive.shapeGenerator import Cube as CubeModel
-from modules.world.map3d import Generate_Heights
 from modules.drive.textures import textures
-from modules.drive.support import ThreadPandaDo
+from modules.world.map3d import generate_heights
+from pandac.PandaModules import Texture, PNMImage
 
 
 class MapTree():
-    # map_tree
+    """Tree of Maps level
+    """
+    # map_tree ---
     map3d = None
     coords = (0, 0, 64)
     childs = {}
     def __init__(self, parent = None, name = None):
-        # map_tree
         self.parent = parent
         self.name = name
         if self.parent:
-            x, y, z = self.parent.coords
             start_x, start_y = name
-            # x - (start_x * 16) == cur_x / 16
-            # →
-            # x == (cur_x / 16) + (start_x * 16)
-            cur_x = (x - (start_x * 16)) * 16
-            cur_y = (y - (start_y * 16)) * 16
-            self.coords = (cur_x, cur_y, 64)
-            print 'Parent: ', self.parent.coords, ' self: ', self.coords
+            self.gen_down_coords()
+            print 'Name: ', name, '/', self.parent.name, 'Parent: ', self.parent.coords, ' self: ', self.coords
             t = time.time()
-            gh = Generate_Heights(self.parent.map3d, start_x, start_y)
-            for i in gh.start(): pass
-            self.map3d = gh.map3d
-            print 'generate map:', time.time() - t
+            self.map3d = generate_heights(self.parent.map3d, start_x, start_y)
+            #print 'generate map:', time.time() - t
+
+    def gen_down_coords(self):
+        """Generate self.coords, when def down is run
+        """
+        x, y, z = self.parent.coords
+        start_x, start_y = self.name
+        cur_x = (x - (start_x * 16)) * 16
+        cur_y = (y - (start_y * 16)) * 16
+        self.coords = (cur_x, cur_y, 64)
 
     def down(self):
+        """Create new MapTree and join
+        """
         x, y, z = self.coords
         x = x / 16
         y = y / 16
         name = x, y
         if name not in self.childs:
             self.childs[name] = MapTree(self, name)
+        else:
+            self.childs[name].gen_down_coords()
         return self.childs[name]
 
     def change_parent_coords(self):
+        """Change parent coordinates when child is moving
+        """
         if self.parent:
             cur_x, cur_y, cur_z = self.coords
             start_x, start_y = self.name
@@ -166,8 +170,7 @@ def show_terrain(game, cam_coords, level):
         game.world.map_tree.change_parent_coords()
         game.write(game.world.map_tree.get_coords_txt(level, cam_coords))
 
-        
-
+    # down / up
     else:
         for ch in game.world.chanks_map[last_level]:
             game.world.chanks_map[last_level][ch].destroy()
@@ -209,6 +212,8 @@ def show_terrain(game, cam_coords, level):
 
 
     def Paint():
+        """Create cubes on screen
+        """
 
         t= time.time()
 
@@ -248,6 +253,8 @@ def show_terrain(game, cam_coords, level):
                         cube_Y = y + (256 * (int(camY)/256))
                         cube_X = cube_X * cube_size
                         cube_Y = cube_Y * cube_size
+                        if cur_map.water_z != 0:
+                            print '2 WATER:', cur_map.water_z
                         if cur_map[(cX, cY)]<=cur_map.water_z:
                             cubes[(cube_X, cube_Y, cur_map[cX,cY] - game.world.cube_z)] = 'water'
                         else:
@@ -256,7 +263,10 @@ def show_terrain(game, cam_coords, level):
                 #print 'time gen cubes: ', time.time() - time_gen
 
                 #time_create = time.time()
-                ch = Chank('ch_{0}_{1}_{2}'.format(level, chank_X, chank_Y), types, game.process.lod_node, game.process.lod)
+                ch = Chank('ch_{0}_{1}_{2}'.format(level, 
+                                                   chank_X, chank_Y), 
+                                                   types, game.process.lod_node, 
+                                                   game.process.lod)
                 ch.new(cubes)
                 game.world.chanks_map[level][(chank_X, chank_Y)] = ch
 
@@ -264,7 +274,7 @@ def show_terrain(game, cam_coords, level):
                 dy += size_chank
             dx += size_chank
 
-        print 'show', time.time()-t
+        #print 'show', time.time()-t
         game.world.chank_changed = False
         game.world.paint_thread = False
 
