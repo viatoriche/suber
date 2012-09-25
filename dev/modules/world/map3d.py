@@ -189,13 +189,7 @@ class Map3d(dict):
             diamond_it(E[0], E[1], dsize)
 
         diamond_it(0, 0, self.size)
-
-        #for coords in self:
-            #col = 0
-            #xy_rounds = self.get_round_xy_land(coords, -1)
-            #for round_coords in xy_rounds:
-                #col += self[round_coords]
-            #self[coords] = int(round(col/float(len(xy_rounds))))
+        # TODO: create alias coasts
 
         for x in xrange(16):
             for y in xrange(16):

@@ -92,7 +92,7 @@ class Command_Handler():
         docstring for cmd_show_map
         """
         if self.minimap:
-            textures['world_map'] = generate_map_texture(self.game.world.map_tree, 1)
+            textures['world_map'] = generate_map_texture(self.game.world.map_tree, 2)
             self.game.process.screen_images.add_image('world_map', 
                                             textures['world_map'], 
                                             scale = 0.4, pos = (-0.92, 0, 0.58))
