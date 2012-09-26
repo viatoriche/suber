@@ -4,16 +4,17 @@ from pandac.PandaModules import Vec3, WindowProperties
 import math
 
 class CamFree(DirectObject.DirectObject):
-    def __init__(self, limit_Z = (8,64),
-                       min_level = 10, max_level = 16, showterrain = lambda x: x, game = None):
+    def __init__(self, limit_Z = (-256,256), join_Z = (64, 64),
+                       min_level = 1, max_level = 16, showterrain = lambda x: x, game = None):
         base.disableMouse()
 
         self.level = max_level
         self.min_level = min_level
         self.max_level = max_level
+        self.join_Z = join_Z
         self.game = game
-        camera.setPos(0, 0, limit_Z[1])
-        base.camLens.setFar(128)
+        camera.setPos(0, 0, 64)
+        base.camLens.setFar(256)
 
         self.keyMap = {"FORWARD":0, "BACK":0, "RIGHT":0,
                        "LEFT":0, "Mouse3":0, "LSHIFT":0,
@@ -37,6 +38,7 @@ class CamFree(DirectObject.DirectObject):
         self.accept("wheel_up", self.CamSpeed, [1.1])
         self.accept("wheel_down", self.CamSpeed, [0.9])
 
+        self.SpeedCam = 1
         self.SpeedRot = 0.05 # Скорость врашения камеры
         self.SpeedMult = 5 # Множитель скорости камеры при нажатии lshift
         self.limit_Z = limit_Z
@@ -72,7 +74,8 @@ class CamFree(DirectObject.DirectObject):
             y = md.getY()
             z = camera.getZ()
 
-            self.SpeedCam = z/64.0
+            self.SpeedCam = (abs(z)+64)/256.0
+
 
             Speed = self.SpeedCam
 
@@ -95,18 +98,19 @@ class CamFree(DirectObject.DirectObject):
             if (self.keyMap["DOWNWARDS"]!=0):
                 camera.setZ(camera.getZ()-Speed)
 
-            if camera.getZ() < self.limit_Z[0]:
-                if self.level > self.min_level:
-                    camera.setZ(self.limit_Z[1])
-                    self.level -= 1
-                else:
-                    camera.setZ(self.limit_Z[0])
-            elif camera.getZ() > self.limit_Z[1]:
-                if self.level < self.max_level:
-                    camera.setZ(self.limit_Z[0])
-                    self.level += 1
-                else:
-                    camera.setZ(self.limit_Z[1])
+#            if camera.getZ() < self.limit_Z[0]:
+                #if self.level > self.min_level:
+                    #camera.setZ(self.join_Z[1])
+                    #self.level -= 1
+                #else:
+                    #camera.setZ(self.join_Z[0])
+
+            #elif camera.getZ() > self.limit_Z[1]:
+                #if self.level < self.max_level:
+                    #camera.setZ(self.join_Z[0])
+                    #self.level += 1
+                #else:
+                    #camera.setZ(self.join_Z[1])
 
             if base.win.movePointer(0, base.win.getXSize()/2, base.win.getYSize()/2):
                 camera.setH(camera.getH() -  (x - base.win.getXSize()/2)*self.SpeedRot)

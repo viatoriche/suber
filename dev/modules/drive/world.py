@@ -9,12 +9,43 @@ Drive module for World
 import sys, random
 import time
 
-from modules.drive.landplane import Chank
+from modules.drive.landplane import Chank, LandNode
 from modules.drive.shapeGenerator import Cube as CubeModel
 from modules.drive.textures import textures
 from modules.world.map3d import generate_heights
-from pandac.PandaModules import Texture, PNMImage
+from pandac.PandaModules import TransparencyAttrib, Texture, TextureStage, PNMImage
 
+class WaterNode():
+    """Water plane for nya
+
+    """
+    def __init__(self, water_z):
+        self.water_z = water_z
+
+    def create(self, x, y):
+        self.water = LandNode(self.water_z)
+        #textures['water'].setWrapU(Texture.WMRepeat)
+        #textures['water'].setWrapV(Texture.WMRepeat)
+        ts = TextureStage('ts')
+        #ts.setMode(TextureStage.MDecal)
+        self.water.landNP.setTransparency(TransparencyAttrib.MAlpha)
+        self.water.landNP.setTexture(ts, textures['water'])
+        self.water.landNP.setTexScale(ts, 256, 256)
+
+    def show(self):
+        self.water.landNP.show()
+
+    def hide(self):
+        self.water.landNP.hide()
+
+    def reset(self, x, y):
+        #self.Destroy()
+        #self.create(x, y)
+        self.water.landNP.show()
+        try:
+            self.water.landNP.setPos(x, y, self.water_z)
+        except:
+            pass
 
 class MapTree():
     """Tree of Maps level
@@ -66,9 +97,6 @@ class MapTree():
         """
         if (mapX, mapY) == (0, 0):
             return self.map3d
-
-        if (mapX, mapY) != (0, 0) and Join:
-            print 'JOOOOIN = ', mapX, mapY
 
         if self.parent:
             name_X, name_Y = self.name
@@ -139,6 +167,7 @@ class World():
         self.chank_changed = True
         self.level = 16
         self.new = True
+        self.water_node = WaterNode(0.5)
         textures['dirt'] = loader.loadTexture("res/textures/dirt.png")
         textures['dirt'].setMagfilter(Texture.FTLinearMipmapLinear)
         textures['dirt'].setMinfilter(Texture.FTLinearMipmapLinear)
@@ -151,6 +180,7 @@ class World():
         textures['sand'].setMagfilter(Texture.FTLinearMipmapLinear)
         textures['sand'].setMinfilter(Texture.FTLinearMipmapLinear)
 
+        self.water_node.create(0, 0)
         self.cube_size = 1
         self.cube_z = 16
         self.types['land'] = CubeModel(self.cube_size, self.cube_size, self.cube_z)
@@ -204,6 +234,8 @@ def show_terrain(game, cam_coords, level):
             if lastY == 255:
                 mapY = -1
             game.world.map_tree.get_map(mapX, mapY, True)
+
+            #game.world.water_node.reset(int(camX/16)*16, int(camY/16)*16)
 
             game.world.map_tree.coords = (X, Y, Z)
             game.world.map_tree.change_parent_coords()
@@ -267,6 +299,9 @@ def show_terrain(game, cam_coords, level):
             for ycount in xrange(chanks * 2):
                 chank_X = dx + (256 * (int(camX)/256))
                 chank_Y = dy + (256 * (int(camY)/256))
+                water_X = chank_X - 80
+                water_Y = chank_Y - 80
+                game.world.water_node.reset(water_X, water_Y)
                 #print chank_X, chank_Y
                 if game.world.chanks_map[level].has_key((chank_X, chank_Y)):
                     time_show = time.time()

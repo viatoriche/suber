@@ -72,21 +72,19 @@ class Chank(RigidBodyCombiner):
         self.active = False
 
 class LandNode():
-    def __init__(self, x1, y1, x2, y2, z):
+    def __init__(self, z):
         maker = CardMaker( 'land' )
-        maker.setFrame( x1, x2, y1, y2 )
 
-        self.landNP = render.attachNewNode(maker.generate())
+        #self.landNP = render.attachNewNode(maker.generate())
+        self.landNP = NodePath(maker.generate())
+        self.landNP.reparentTo(render)
         self.landNP.setHpr(0,-90,0)
         self.landNP.setPos(0,0,z)
+        self.landNP.setScale(48*2, 0, 48*2)
+        self.landNP.hide()
         self.landNP.setTransparency(TransparencyAttrib.MAlpha )
 
     def Destroy(self):
-        base.graphicsEngine.removeWindow(self.buffer)
-        self.cam.setInitialState(RenderState.makeEmpty())
-        self.watercamNP.removeNode()
-        self.landNP.clearShader()
-        #self.bottomNP.removeNode()
         self.landNP.removeNode()
 
 

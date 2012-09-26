@@ -6,19 +6,17 @@ License: GPL (see http://www.gnu.org/licenses/gpl.txt)
 
 Grap modul, for render and show all >_<
 """
-import hashlib, random
-import math
+from direct.gui.DirectGui import DirectButton, DirectEntry
 from direct.gui.OnscreenImage import OnscreenImage
-from direct.showbase.ShowBase import ShowBase
-from direct.gui.DirectGui import DirectButton, DirectEntry, DirectLabel
 from direct.gui.OnscreenText import OnscreenText
-from panda3d.core import TextNode, GeomPrimitive, LODNode, NodePath
-from modules.drive.support import generate_hash
+from direct.showbase.ShowBase import ShowBase
 from modules.drive.camera import CamFree
+from modules.drive.support import generate_hash
 from modules.drive.textures import textures
 from modules.drive.world import show_terrain
-from pandac.PandaModules import loadPrcFileData
+from panda3d.core import TextNode, LODNode, NodePath
 from pandac.PandaModules import TransparencyAttrib
+from pandac.PandaModules import loadPrcFileData
 
 loadPrcFileData("editor-startup", "show-frame-rate-meter #t")
 
@@ -100,6 +98,7 @@ class GUI():
     """
     GUI --- panda3d
     """
+
     def __init__(self, game):
         """
         Initialization of GUI Class
@@ -120,13 +119,24 @@ class GUI():
         self.lod = LODNode('suber')
         self.lod_node = NodePath(self.lod)
         self.lod_node.reparentTo(render)
+        #render.setShaderInput('time', 0)
         self.buttons.add_button(name = 'Exit', text = ("Exit", "Exit", "Exit", "disabled"),
                                     pos = (1.23, 0, -0.95),
                                     scale = 0.07, command=self.game.stop)
+
+        self.buttons.add_button(name = 'Down', text = ("Down", "Down", "Down", "disabled"),
+                                    pos = (1.23, 0, 0.7),
+                                    scale = 0.07, command = self.down)
+        self.buttons.add_button(name = 'Up', text = ("Up", "Up", "Up", "disabled"),
+                                    pos = (1.23, 0, 0.8),
+                                    scale = 0.07, command = self.up)
+
         self.screen_texts.add_text(name = 'status',
                                         text = 'Hello! Suber was started!',
                                         pos = (-1.3, -0.95), scale = 0.07)
-        self.entries.add_entry(name = 'console',text = "" , pos = (-1.29, 0, -0.85), scale=0.07,command=self.game.cmd_handle,
+        self.entries.add_entry(name = 'console',text = "" , 
+                               pos = (-1.29, 0, -0.85), 
+                               scale=0.07,command=self.game.cmd_handle,
             initialText="", width = 37, numLines = 1,focus=0)
 
         textures['sight'] = loader.loadTexture('res/textures/sight.png')
@@ -135,9 +145,28 @@ class GUI():
                                             scale = 0.05, pos = (0, 0, 0))
         self.screen_images['sight'].setTransparency(TransparencyAttrib.MAlpha)
 
+
     def default_cam(self, level):
         self.camFree.level = level
 
+
+    def down(self):
+        min_level = self.camFree.min_level
+        level = self.camFree.level
+        if level<=min_level:
+            return
+        level -= 1
+        self.camFree.level = level
+        self.show_terrain(level)
+
+    def up(self):
+        max_level = self.camFree.max_level
+        level = self.camFree.level
+        if level>=max_level:
+            return
+        level += 1
+        self.camFree.level = level
+        self.show_terrain(level)
 
     def show_terrain(self, level):
         show_terrain(self.game, base.camera.getPos(), level)

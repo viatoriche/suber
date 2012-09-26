@@ -5,7 +5,7 @@
 """Commands handlers modul"""
 import random, pickle, sys
 from modules.world.map2d import Map_generator_2D
-from modules.world.map3d import generate_heights, map2d_to_3d
+from modules.world.map3d import map2d_to_3d
 from modules.drive.support import ThreadDo
 from modules.drive.world import generate_map_texture, show_terrain, MapTree, World
 from modules.drive.textures import textures
