@@ -39,6 +39,7 @@ class Chank(RigidBodyCombiner):
 
     def new(self, cubes):
         #tim = time.time()
+        self.cubes = cubes
         for cube in cubes:
             f = self.types[cubes[cube]].copyTo(self.node)
             f.setPos(cube)

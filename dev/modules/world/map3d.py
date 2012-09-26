@@ -195,7 +195,7 @@ class Map3d(dict):
             return patterns
 
         t = time.time()
-        smooth_patterns = create_smooth_patterns(64)
+        smooth_patterns = create_smooth_patterns(16)
         print 'create patterns: ', time.time() - t
 
         def smooth_it(rounds, center):
@@ -205,24 +205,45 @@ class Map3d(dict):
                 self[cx+x, cy+y] = self[center]
 
         # get and smooth coasts from water
-        t = time.time()
-        coasts = self.get_all_coasts()
-        print 'get coasts: ', time.time() - t
-        t = time.time()
-        for coord in coasts:
-            rounds = self.get_round_xy_land(coord, -8, False)
-            smooth_it(rounds, coord)
+        def smooth_all_coasts():
+            coasts = self.get_all_coasts()
+            print 'get coasts: ', time.time() - t
+            t = time.time()
+            for coord in coasts:
+                rounds = self.get_round_xy_land(coord, -8, False)
+                smooth_it(rounds, coord)
 
+        t = time.time()
+        #smooth_all_coasts()
         print 'smooth: ', time.time() - t
 
-        def diamond_it(sx, sy, size):
-            #print sx, sy, sx+size-1, sy+size-1, size
+        def add_mounts():
+            for coord in self:
+                dice = random.randint(0,20)
+                if dice == 256:
+                    if self[coord] > self.water_z:
+                        self[coord] = self.coord + random.randint(3,16)
+                    else:
+                        self[coord] = self.coord - random.randint(3,16)
+
+        t = time.time()
+        #add_mounts()
+        print 'add mounts: ', time.time() - t
+
+        def square_diamond_it(sx, sy, size):
+            """Algorithm Square-diamond generate terrain heights
+
+            -> http://www.lighthouse3d.com/opengl/terrain/index.php?mpd2
+            """
             dsize = size/2
             if dsize <= 0:
                 return
             ex = sx+size-1
             ey = sy+size-1
             # lets get math style
+
+
+            # SQUARE STEP
 
             A = sx, sy
             B = ex, sy
@@ -235,22 +256,40 @@ class Map3d(dict):
             I = sx + dsize, ey
 
             def RAND(X):
-                return random.randint(-1, 2)
+                return random.randint(-1, 1)
 
             ### for coasts dont disappear
 
             def normalize(add_z, X):
+                dice_mode = 20
+                dice = random.randint(0, dice_mode)
+                if dice == dice_mode:
+                    return add_z
                 if self[X] <= self.water_z:
                     if add_z > self.water_z:
-                        add_z = random.randint(-1,0)
+                        add_z = 0
                 else:
                     if add_z <= self.water_z:
-                        add_z = random.randint(1,2)
+                        add_z = 1
                 return add_z
+
+            # Generate heights
+            # E = (A+B+C+D) / 4 + RAND(d)
+            # F = (A + C + E + E) / 4 + RAND(d)
+            # G = (A + B + E + E) / 4 + RAND(d)
+            # H = (B + D + E + E) / 4 + RAND(d)
+            # I = (C + D + E + E) / 4 + RANS(d)
 
             ### E
 
-            add_z = ((self[A] + self[B] + self[C] + self[D]) / 4) + RAND(E)
+            try:
+
+                add_z = ((self[A] + self[B] + self[C] + self[D]) / 4) + RAND(E)
+
+            except KeyError, e:
+                print A, B, C, D, size, dsize, len(self)
+                raise e
+
 
             self[E] = normalize(add_z, E)
 
@@ -277,26 +316,106 @@ class Map3d(dict):
 
             self[I] = normalize(add_z, I)
 
+
+            # DIAMOND STEP
+
+            # get coordinates
+            # 0 - x, 1 - y
+
+            x, y = 0, 1
+
+            dx = (G[x] - A[x]) / 2
+            dy = (F[y] - A[y]) / 2
+
+            J = A[x] + dx, A[y] + dy
+            K = G[x] + dx, G[y] + dy
+            L = F[x] + dx, F[y] + dy
+            M = E[x] + dx, E[y] + dy
+
+            N = A[x], A[y] + dy
+            O = A[x] + dx, A[y]
+            P = G[x], G[y] + dy
+            Q = A[x] + dx, F[y]
+
+            # Generate Heights
+            # J = (A + G + F + E)/4 + RAND(d)
+            # K = (G + B + E + H)/4 + RAND(d)
+            # L = (F + E + C + I)/4 + RAND(d)
+            # M = (E + H + I + D)/4 + RAND(d)
+
+            # J
+            add_z = ((self[A] + self[G] + self[F] + self[E]) / 4) + RAND(J)
+            self[J] = normalize(add_z, J)
+
+            # K
+            add_z = ((self[G] + self[B] + self[E] + self[H]) / 4) + RAND(K)
+            self[K] = normalize(add_z, K)
+
+            # L
+            add_z = ((self[F] + self[E] + self[C] + self[I]) / 4) + RAND(L)
+            self[L] = normalize(add_z, L)
+
+            # M
+            add_z = ((self[E] + self[H] + self[I] + self[D]) / 4) + RAND(M)
+            self[M] = normalize(add_z, M)
+
+            # N = (K + A + J + F)/4 + RAND(d)
+            # O = (L + A + G + J)/4 + RAND(d)
+            # P = (J + G + K + E)/4 + RAND(d)
+            # Q = (F + J + E + L)/4 + RAND(d)
+
+            # N
+            add_z = ((self[K] + self[A] + self[J] + self[F]) / 4) + RAND(N)
+            self[N] = normalize(add_z, N)
+
+            # O
+            add_z = ((self[L] + self[A] + self[G] + self[J]) / 4) + RAND(O)
+            self[O] = normalize(add_z, O)
+
+            # P
+            add_z = ((self[J] + self[G] + self[K] + self[E]) / 4) + RAND(P)
+            self[P] = normalize(add_z, P)
+
+            # Q
+            add_z = ((self[F] + self[J] + self[E] + self[L]) / 4) + RAND(Q)
+            self[Q] = normalize(add_z, Q)
+
+            # N = (A + J + F)/3 + RAND(d)
+            # O = (A + G + J)/3 + RAND(d)
+
+            # N
+            add_z = ((self[A] + self[J] + self[F]) / 3) + RAND(N)
+            self[N] = normalize(add_z, N)
+
+            # O
+            add_z = ((self[A] + self[G] + self[J]) / 3) + RAND(N)
+            self[O] = normalize(add_z, O)
+
+
             ### Start recurse for diamond alg
-            diamond_it(A[0], A[1], dsize)
-            diamond_it(G[0], G[1], dsize)
-            diamond_it(F[0], F[1], dsize)
-            diamond_it(E[0], E[1], dsize)
+            square_diamond_it(A[0], A[1], dsize)
+            square_diamond_it(G[0], G[1], dsize)
+            square_diamond_it(F[0], F[1], dsize)
+            square_diamond_it(E[0], E[1], dsize)
 
         t = time.time()
-        diamond_it(0, 0, self.size)
+        square_diamond_it(0, 0, self.size)
         print 'diamond: ', time.time() - t
-        #diamond_it(0, 0, self.size)
-        #diamond_it(0, 0, self.size)
-        #diamond_it(0, 0, self.size)
 
         # alias
-        #for tar_coord in self:
-            #average = 0
-            #rounds = self.get_round_xy_land(tar_coord, -1, False)
-            #for coord in rounds:
-                #average += self[coord]
-            #self[coord] = int(round(average / float(len(rounds))))
+        def alias_it():
+            for tar_coord in self:
+                average = 0
+                rounds = self.get_round_xy_land(tar_coord, -2, False)
+                for coord in rounds:
+                    average += self[coord]
+                self[coord] = int(round(average / float(len(rounds))))
+
+
+        t = time.time()
+        alias_it()
+        #alias_it()
+        print 'alias: ', time.time() -t
 
         for x in xrange(16):
             for y in xrange(16):
@@ -327,7 +446,6 @@ def generate_heights(source_map, start_x, start_y):
     #import pdb; pdb.set_trace()
     seed = source_map.land_seeds[start_x, start_y]
     map3d = Map3d(source_map.size, seed)
-    print 'generate heights started in: ', start_x, start_y
     for x in xrange(map3d.size):
         for y in xrange(map3d.size):
             sx = (x / 16) + (start_x * 16)
@@ -337,11 +455,8 @@ def generate_heights(source_map, start_x, start_y):
             if height == source_map.water_z or height == source_map.water_z + 1:
                 map3d[(x, y)] = height
             else:
-                if height < source_map.water_z:
-                    map3d[(x, y)] = height - 1
-                else:
-                    map3d[(x, y)] = height + 1
-            #map3d[(x, y)] = source_map[(sx, sy)]
+                map3d[(x, y)] = height * 4
+            #map3d[(x, y)] = height
 
     map3d.gen_random_heights()
     return map3d

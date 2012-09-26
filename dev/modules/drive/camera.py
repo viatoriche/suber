@@ -5,7 +5,7 @@ import math
 
 class CamFree(DirectObject.DirectObject):
     def __init__(self, limit_Z = (-256,256), join_Z = (64, 64),
-                       min_level = 1, max_level = 16, showterrain = lambda x: x, game = None):
+                       min_level = 12, max_level = 16, showterrain = lambda x: x, game = None):
         base.disableMouse()
 
         self.level = max_level
@@ -74,7 +74,7 @@ class CamFree(DirectObject.DirectObject):
             y = md.getY()
             z = camera.getZ()
 
-            self.SpeedCam = (abs(z)+64)/256.0
+            #self.SpeedCam = (abs(z)+64)/256.0
 
 
             Speed = self.SpeedCam

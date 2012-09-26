@@ -120,7 +120,6 @@ class Command_Handler():
         """
         self.game.world = pickle.load(open('world.sav', 'r'))
         random.seed(self.game.world.seed)
-        textures['world_map'] = generate_map_texture(self.game.world.map_2d)
         self.cmd_show_map()
 
     def cmd_handle(self, raw_cmd):

@@ -56,5 +56,18 @@ class ThreadDo(threading.Thread):
         self.result = self.doit(*self.args, **self.params)
         self.done = True
 
+def get_size_world():
+    pixel = 16
+    out = ''
+    for i in xrange(16,11,-1):
+        pixel = pixel * 16
+        out += 'Level: {0}, Pixels: {1} {2}\n'.format(i, pixel, 16 ** (18-i))
+    out += '16 ** 6: {0}'.format(16 ** 6)
+
+    # formula = 16 ** (level - 1)
+    return out
+
+if __name__ == "__main__":
+    print get_size_world()
 # vi: ft=python:tw=0:ts=4
 
