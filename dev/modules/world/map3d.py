@@ -17,16 +17,38 @@ class Map3d(dict):
     docstring for Map3d
     """
     config = Config()
-    def __init__(self, size, seed, *args, **params):
+    map_x = 0
+    map_y = 0
+    def __init__(self, map_tree, parent_map, size, seed, mount_level, *args, **params):
         """
         docstring for __init__
+
+        mount_level = 0 land
+        1 - low level
+        2 - mid level
+        3 - high level
         """
         dict.__init__(self, *args, **params)
         self.size = size
         self.water_z = 0
         self.seed = seed
+        self.map_tree = map_tree
+        self.parent_map = parent_map
+        dice = random.randint(0, self.config.factor_change_mount_level)
+        if dice == self.config.factor_change_mount_level:
+            self.mount_level = random.randint(0, 3)
+        else:
+            self.mount_level = mount_level
         # mode x mode [n, m] = seed
         self.land_seeds = {}
+        self.mount_levels = {}
+        for x in xrange(0, self.config.factor):
+            for y in xrange(0, self.config.factor):
+                dice = random.randint(0, self.config.factor_change_mount_level)
+                if dice == self.config.factor_change_mount_level:
+                    self.mount_levels[(x, y)] = random.randint(0, 3)
+                else:
+                    self.mount_levels[(x, y)] = self.mount_level
 
     def get_land_size(self):
         size = 0
@@ -100,25 +122,17 @@ class Map3d(dict):
             if round_x < 0:
                 if toroid:
                     round_x = size+iter_x
-                else:
-                    round_x = 0
             if round_x > size - 1:
                 if toroid:
                     round_x = size - 1 -iter_x
-                else:
-                    round_x = size - 1
             for iter_y in xrange(start, end):
                 round_y = iter_y + targ_y
                 if round_y < 0:
                     if toroid:
                         round_y = size+iter_y
-                    else:
-                        round_y = 0
                 if round_y > size - 1:
                     if toroid:
                         round_y = size - 1 - iter_y
-                    else:
-                        round_y = size - 1
 
                 if (round_x, round_y) not in coords:
                     coords.append((round_x, round_y))
@@ -163,6 +177,13 @@ class Map3d(dict):
             search_target = 1
 
         for coord in target:
+            x, y = coord
+
+            #if x>self.config.factor_tor: continue
+            #if y>self.config.factor_tor: continue
+            #if x<0: continue
+            #if y<0: continue
+
             # get coordinates around this point
             round_coords = self.get_round_xy_land(coord, -1, False)
             for r_coord in round_coords:
@@ -170,6 +191,92 @@ class Map3d(dict):
                     coasts.append(coord)
                     break
         return coasts
+
+    def __getitem__(self, item):
+        """ If not, return from other map or 1
+
+        for diamond_square
+
+        REMEMBER FOR DEBUG
+
+        """
+        try:
+            return dict.__getitem__(self, item)
+        except KeyError:
+
+            height = None
+
+            # heights from near maps
+
+            if self.map_tree:
+                x, y = item
+                dx, dy = 0, 0
+                if x < 0:
+                    dx = -1
+                elif x > self.config.factor_double_tor:
+                    dx = 1
+                if y < 0:
+                    dy = -1
+                elif y > self.config.factor_double_tor:
+                    dy = 1
+
+                # -8 => 63
+
+                # if dx == -1:  <----
+
+                if x < 0:
+                    x = self.config.factor_double + x
+                elif x > self.config.factor_double_tor:
+                    x = x - self.config.factor_double
+
+                if y < 0:
+                    y = self.config.factor_double + y
+                elif y > self.config.factor_double_tor:
+                    y = y - self.config.factor_double
+
+                height = self.map_tree.get_cache_map(self.map_x + dx, self.map_y + dy, x, y)
+                #if height == None:
+                    #print 'item',item,'dx:dy ',dx,dy,' X, Y: ', x,y
+
+            # get height from self
+            if height == None:
+                x, y = item
+                if x < 0:
+                    x = x + self.config.factor
+                elif x > self.config.factor_double_tor:
+                    x = x - self.config.factor
+                if y < 0:
+                    y = y + self.config.factor
+                elif y > self.config.factor_double_tor:
+                    y = y - self.config.factor
+                height = self[(x, y)]
+
+            self[item] = height
+            return height
+
+#            x = (x / self.config.factor) + ((self.map_x + dx) * self.config.factor)
+            #y = (y / self.config.factor) + ((self.map_y + dy) * self.config.factor)
+            #if self.parent_map != None:
+                #print 'PARENT'
+                #height = self.parent_map[x, y]
+                #if height == self.water_z+1 or height == self.water_z:
+                    #pass
+                #else:
+                    #height = height * self.config.height_factor
+#                #print 'Lol ', height
+            #else:
+#            x, y = item
+            #if x < 0:
+                #x = x + self.config.factor
+            #if x > self.config.factor_double_tor:
+                #x = x - self.config.factor_double
+            #if y < 0:
+                #y = y + self.config.factor
+            #if y > self.config.factor_double_tor:
+                #y = y - self.config.factor_double
+           #return self[(x, y)]
+            #print 'FUCK'
+            #return height
 
     def gen_random_heights(self):
         """
@@ -179,7 +286,11 @@ class Map3d(dict):
         """
         import time
         random.seed(self.seed)
-        # coast smooth
+
+        # if map part was modified: change heights
+
+
+
 
         def create_smooth_patterns(count):
             patterns = []
@@ -210,25 +321,12 @@ class Map3d(dict):
         def smooth_all_coasts():
             coasts = self.get_all_coasts()
             for coord in coasts:
-                rounds = self.get_round_xy_land(coord, -8, False)
+                rounds = self.get_round_xy_land(coord, -self.config.factor_tor, False)
                 smooth_it(rounds, coord)
 
-        t = time.time()
-        smooth_all_coasts()
-        print 'smooth: ', time.time() - t
-
-        def add_mounts():
-            for coord in self:
-                dice = random.randint(0,20)
-                if dice == self.factor.factor_double:
-                    if self[coord] > self.water_z:
-                        self[coord] = self.coord + random.randint(3,16)
-                    else:
-                        self[coord] = self.coord - random.randint(3,16)
-
-        t = time.time()
-        #add_mounts()
-        print 'add mounts: ', time.time() - t
+        #t = time.time()
+        #smooth_all_coasts()
+        #print 'smooth: ', time.time() - t
 
         def square_diamond_it(sx, sy, size):
             """Algorithm Square-diamond generate terrain heights
@@ -256,15 +354,11 @@ class Map3d(dict):
             I = sx + dsize, ey
 
             def RAND(X):
-                return random.randint(-1, 1)
+                return random.randint(-self.mount_level, self.mount_level)
 
             ### for coasts dont disappear
 
             def normalize(add_z, X):
-                dice_mode = 20
-                dice = random.randint(0, dice_mode)
-                if dice == dice_mode:
-                    return add_z
                 if self[X] <= self.water_z:
                     if add_z > self.water_z:
                         add_z = 0
@@ -399,23 +493,57 @@ class Map3d(dict):
             square_diamond_it(E[0], E[1], dsize)
 
         t = time.time()
-        square_diamond_it(0, 0, self.size)
+        square_diamond_it(-self.config.factor, -self.config.factor, self.size + (self.config.factor*2))
         print 'diamond: ', time.time() - t
 
-        # alias
-        def alias_it():
-            for tar_coord in self:
+        # align
+        #water = self.water_z
+        def align_it():
+            map3d = self.copy()
+            for x, y in map3d:
                 average = 0
-                rounds = self.get_round_xy_land(tar_coord, -1, False)
+#                if x < 1: continue
+                #if y < 1: continue
+                #if x > self.config.factor_double_tor-1: continue
+#                if y > self.config.factor_double_tor-1: continue
+                rounds = self.get_round_xy_land((x, y), -1, False)
+                for coord in rounds:
+                    average += self[coord]
+
+                height = int(round(average / float(len(rounds))))
+                #if self[coord] <= water:
+                    #if height > water:
+                        #height = water
+                #else:
+                    #if height <= water:
+                        #height = water + 1
+
+                self[coord] = height
+
+        def border_align():
+            dmap = {}
+            for x in xrange(1, self.config.factor - 1, 1):
+                for y in xrange(1, self.config.factor - 1, 1):
+                    dmap[(x, y)] = self.get_round_xy_land((x, y), -1, False)
+
+            for x in xrange(self.config.factor_double_tor - self.config.factor, self.config.factor_double-1, 1):
+                for y in xrange(self.config.factor_double_tor - self.config.factor, self.config.factor_double-1, 1):
+                    dmap[(x, y)] = self.get_round_xy_land((x, y), -1, False)
+
+            keys = dmap.keys()
+            random.shuffle(keys)
+            for coord in keys:
+                average = 0
+                rounds = self.get_round_xy_land((x, y), -1, False)
                 for coord in rounds:
                     average += self[coord]
                 self[coord] = int(round(average / float(len(rounds))))
 
-
         t = time.time()
-        alias_it()
-        alias_it()
-        print 'alias: ', time.time() -t
+        smooth_all_coasts()
+        align_it()
+        #border_align()
+        print 'align: ', time.time() -t
 
         for x in xrange(self.config.factor):
             for y in xrange(self.config.factor):
@@ -426,7 +554,7 @@ def map2d_to_3d(map2d, seed):
 
     """
     config = Config()
-    map3d = Map3d(map2d.size, seed)
+    map3d = Map3d(None, None, map2d.size, seed, config.default_height_level)
     for coords in map2d:
         # if water
         if map2d[coords] == 0:
@@ -437,17 +565,20 @@ def map2d_to_3d(map2d, seed):
     for x in xrange(config.factor):
         for y in xrange(config.factor):
             map3d.land_seeds[x, y] = random.randint(0, sys.maxint)
+
     return map3d
 
 
-def generate_heights(source_map, start_x, start_y):
+def generate_heights(map_tree, source_map, start_x, start_y):
     """
     docstring for generate_heights
     """
     config = Config()
     #import pdb; pdb.set_trace()
     seed = source_map.land_seeds[start_x, start_y]
-    map3d = Map3d(source_map.size, seed)
+    map3d = Map3d(map_tree, source_map, source_map.size, seed, source_map.mount_levels[(start_x, start_y)])
+    map3d.map_x = start_x
+    map3d.map_y = start_y
     for x in xrange(map3d.size):
         for y in xrange(map3d.size):
             sx = (x / config.factor) + (start_x * config.factor)

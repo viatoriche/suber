@@ -61,7 +61,7 @@ class MapTree():
     maps = {}
     config = Config()
 
-    def __init__(self, game, parent = None, name = None):
+    def __init__(self, game, parent = None, name = (0, 0)):
         self.parent = parent
         self.game = game
         self.name = name
@@ -70,7 +70,7 @@ class MapTree():
             self.gen_down_coords()
             print 'INIT: Name: ', name, ' / Parent name: ', self.parent.name, ' / level: ', self.game.world.level
             t = time.time()
-            self.map3d = generate_heights(self.parent.map3d, start_x, start_y)
+            self.map3d = generate_heights(self, self.parent.map3d, start_x, start_y)
             print 'generate map:', time.time() - t
 
     def gen_down_coords(self):
@@ -100,6 +100,37 @@ class MapTree():
             self.parent.coords = (x, y, 64)
             #print 'Parent: ', self.parent.coords, ' self: ', self.coords
 
+    def get_cache_map(self, mX, mY, X, Y):
+        parentX, parentY = 0, 0
+        nameX, nameY = mX, mY
+        if nameX > self.config.factor_tor:
+            nameX = nameX - self.config.factor
+            parentX = 1
+        elif nameX < 0:
+            nameX = nameX + self.config.factor
+            parentX = -1
+        if nameY > self.config.factor_tor:
+            nameY = nameY - self.config.factor
+            parentY = 1
+        elif nameY < 0:
+            nameY = nameY + self.config.factor
+            parentY = -1
+
+        if not self.parent.parent:
+            parentX, parentY = 0, 0
+
+        #print 'Try get ', (mapX, mapY), (parentX, parentY), ' / ',nameX, nameY
+        if self.maps != None and self.parent != None:
+            if self.maps.has_key( (self.parent.name[0] + parentX,
+                                   self.parent.name[1] + parentY,
+                                   nameX, nameY) ):
+
+                return self.maps[ (self.parent.name[0] + parentX,
+                                   self.parent.name[1] + parentY,
+                                   nameX, nameY) ].get((X, Y))
+            else:
+                return None
+
     # Oh, I love recurses :3
     def get_map(self, mapX, mapY, Join = False):
         """Get map for new name, and join to, if Join == True
@@ -118,42 +149,59 @@ class MapTree():
             if nameX > self.config.factor_tor:
                 nameX = nameX - self.config.factor
                 parentX = 1
-            if nameX < 0:
+            elif nameX < 0:
                 nameX = nameX + self.config.factor
                 parentX = -1
             if nameY > self.config.factor_tor:
                 nameY = nameY - self.config.factor
                 parentY = 1
-            if nameY < 0:
+            elif nameY < 0:
                 nameY = nameY + self.config.factor
                 parentY = -1
 
             if Join:
                 print self.name,'/',self.parent.name,' try Go X+', mapX, ' Y+', mapY,' -> ', nameX, nameY
 
-            def gen_map():
+            def gen_map(source_map):
                 print self.name,'/',self.parent.name,' -> Start generate of map X.Y:', nameX, nameY
                 t = time.time()
-                map3d = generate_heights(source_map, nameX, nameY)
+                map3d = generate_heights(self, source_map, nameX, nameY)
                 print 'generate map:', time.time() - t
                 return map3d
 
+            if not self.parent.parent:
+                parentX, parentY = 0, 0
 
-            if self.maps.has_key( (parentX, parentY, nameX, nameY) ):
+            if self.maps.has_key( (self.parent.name[0]+parentX,
+                                   self.parent.name[1]+parentY, 
+                                   nameX, nameY) ) and not Join:
 
-                map3d = self.maps[ (parentX, parentY, nameX, nameY) ]
+                map3d = self.maps[ (self.parent.name[0]+parentX, 
+                                    self.parent.name[1]+parentY, 
+                                    nameX, nameY) ]
 
             else:
 
                 source_map = self.parent.map3d
+                parent_nameX = self.parent.name[0] + parentX
+                parent_nameY = self.parent.name[1] + parentY
                 if (parentX, parentY) != (0, 0):
-                    print 'NEW PARENT on ', self.game.world.level
+                    print 'NEW PARENT on ', self.game.world.level, ' JOIN: ', Join
                     new_source_map = self.parent.get_map(parentX, parentY, Join = Join)
                 else:
                     new_source_map = source_map
 
-                map3d = gen_map()
-                self.maps[(parentX, parentY, nameX, nameY)] = map3d
+                if self.maps.has_key( (parent_nameX,
+                                       parent_nameY,
+                                       nameX, nameY) ):
+
+                    map3d = self.maps[ (parent_nameX,
+                                        parent_nameY,
+                                        nameX, nameY) ]
+
+                else:
+                    map3d = gen_map(new_source_map)
+                    self.maps[(parent_nameX, parent_nameY, nameX, nameY)] = map3d
 
             if Join:
                 print self.name,' --> joined to: -->', nameX, nameY
@@ -200,9 +248,27 @@ class World():
         self.level = self.config.root_level
         self.new = True
         self.water_node = WaterNode(0.5)
-        textures['dirt'] = loader.loadTexture("res/textures/dirt.png")
-        textures['dirt'].setMagfilter(Texture.FTLinearMipmapLinear)
-        textures['dirt'].setMinfilter(Texture.FTLinearMipmapLinear)
+
+        land_mount_level = self.config.land_mount_level
+        low_mount_level = self.config.low_mount_level
+        mid_mount_level = self.config.mid_mount_level
+        high_mount_level = self.config.high_mount_level
+
+        textures[land_mount_level] = loader.loadTexture("res/textures/land.png")
+        textures[land_mount_level].setMagfilter(Texture.FTLinearMipmapLinear)
+        textures[land_mount_level].setMinfilter(Texture.FTLinearMipmapLinear)
+
+        textures[low_mount_level] = loader.loadTexture("res/textures/low_mount.png")
+        textures[low_mount_level].setMagfilter(Texture.FTLinearMipmapLinear)
+        textures[low_mount_level].setMinfilter(Texture.FTLinearMipmapLinear)
+
+        textures[mid_mount_level] = loader.loadTexture("res/textures/mid_mount.png")
+        textures[mid_mount_level].setMagfilter(Texture.FTLinearMipmapLinear)
+        textures[mid_mount_level].setMinfilter(Texture.FTLinearMipmapLinear)
+
+        textures[high_mount_level] = loader.loadTexture("res/textures/high_mount.png")
+        textures[high_mount_level].setMagfilter(Texture.FTLinearMipmapLinear)
+        textures[high_mount_level].setMinfilter(Texture.FTLinearMipmapLinear)
 
         textures['water'] = loader.loadTexture("res/textures/water.png")
         textures['water'].setMagfilter(Texture.FTLinearMipmapLinear)
@@ -214,11 +280,22 @@ class World():
 
         self.water_node.create(0, 0, (self.config.factor_double,  self.config.factor_double))
         self.cube_size = 1
-        self.cube_z = 8
-        self.types['land'] = CubeModel(self.cube_size, self.cube_size, self.cube_z)
-        self.types['land'].setTexture(textures['dirt'],1)
-        self.types['water'] = CubeModel(self.cube_size, self.cube_size, self.cube_z)
-        self.types['water'].setTexture(textures['sand'],1)
+        self.cube_z = 100
+
+        self.types[land_mount_level] = CubeModel(self.cube_size, self.cube_size, self.cube_z)
+        self.types[land_mount_level].setTexture(textures[land_mount_level],1)
+
+        self.types[low_mount_level] = CubeModel(self.cube_size, self.cube_size, self.cube_z)
+        self.types[low_mount_level].setTexture(textures[low_mount_level],1)
+
+        self.types[mid_mount_level] = CubeModel(self.cube_size, self.cube_size, self.cube_z)
+        self.types[mid_mount_level].setTexture(textures[mid_mount_level],1)
+
+        self.types[high_mount_level] = CubeModel(self.cube_size, self.cube_size, self.cube_z)
+        self.types[high_mount_level].setTexture(textures[high_mount_level],1)
+
+        self.types['sand'] = CubeModel(self.cube_size, self.cube_size, self.cube_z)
+        self.types['sand'].setTexture(textures['sand'],1)
 
         self.paint_thread = False
 
@@ -394,9 +471,10 @@ def show_terrain(game, cam_coords, level):
                         cube_X = cube_X * cube_size
                         cube_Y = cube_Y * cube_size
                         if cur_map[(cX, cY)]<=cur_map.water_z:
-                            cubes[(cube_X, cube_Y, cur_map[cX,cY] - game.world.cube_z)] = 'water'
+                            cubes[(cube_X, cube_Y, cur_map[cX,cY] - game.world.cube_z)] = 'sand'
                         else:
-                            cubes[(cube_X, cube_Y, cur_map[cX,cY] - game.world.cube_z)] = 'land'
+                            cubes[(cube_X, cube_Y, cur_map[cX,cY] - game.world.cube_z)] = \
+                            cur_map.mount_levels[(cX / game.config.factor, cY / game.config.factor)]
 
                 #print 'time gen cubes: ', time.time() - time_gen
 

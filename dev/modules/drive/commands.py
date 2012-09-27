@@ -35,6 +35,12 @@ class Command_Handler():
             text = ' '.join(params)
             self.game.write(text)
 
+    def testmap(self, params = []):
+        """
+        Generate global map with test seed
+        """
+        self.cmd_create_global_map([833650645])
+
     def cmd_create_global_map(self, params = []):
         """
         Generate global map template and show it
@@ -66,6 +72,8 @@ class Command_Handler():
                         self.game.world.chanks_map[self.game.world.level][ch].destroy()
                 except KeyError:
                     pass
+                if self.game.world:
+                    self.game.world.water_node.hide()
                 self.game.world = World()
                 self.game.world.chank_changed = True
                 self.game.world.level = self.config.root_level
@@ -147,6 +155,7 @@ class Command_Handler():
     run_cmd = { 
                 'exit': cmd_exit,
                 'createmap': cmd_create_global_map,
+                'test': testmap,
                 'write': cmd_write,
                 'showmap': cmd_show_map,
                 'hidemap': cmd_hide_map,
