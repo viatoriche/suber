@@ -6,6 +6,8 @@ License: GPL (see http://www.gnu.org/licenses/gpl.txt)
 Drive module for World
 """
 
+# Modificated for config modul
+
 import sys, random
 import time
 
@@ -14,6 +16,8 @@ from modules.drive.shapeGenerator import Cube as CubeModel
 from modules.drive.textures import textures
 from modules.world.map3d import generate_heights
 from pandac.PandaModules import TransparencyAttrib, Texture, TextureStage, PNMImage
+from config import Config
+
 
 class WaterNode():
     """Water plane for nya
@@ -22,7 +26,7 @@ class WaterNode():
     def __init__(self, water_z):
         self.water_z = water_z
 
-    def create(self, x, y):
+    def create(self, x, y, scale):
         self.water = LandNode(self.water_z)
         #textures['water'].setWrapU(Texture.WMRepeat)
         #textures['water'].setWrapV(Texture.WMRepeat)
@@ -30,7 +34,8 @@ class WaterNode():
         #ts.setMode(TextureStage.MDecal)
         self.water.landNP.setTransparency(TransparencyAttrib.MAlpha)
         self.water.landNP.setTexture(ts, textures['water'])
-        self.water.landNP.setTexScale(ts, 256, 256)
+        scale_x, scale_y = scale
+        self.water.landNP.setTexScale(ts, scale_x, scale_y)
 
     def show(self):
         self.water.landNP.show()
@@ -54,14 +59,16 @@ class MapTree():
     map3d = None
     coords = (0, 0, 64)
     maps = {}
-    child = None
-    def __init__(self, parent = None, name = None):
+    config = Config()
+
+    def __init__(self, game, parent = None, name = None):
         self.parent = parent
+        self.game = game
         self.name = name
         if self.parent:
             start_x, start_y = name
             self.gen_down_coords()
-            print 'Name: ', name, '/', self.parent.name, 'Parent: ', self.parent.coords, ' self: ', self.coords
+            print 'INIT: Name: ', name, ' / Parent name: ', self.parent.name, ' / level: ', self.game.world.level
             t = time.time()
             self.map3d = generate_heights(self.parent.map3d, start_x, start_y)
             print 'generate map:', time.time() - t
@@ -71,16 +78,16 @@ class MapTree():
         """
         x, y, z = self.parent.coords
         start_x, start_y = self.name
-        cur_x = (x - (start_x * 16)) * 16
-        cur_y = (y - (start_y * 16)) * 16
+        cur_x = (x - (start_x * self.config.factor)) * self.config.factor
+        cur_y = (y - (start_y * self.config.factor)) * self.config.factor
         self.coords = (cur_x, cur_y, 64)
 
     def down(self):
         """Create new MapTree and join
         """
         x, y, z = self.coords
-        name = x / 16, y / 16
-        return MapTree(self, name)
+        name = x / self.config.factor, y / self.config.factor
+        return MapTree(self.game, self, name)
 
     def change_parent_coords(self):
         """Change parent coordinates when child is moving
@@ -88,57 +95,75 @@ class MapTree():
         if self.parent:
             cur_x, cur_y, cur_z = self.coords
             start_x, start_y = self.name
-            x = (cur_x / 16) + (start_x * 16)
-            y = (cur_y / 16) + (start_y * 16)
+            x = (cur_x / self.config.factor) + (start_x * self.config.factor)
+            y = (cur_y / self.config.factor) + (start_y * self.config.factor)
             self.parent.coords = (x, y, 64)
             #print 'Parent: ', self.parent.coords, ' self: ', self.coords
 
+    # Oh, I love recurses :3
     def get_map(self, mapX, mapY, Join = False):
         """Get map for new name, and join to, if Join == True
         """
+        #import pdb
+        #pdb.set_trace()
         if (mapX, mapY) == (0, 0):
             return self.map3d
 
         if self.parent:
-            name_X, name_Y = self.name
-            mapX, mapY = name_X + mapX, name_Y + mapY
-            if self.name == (mapX, mapY):
-                map3d = self.map3d
-            else:
-                #import pdb
-                #pdb.set_trace()
-                parent_X, parent_Y = 0, 0
-                if mapX > 15:
-                    mapX = mapX - 15
-                    parent_X = 1
-                if mapX < 0:
-                    mapX = mapX + 15
-                    parent_X = -1
-                if mapY > 15:
-                    mapY = mapY - 15
-                    parent_Y = 1
-                if mapY < 0:
-                    mapY = mapY + 15
-                    parent_Y = -1
+            nameX, nameY = self.name
+            nameX, nameY = nameX + mapX, nameY + mapY
 
-                # Oh, I love recurses :3
-                if self.maps.has_key( (mapX, mapY) ):
-                    map3d = self.maps[ (mapX, mapY) ]
+
+            parentX, parentY = 0, 0
+            if nameX > self.config.factor_tor:
+                nameX = nameX - self.config.factor
+                parentX = 1
+            if nameX < 0:
+                nameX = nameX + self.config.factor
+                parentX = -1
+            if nameY > self.config.factor_tor:
+                nameY = nameY - self.config.factor
+                parentY = 1
+            if nameY < 0:
+                nameY = nameY + self.config.factor
+                parentY = -1
+
+            if Join:
+                print self.name,'/',self.parent.name,' try Go X+', mapX, ' Y+', mapY,' -> ', nameX, nameY
+
+            def gen_map():
+                print self.name,'/',self.parent.name,' -> Start generate of map X.Y:', nameX, nameY
+                t = time.time()
+                map3d = generate_heights(source_map, nameX, nameY)
+                print 'generate map:', time.time() - t
+                return map3d
+
+
+            if self.maps.has_key( (parentX, parentY, nameX, nameY) ):
+
+                map3d = self.maps[ (parentX, parentY, nameX, nameY) ]
+
+            else:
+
+                source_map = self.parent.map3d
+                if (parentX, parentY) != (0, 0):
+                    print 'NEW PARENT on ', self.game.world.level
+                    new_source_map = self.parent.get_map(parentX, parentY, Join = Join)
                 else:
-                    source_map = self.parent.get_map(parent_X, parent_Y, Join = Join)
-                    print 'Start generate of map X.Y:', mapX, mapY,' / Name: ', self.name, '/', self.parent.name, 'Parent: ', self.parent.coords, ' self: ', self.coords
-                    t = time.time()
-                    map3d = generate_heights(source_map, mapX, mapY)
-                    print 'generate map:', time.time() - t
-                    self.maps[ (mapX, mapY) ] = map3d
-                    if Join:
-                        self.name = mapX, mapY
-                        print 'We are joined to: ', self.name
-                        self.map3d = map3d
-        # If we are 16 lvl (high-end)
+                    new_source_map = source_map
+
+                map3d = gen_map()
+                self.maps[(parentX, parentY, nameX, nameY)] = map3d
+
+            if Join:
+                print self.name,' --> joined to: -->', nameX, nameY
+                self.name = nameX, nameY
+                self.map3d = map3d
+
+            return map3d
+        # If we are 1 lvl (high-end)
         else:
-            map3d = self.map3d
-        return map3d
+            return self.map3d
 
     def get_coords_txt(self, level, cam):
         cur_x, cur_y, cur_z = self.coords
@@ -162,15 +187,17 @@ class World():
     map_2d = None
     # kawaii tech for LoD of World, logic Tree based
     map_tree = None
-    # chanks {level: {(x, y): Chank}}, where x, y = X*16, Y*16 with cubes
+    # chanks {level: {(x, y): Chank}}, where x, y = X*mode_game, Y*mode_game with cubes
     chanks_map = {}
-    size_chank = 16
+    config = Config()
+    size_chank = config.factor
     # modelles with texture for cubes
     types = {}
+    wayX, wayY = [], []
     def __init__(self):
         self.seed = random.randint(0, sys.maxint)
         self.chank_changed = True
-        self.level = 16
+        self.level = self.config.root_level
         self.new = True
         self.water_node = WaterNode(0.5)
         textures['dirt'] = loader.loadTexture("res/textures/dirt.png")
@@ -185,9 +212,9 @@ class World():
         textures['sand'].setMagfilter(Texture.FTLinearMipmapLinear)
         textures['sand'].setMinfilter(Texture.FTLinearMipmapLinear)
 
-        self.water_node.create(0, 0)
+        self.water_node.create(0, 0, (self.config.factor_double,  self.config.factor_double))
         self.cube_size = 1
-        self.cube_z = 16
+        self.cube_z = 8
         self.types['land'] = CubeModel(self.cube_size, self.cube_size, self.cube_z)
         self.types['land'].setTexture(textures['dirt'],1)
         self.types['water'] = CubeModel(self.cube_size, self.cube_size, self.cube_z)
@@ -195,7 +222,7 @@ class World():
 
         self.paint_thread = False
 
-        for i in xrange(1,17):
+        for i in xrange(self.config.root_level,self.config.land_level+1):
             self.chanks_map[i] = {}
 
 def show_terrain(game, cam_coords, level):
@@ -219,34 +246,54 @@ def show_terrain(game, cam_coords, level):
 
         lastX, lastY, lastZ = game.world.map_tree.coords
 
-        X = int(camX) / 256
-        X = X * 256
+        mode_double = game.config.factor_double
+        mode_double_tor = game.config.factor_double_tor
+
+
+        X = int(camX) / mode_double
+        X = X * mode_double
         X = int(camX) - X
 
-        Y = int(camY) / 256
-        Y = Y * 256
+        Y = int(camY) / mode_double
+        Y = Y * mode_double
         Y = int(camY) - Y
 
         Z = int(camZ)
 
-        if (lastX, lastY, lastZ) != (X, Y, Z):
+        if [X] != game.world.wayX[-1:]:
+            game.world.wayX.append(X)
+        if [Y] != game.world.wayY[-1:]:
+            game.world.wayY.append(Y)
 
-            mapX, mapY = 0, 0
-            if lastX == 0:
-                mapX = 1
-            if lastX == 255:
-                mapX = -1
-            if lastY == 0:
-                mapY = 1
-            if lastY == 255:
-                mapY = -1
+        game.world.wayX = game.world.wayX[-2:]
+        game.world.wayY = game.world.wayY[-2:]
+        #print 'X way:', game.world.wayX[-2:]
+        #print 'Y way:', game.world.wayY[-2:]
+
+        mapX, mapY = 0, 0
+
+        # 63 --> 0 ---GO +1 ... 1 -> 0 --- GO -1
+
+        if game.world.wayX == [63, 0]:
+            mapX = +1
+
+        if game.world.wayX == [0, 63]:
+            mapX = -1
+
+        if game.world.wayY == [63, 0]:
+            mapY = +1
+
+        if game.world.wayY == [0, 63]:
+            mapY = -1
+
+        if mapX != 0 or mapY != 0:
+            game.world.wayX = []
+            game.world.wayY = []
             game.world.map_tree.get_map(mapX, mapY, True)
 
-            #game.world.water_node.reset(int(camX/16)*16, int(camY/16)*16)
-
-            game.world.map_tree.coords = (X, Y, Z)
-            game.world.map_tree.change_parent_coords()
-            game.write(game.world.map_tree.get_coords_txt(level, cam_coords))
+        game.world.map_tree.coords = (X, Y, Z)
+        game.world.map_tree.change_parent_coords()
+        game.write(game.world.map_tree.get_coords_txt(level, cam_coords))
 
     # down / up
     else:
@@ -257,9 +304,9 @@ def show_terrain(game, cam_coords, level):
 
         game.world.chank_changed = True
 
-        if level < last_level:
-            game.world.map_tree = game.world.map_tree.down()
         if level > last_level:
+            game.world.map_tree = game.world.map_tree.down()
+        if level < last_level:
             game.world.map_tree = game.world.map_tree.parent
 
         X, Y, Z = game.world.map_tree.coords
@@ -272,6 +319,7 @@ def show_terrain(game, cam_coords, level):
         OK = True
         change_level = True
 
+    game.cmd_handle('showmap')
     if (lastX, lastY) != (X, Y):
         OK = True
 
@@ -284,7 +332,6 @@ def show_terrain(game, cam_coords, level):
             ch.hide()
         game.world.chank_changed = True
 
-    game.cmd_handle('showmap')
 
     if not game.world.chank_changed:
         return
@@ -294,48 +341,56 @@ def show_terrain(game, cam_coords, level):
         """Create cubes on screen
         """
 
+        mode = game.config.factor
+        mode_double = game.config.factor_double
+        mode_tor = game.config.factor_tor
+        mode_double_tor = game.config.factor_double_tor
+
         t= time.time()
 
         cube_size = game.world.cube_size
         types = game.world.types
 
-        chanks = 3
+        chanks = game.config.count_chanks
 
         dx = ((X / size_chank) - chanks) * size_chank
         for xcount in xrange(chanks * 2):
             dy = ((Y / size_chank) - chanks) * size_chank
             for ycount in xrange(chanks * 2):
-                chank_X = dx + (256 * (int(camX)/256))
-                chank_Y = dy + (256 * (int(camY)/256))
-                water_X = chank_X - 80
-                water_Y = chank_Y - 80
+                chank_X = dx + (mode_double * (int(camX)/mode_double))
+                chank_Y = dy + (mode_double * (int(camY)/mode_double))
+                water_X = chank_X - (mode*mode) - (mode*(chanks/2))
+                water_Y = chank_Y - (mode*mode) - (mode*(chanks/2))
                 game.world.water_node.reset(water_X, water_Y)
-                
+
                 cubes = {}
                 time_gen = time.time()
                 for x in xrange(dx, dx + size_chank):
                     mapX = 0
                     cX = x
                     if cX < 0:
-                        cX = 255+cX
+                        cX = mode_double+cX
                         mapX = -1
-                    if cX > 255:
-                        cX = cX-255
+                    if cX > mode_double_tor:
+                        cX = cX - mode_double
                         mapX = 1
                     for y in xrange(dy, dy + size_chank):
                         mapY = 0
                         cY = y
                         if cY < 0:
-                            cY = 255+cY
+                            cY = mode_double + cY
                             mapY = -1
-                        if cY > 255:
-                            cY = cY-255
+                        if cY > mode_double_tor:
+                            cY = cY-mode_double
                             mapY = 1
 
-                        cur_map = game.world.map_tree.get_map(mapX, mapY, False)
+                        if (mapX, mapY) != (0, 0):
+                            cur_map = game.world.map_tree.get_map(mapX, mapY, False)
+                        else:
+                            cur_map = game.world.map_tree.map3d
 
-                        cube_X = x + (256 * (int(camX)/256))
-                        cube_Y = y + (256 * (int(camY)/256))
+                        cube_X = x + (mode_double * (int(camX)/mode_double))
+                        cube_Y = y + (mode_double * (int(camY)/mode_double))
                         cube_X = cube_X * cube_size
                         cube_Y = cube_Y * cube_size
                         if cur_map[(cX, cY)]<=cur_map.water_z:
@@ -346,12 +401,9 @@ def show_terrain(game, cam_coords, level):
                 #print 'time gen cubes: ', time.time() - time_gen
 
                 #time_create = time.time()
-                if game.world.chanks_map[level].has_key((chank_X, chank_Y)):
-                    if game.world.chanks_map[level][(chank_X, chank_Y)].cubes == cubes:
-                        time_show = time.time()
+                if game.world.chanks_map[level].has_key((chank_X, chank_Y)) and\
+                      game.world.chanks_map[level][(chank_X, chank_Y)].cubes == cubes:
                         game.world.chanks_map[level][(chank_X, chank_Y)].show()
-                    else:
-                        game.world.chanks_map[level][(chank_X, chank_Y)].new(cubes)
                 else:
                     ch = Chank('ch_{0}_{1}_{2}'.format(level, chank_X, chank_Y),
                                                    types, game.process.lod_node,
@@ -371,7 +423,7 @@ def show_terrain(game, cam_coords, level):
     Paint()
     if change_level:
         change_level = False
-        base.camera.setZ(cur_map[(X, Y)]+10)
+        base.camera.setZ(cur_map[(X, Y)]+32)
 
 def generate_map_texture(map_tree, factor):
     map_world = map_tree.map3d
@@ -389,18 +441,19 @@ def generate_map_texture(map_tree, factor):
     char_x, char_y, char_z = map_tree.coords
     char_x = char_x / factor
     char_y = char_y / factor
-    if factor>2:
-        image.setPixel(char_x, char_y, (255, 0, 0))
-    else:
-        for x in xrange(char_x - 1, char_x+2):
-            cx = x
-            if cx > size-1: cx = size-1
-            if cx < 0: cx = 0
-            for y in xrange(char_y - 1, char_y+2):
-                cy = y
-                if cy > size-1: cy = size-1
-                if cy < 0: cy = 0
-                image.setPixel(cx, cy, (255, 0, 0))
+    image.setPixel(char_x, char_y, (255, 0, 0))
+    #if factor>2:
+        #image.setPixel(char_x, char_y, (255, 0, 0))
+    #else:
+        #for x in xrange(char_x - 1, char_x+2):
+            #cx = x
+            #if cx > size-1: cx = size-1
+            #if cx < 0: cx = 0
+            #for y in xrange(char_y - 1, char_y+2):
+                #cy = y
+                #if cy > size-1: cy = size-1
+                #if cy < 0: cy = 0
+                #image.setPixel(cx, cy, (255, 0, 0))
     texture = Texture()
     texture.load(image)
     return texture

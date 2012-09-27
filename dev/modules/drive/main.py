@@ -6,13 +6,13 @@
 
 import os
 import signal
-import threading
 import logging
 
 from modules.drive.commands import Command_Handler
 from modules.drive.console import Console_UI
 from modules.drive.graph import GUI
 from modules.drive.world import World
+from config import Config
 
 class Root():
     """
@@ -25,25 +25,6 @@ class Root():
         """
         pass
 
-class ThreadDo(threading.Thread):
-    """
-    docstring for ThreadSupport
-    """
-    def __init__(self, doit, *args, **params):
-        """
-        doit - callable object, and next parameters for him
-        """
-        threading.Thread.__init__(self)
-        self.doit = doit
-        self.result = None
-        self.done = False
-        self.args = args
-        self.params = params
-
-    def run(self):
-        self.result = self.doit(*self.args, **self.params)
-        self.done = True
-
 class Game(Root):
     """Main class
 
@@ -51,6 +32,7 @@ class Game(Root):
     prompt = 'Suber> '
     tick = 1
     live = True
+    config = Config()
 
     def __init__(self, mode = 'console', cheat_enable = True):
         Root.__init__(self)

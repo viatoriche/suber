@@ -117,8 +117,7 @@ class Maps2D(dict):
         return coasts
 
     def create_image(self, filename, level = 0):
-        """
-        Create image of map and save to filename
+        """Create image of map and save to filename
         """
         cmap = self[level]
         size = cmap.size
@@ -134,8 +133,8 @@ class Maps2D(dict):
         del image
 
     def get_round_xy_land(self, target_coord, size):
-        """
-        Get 3x3 square, where target location in center
+        """Get 3x3 square, where target location in center
+
             target_coord = (targ_x, targ_y) or [targ_x, targ_y]
             size = size of target map
 
@@ -174,11 +173,12 @@ class Map_generator_2D():
         Step iters     | alias coasts
     """
     params = {}
-    def __init__(self, iters = 5, min_land = 25, max_land = 45,
+    def __init__(self, iters = 3, min_land = 25, max_land = 45,
                                     min_continents = 4, max_continents = 6):
         """
         Initialization of generator
         """
+        # --> 64
         self.size = 8
         # create dict of MapDict2D
         self.maps = Maps2D()

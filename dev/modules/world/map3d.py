@@ -8,6 +8,7 @@ Map 3d
 
 import random
 import sys
+from config import Config
 
 from PIL import Image
 
@@ -15,6 +16,7 @@ class Map3d(dict):
     """
     docstring for Map3d
     """
+    config = Config()
     def __init__(self, size, seed, *args, **params):
         """
         docstring for __init__
@@ -23,7 +25,7 @@ class Map3d(dict):
         self.size = size
         self.water_z = 0
         self.seed = seed
-        # 16x16 [n, m] = seed
+        # mode x mode [n, m] = seed
         self.land_seeds = {}
 
     def get_land_size(self):
@@ -184,7 +186,7 @@ class Map3d(dict):
             for i in xrange(count):
                 pattern = [(0, 0)]
                 j = 0
-                while j <= 256:
+                while j <= self.config.factor_double:
                     x, y = pattern[(random.randint(0, len(pattern)-1))]
                     x += random.randint(-1, 1)
                     y += random.randint(-1, 1)
@@ -207,20 +209,18 @@ class Map3d(dict):
         # get and smooth coasts from water
         def smooth_all_coasts():
             coasts = self.get_all_coasts()
-            print 'get coasts: ', time.time() - t
-            t = time.time()
             for coord in coasts:
                 rounds = self.get_round_xy_land(coord, -8, False)
                 smooth_it(rounds, coord)
 
         t = time.time()
-        #smooth_all_coasts()
+        smooth_all_coasts()
         print 'smooth: ', time.time() - t
 
         def add_mounts():
             for coord in self:
                 dice = random.randint(0,20)
-                if dice == 256:
+                if dice == self.factor.factor_double:
                     if self[coord] > self.water_z:
                         self[coord] = self.coord + random.randint(3,16)
                     else:
@@ -406,7 +406,7 @@ class Map3d(dict):
         def alias_it():
             for tar_coord in self:
                 average = 0
-                rounds = self.get_round_xy_land(tar_coord, -2, False)
+                rounds = self.get_round_xy_land(tar_coord, -1, False)
                 for coord in rounds:
                     average += self[coord]
                 self[coord] = int(round(average / float(len(rounds))))
@@ -414,17 +414,18 @@ class Map3d(dict):
 
         t = time.time()
         alias_it()
-        #alias_it()
+        alias_it()
         print 'alias: ', time.time() -t
 
-        for x in xrange(16):
-            for y in xrange(16):
+        for x in xrange(self.config.factor):
+            for y in xrange(self.config.factor):
                 self.land_seeds[x,y] = random.randint(0, sys.maxint)
 
 def map2d_to_3d(map2d, seed):
     """docstring for map2d_to_3d
 
     """
+    config = Config()
     map3d = Map3d(map2d.size, seed)
     for coords in map2d:
         # if water
@@ -433,8 +434,8 @@ def map2d_to_3d(map2d, seed):
         else:
             map3d[coords] = map3d.water_z+1
 
-    for x in xrange(16):
-        for y in xrange(16):
+    for x in xrange(config.factor):
+        for y in xrange(config.factor):
             map3d.land_seeds[x, y] = random.randint(0, sys.maxint)
     return map3d
 
@@ -443,19 +444,20 @@ def generate_heights(source_map, start_x, start_y):
     """
     docstring for generate_heights
     """
+    config = Config()
     #import pdb; pdb.set_trace()
     seed = source_map.land_seeds[start_x, start_y]
     map3d = Map3d(source_map.size, seed)
     for x in xrange(map3d.size):
         for y in xrange(map3d.size):
-            sx = (x / 16) + (start_x * 16)
-            sy = (y / 16) + (start_y * 16)
+            sx = (x / config.factor) + (start_x * config.factor)
+            sy = (y / config.factor) + (start_y * config.factor)
             # heights
             height = source_map[(sx, sy)]
             if height == source_map.water_z or height == source_map.water_z + 1:
                 map3d[(x, y)] = height
             else:
-                map3d[(x, y)] = height * 4
+                map3d[(x, y)] = height * config.height_factor
             #map3d[(x, y)] = height
 
     map3d.gen_random_heights()

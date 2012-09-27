@@ -1,18 +1,20 @@
 # -*- coding: utf-8 -*-
-from direct.showbase import DirectObject
-from pandac.PandaModules import Vec3, WindowProperties
 import math
 
+from config import Config
+from direct.showbase import DirectObject
+from pandac.PandaModules import Vec3, WindowProperties
+
 class CamFree(DirectObject.DirectObject):
-    def __init__(self, limit_Z = (-256,256), join_Z = (64, 64),
-                       min_level = 12, max_level = 16, showterrain = lambda x: x, game = None):
+    config = Config()
+    def __init__(self, limit_Z = (-1024,1024), join_Z = (64, 64),
+                       showterrain = lambda x: x):
         base.disableMouse()
 
-        self.level = max_level
-        self.min_level = min_level
-        self.max_level = max_level
+        self.level = self.config.root_level
+        self.high_level = self.config.root_level
+        self.low_level = self.config.land_level
         self.join_Z = join_Z
-        self.game = game
         camera.setPos(0, 0, 64)
         base.camLens.setFar(256)
 
@@ -38,9 +40,9 @@ class CamFree(DirectObject.DirectObject):
         self.accept("wheel_up", self.CamSpeed, [1.1])
         self.accept("wheel_down", self.CamSpeed, [0.9])
 
-        self.SpeedCam = 1
-        self.SpeedRot = 0.05 # Скорость врашения камеры
-        self.SpeedMult = 5 # Множитель скорости камеры при нажатии lshift
+        self.SpeedCam = 0.2
+        self.SpeedRot = 0.05 # 
+        self.SpeedMult = 5 # lshift
         self.limit_Z = limit_Z
 
         #self.textSpeed = OnscreenText(pos = (0.9, -0.9), scale = 0.1)
@@ -49,17 +51,17 @@ class CamFree(DirectObject.DirectObject):
 
         self.props = WindowProperties()
 
-        taskMgr.add(self.CamControl, 'CamControl') #менеджер для запуска функции
+        taskMgr.add(self.CamControl, 'CamControl') #???????? ??? ??????? ???????
         self.showterrain = showterrain
 
-    def setKey(self, key, value): # Функция для перезаписи в словарь "keyMap" ключа и значения
+    def setKey(self, key, value): # ??????? ??? ?????????? ? ??????? "keyMap" ????? ? ????????
         self.keyMap[key] = value
 
-    def CamSpeed(self, sd): # Функция изменения скорости камеры
+    def CamSpeed(self, sd): # ??????? ????????? ???????? ??????
         self.SpeedCam *= sd
 
-    def CamControl(self, task): # Функция управления камерой
-        if (self.keyMap["Mouse3"] != 0): # Управление камерой если зажата правая кнопка мыши
+    def CamControl(self, task): # ??????? ?????????? ???????
+        if (self.keyMap["Mouse3"] != 0): # ?????????? ??????? ???? ?????? ?????? ?????? ????
             if (self.CursorOffOn == 'On'):
                 self.props.setCursorHidden(True)
                 base.win.requestProperties(self.props)
@@ -99,7 +101,7 @@ class CamFree(DirectObject.DirectObject):
                 camera.setZ(camera.getZ()-Speed)
 
 #            if camera.getZ() < self.limit_Z[0]:
-                #if self.level > self.min_level:
+                #if self.level > self.high_level:
                     #camera.setZ(self.join_Z[1])
                     #self.level -= 1
                 #else:

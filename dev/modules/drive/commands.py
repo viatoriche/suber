@@ -11,17 +11,26 @@ from modules.drive.world import generate_map_texture, show_terrain, MapTree, Wor
 from modules.drive.textures import textures
 from pandac.PandaModules import Texture
 from pandac.PandaModules import loadPrcFileData
+from config import Config
 
 class Command_Handler():
+    """Handler for all commands
+    """
+
+    config = Config()
 
     def __init__(self, game):
         self.game = game
         self.minimap = True
 
     def cmd_exit(self, params = []):
+        """Exit the game
+        """
         self.game.stop()
 
     def cmd_write(self, params = []):
+        """Write to stdout or GUI
+        """
         if len(params) > 0:
             text = ' '.join(params)
             self.game.write(text)
@@ -59,13 +68,13 @@ class Command_Handler():
                     pass
                 self.game.world = World()
                 self.game.world.chank_changed = True
-                self.game.world.level = 16
-                self.game.world.map_tree = MapTree()
+                self.game.world.level = self.config.root_level
+                self.game.world.map_tree = MapTree(self.game)
                 self.game.world.map_tree.map3d = map3d
                 self.game.world.map_tree.coords = (0, 0, 0)
                 self.game.world.new = True
                 self.game.process.default_cam(self.game.world.level)
-                show_terrain(self.game, base.camera.getPos(), 16)
+                show_terrain(self.game, base.camera.getPos(), self.config.root_level)
             self.cmd_write(['Map generation process has been completed. Seed: {0}'.format(\
                                                 self.game.world.seed)])
 
@@ -92,10 +101,10 @@ class Command_Handler():
         docstring for cmd_show_map
         """
         if self.minimap:
-            textures['world_map'] = generate_map_texture(self.game.world.map_tree, 2)
+            textures['world_map'] = generate_map_texture(self.game.world.map_tree, 1)
             self.game.process.screen_images.add_image('world_map', 
                                             textures['world_map'], 
-                                            scale = 0.4, pos = (-0.92, 0, 0.58))
+                                            scale = 0.2, pos = (-1.12, 0, 0.79))
 
     def cmd_hide_map(self, params = []):
         """

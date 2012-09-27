@@ -6,6 +6,7 @@ License: GPL (see http://www.gnu.org/licenses/gpl.txt)
 
 Grap modul, for render and show all >_<
 """
+from config import Config
 from direct.gui.DirectGui import DirectButton, DirectEntry
 from direct.gui.OnscreenImage import OnscreenImage
 from direct.gui.OnscreenText import OnscreenText
@@ -98,7 +99,7 @@ class GUI():
     """
     GUI --- panda3d
     """
-
+    config = Config()
     def __init__(self, game):
         """
         Initialization of GUI Class
@@ -109,9 +110,9 @@ class GUI():
         self.game = game
         self.app = PandaApp()
         self.app.disableMouse()
-        self.camFree = CamFree(showterrain = self.show_terrain, game = self.game)
+        self.camFree = CamFree(showterrain = self.show_terrain)
         self.app.camera.setHpr(0, -90, 0)
-        self.default_cam(16)
+        self.default_cam(self.config.root_level)
         self.screen_images = OnscreenImages()
         self.screen_texts = OnscreenTexts()
         self.buttons = DirectButtons()
@@ -151,20 +152,18 @@ class GUI():
 
 
     def down(self):
-        min_level = self.camFree.min_level
-        level = self.camFree.level
-        if level<=min_level:
+        level = self.game.world.level
+        if level>=self.config.land_level:
             return
-        level -= 1
+        level += 1
         self.camFree.level = level
         self.show_terrain(level)
 
     def up(self):
-        max_level = self.camFree.max_level
-        level = self.camFree.level
-        if level>=max_level:
+        level = self.game.world.level
+        if level<=self.config.root_level:
             return
-        level += 1
+        level -= 1
         self.camFree.level = level
         self.show_terrain(level)
 
