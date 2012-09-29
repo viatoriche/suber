@@ -10,6 +10,7 @@ Drive module for World
 
 import sys, random
 import time
+import math
 
 from modules.drive.landplane import Chank, LandNode
 from modules.drive.shapeGenerator import Cube as CubeModel
@@ -69,9 +70,7 @@ class MapTree():
             start_x, start_y = name
             self.gen_down_coords()
             print 'INIT: Name: ', name, ' / Parent name: ', self.parent.name, ' / level: ', self.game.world.level
-            t = time.time()
             self.map3d = generate_heights(self, self.parent.map3d, start_x, start_y)
-            print 'generate map:', time.time() - t
 
     def gen_down_coords(self):
         """Generate self.coords, when def down is run
@@ -100,7 +99,7 @@ class MapTree():
             self.parent.coords = (x, y, 64)
             #print 'Parent: ', self.parent.coords, ' self: ', self.coords
 
-    def get_cache_map(self, mX, mY, X, Y):
+    def get_cache_map_height(self, mX, mY, X, Y):
         parentX, parentY = 0, 0
         nameX, nameY = mX, mY
         if nameX > self.config.factor_tor:
@@ -130,6 +129,121 @@ class MapTree():
                                    nameX, nameY) ].get((X, Y))
             else:
                 return None
+
+
+    def get_parent_map_height(self, mX, mY, X, Y):
+        if not self.parent:
+            return None
+
+        parentX, parentY = 0, 0
+        nameX, nameY = mX, mY
+        if nameX > self.config.factor_tor:
+            nameX = nameX - self.config.factor
+            parentX = 1
+        elif nameX < 0:
+            nameX = nameX + self.config.factor
+            parentX = -1
+        if nameY > self.config.factor_tor:
+            nameY = nameY - self.config.factor
+            parentY = 1
+        elif nameY < 0:
+            nameY = nameY + self.config.factor
+            parentY = -1
+
+        if not self.parent.parent:
+            parentX, parentY = 0, 0
+
+        parent_map = self.parent.map3d
+        if (parentX, parentY) != (0, 0):
+            parent_map = self.parent.get_map(parentX, parentY, Join = False)
+
+
+        x = (X / self.config.factor) + (nameX * self.config.factor)
+        y = (Y / self.config.factor) + (nameY * self.config.factor)
+
+        return parent_map[x, y]
+
+    def change_cache_map_height(self, mX, mY, X, Y, height):
+        parentX, parentY = 0, 0
+        nameX, nameY = mX, mY
+        if nameX > self.config.factor_tor:
+            nameX = nameX - self.config.factor
+            parentX = 1
+        elif nameX < 0:
+            nameX = nameX + self.config.factor
+            parentX = -1
+        if nameY > self.config.factor_tor:
+            nameY = nameY - self.config.factor
+            parentY = 1
+        elif nameY < 0:
+            nameY = nameY + self.config.factor
+            parentY = -1
+
+        if not self.parent.parent:
+            parentX, parentY = 0, 0
+
+        #print 'Try get ', (mapX, mapY), (parentX, parentY), ' / ',nameX, nameY
+        if self.maps != None and self.parent != None:
+            if self.maps.has_key( (self.parent.name[0] + parentX,
+                                   self.parent.name[1] + parentY,
+                                   nameX, nameY) ):
+
+                self.maps[ (self.parent.name[0] + parentX,
+                                   self.parent.name[1] + parentY,
+                                   nameX, nameY) ][X, Y] = height
+            else:
+                def gen_map(source_map):
+                    print self.name,'/',self.parent.name,' -> Start generate of map FOR CHANGE X.Y:', nameX, nameY
+                    t = time.time()
+                    return generate_heights(self, source_map, nameX, nameY, True, {(X, Y): height})
+
+                if not self.parent.parent:
+                    parentX, parentY = 0, 0
+
+                source_map = self.parent.map3d
+                parent_nameX = self.parent.name[0] + parentX
+                parent_nameY = self.parent.name[1] + parentY
+                if (parentX, parentY) != (0, 0):
+                    print 'NEW PARENT FOR CHANGE MAP on ', self.game.world.level
+                    new_source_map = self.parent.get_map(parentX, parentY, False)
+                else:
+                    new_source_map = source_map
+
+                map3d = gen_map(new_source_map)
+                self.maps[(parent_nameX, parent_nameY, nameX, nameY)] = map3d
+
+
+    def get_cache_map_height(self, mX, mY, X, Y):
+        parentX, parentY = 0, 0
+        nameX, nameY = mX, mY
+        if nameX > self.config.factor_tor:
+            nameX = nameX - self.config.factor
+            parentX = 1
+        elif nameX < 0:
+            nameX = nameX + self.config.factor
+            parentX = -1
+        if nameY > self.config.factor_tor:
+            nameY = nameY - self.config.factor
+            parentY = 1
+        elif nameY < 0:
+            nameY = nameY + self.config.factor
+            parentY = -1
+
+        if not self.parent.parent:
+            parentX, parentY = 0, 0
+
+        #print 'Try get ', (mapX, mapY), (parentX, parentY), ' / ',nameX, nameY
+        if self.maps != None and self.parent != None:
+            if self.maps.has_key( (self.parent.name[0] + parentX,
+                                   self.parent.name[1] + parentY,
+                                   nameX, nameY) ):
+
+                return self.maps[ (self.parent.name[0] + parentX,
+                                   self.parent.name[1] + parentY,
+                                   nameX, nameY) ].get((X, Y))
+            else:
+                return None
+
 
     # Oh, I love recurses :3
     def get_map(self, mapX, mapY, Join = False):
@@ -173,11 +287,11 @@ class MapTree():
                 parentX, parentY = 0, 0
 
             if self.maps.has_key( (self.parent.name[0]+parentX,
-                                   self.parent.name[1]+parentY, 
+                                   self.parent.name[1]+parentY,
                                    nameX, nameY) ) and not Join:
 
-                map3d = self.maps[ (self.parent.name[0]+parentX, 
-                                    self.parent.name[1]+parentY, 
+                map3d = self.maps[ (self.parent.name[0]+parentX,
+                                    self.parent.name[1]+parentY,
                                     nameX, nameY) ]
 
             else:
@@ -217,13 +331,20 @@ class MapTree():
         cur_x, cur_y, cur_z = self.coords
         x, y, z = cam
         cam = int(x), int(y), int(z)
+
+        try:
+            cube_z = self.map3d[(cur_x, cur_y)]
+        except TypeError:
+            cube_z = 'unk'
+            pass
+
         if self.parent:
             par_x, par_y, par_z = self.parent.coords
             return 'L:{8} * X: {0}, Y: {1} -> {2}:{3} * UX: {4}, UY: {5} -> {6}:{7} | cube = {9} | {10}'.format(
-                cur_x, cur_y, cur_x/16, cur_y/16, par_x, par_y, par_x/16, par_y/16, level, self.map3d[(cur_x, cur_y)], cam)
+                cur_x, cur_y, cur_x/16, cur_y/16, par_x, par_y, par_x/16, par_y/16, level, cube_z, cam)
         else:
             return 'L:{4} * X: {0}, Y: {1} -> {2}:{3} | cube z = {5} | {6}'.format(
-                cur_x, cur_y, cur_x/16, cur_y/16, level, self.map3d[(cur_x, cur_y)], cam)
+                cur_x, cur_y, cur_x/16, cur_y/16, level, cube_z, cam)
 
 
     #def up
@@ -280,7 +401,7 @@ class World():
 
         self.water_node.create(0, 0, (self.config.factor_double,  self.config.factor_double))
         self.cube_size = 1
-        self.cube_z = 100
+        self.cube_z = 10000
 
         self.types[land_mount_level] = CubeModel(self.cube_size, self.cube_size, self.cube_z)
         self.types[land_mount_level].setTexture(textures[land_mount_level],1)
@@ -305,6 +426,14 @@ class World():
 def show_terrain(game, cam_coords, level):
     if game.world.paint_thread:
         return
+
+    def get_height(level, h):
+        if h == 0:
+            return 0
+        high_level = abs(h)
+        factor = game.config.factor
+        mod = math.log(high_level, factor)
+        return int((((level+1) ** mod) ** 2) / h)
 
     change_level = False
 
@@ -344,8 +473,6 @@ def show_terrain(game, cam_coords, level):
 
         game.world.wayX = game.world.wayX[-2:]
         game.world.wayY = game.world.wayY[-2:]
-        #print 'X way:', game.world.wayX[-2:]
-        #print 'Y way:', game.world.wayY[-2:]
 
         mapX, mapY = 0, 0
 
@@ -470,11 +597,25 @@ def show_terrain(game, cam_coords, level):
                         cube_Y = y + (mode_double * (int(camY)/mode_double))
                         cube_X = cube_X * cube_size
                         cube_Y = cube_Y * cube_size
+
+                        height = get_height(level, cur_map[(cX, cY)])
                         if cur_map[(cX, cY)]<=cur_map.water_z:
-                            cubes[(cube_X, cube_Y, cur_map[cX,cY] - game.world.cube_z)] = 'sand'
+                            cubes[(cube_X, cube_Y, height - game.world.cube_z)] = 'sand'
                         else:
-                            cubes[(cube_X, cube_Y, cur_map[cX,cY] - game.world.cube_z)] = \
-                            cur_map.mount_levels[(cX / game.config.factor, cY / game.config.factor)]
+                            if height <= cur_map.water_z:
+                                height = cur_map.water_z + 1
+                            if cur_map[(cX, cY)] in range(game.config.land_mount_level[0], game.config.land_mount_level[1]+1):
+                                cubes[(cube_X, cube_Y, height - game.world.cube_z)] = game.config.land_mount_level
+
+                            elif cur_map[(cX, cY)] in range(game.config.low_mount_level[0], game.config.low_mount_level[1]+1):
+                                cubes[(cube_X, cube_Y, height - game.world.cube_z)] = game.config.low_mount_level
+
+                            elif cur_map[(cX, cY)] in range(game.config.mid_mount_level[0], game.config.mid_mount_level[1]+1):
+                                cubes[(cube_X, cube_Y, height - game.world.cube_z)] = game.config.mid_mount_level
+
+                            else:
+                                cubes[(cube_X, cube_Y, height - game.world.cube_z)] = game.config.high_mount_level
+
 
                 #print 'time gen cubes: ', time.time() - time_gen
 
@@ -501,7 +642,7 @@ def show_terrain(game, cam_coords, level):
     Paint()
     if change_level:
         change_level = False
-        base.camera.setZ(cur_map[(X, Y)]+32)
+        base.camera.setZ(get_height(level, cur_map[(X, Y)])+16)
 
 def generate_map_texture(map_tree, factor):
     map_world = map_tree.map3d
