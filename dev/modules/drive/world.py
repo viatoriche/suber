@@ -26,8 +26,9 @@ class OctreeNode:
         self.world = world
         self.len_cube = len_cube
         self.cube = self.world.cubik
-        self.v = [Vec3(0,0,-1), Vec3(0,0,1), Vec3(0,-1,0), Vec3(0,1,0), Vec3(-1,0,0), Vec3(1,0,0)]
-        self.r = self.len_cube * 2 ** 0.5
+        #self.v = [Vec3(0,0,-1), Vec3(0,0,1), Vec3(0,-1,0), Vec3(0,1,0), Vec3(-1,0,0), Vec3(1,0,0)]
+        self.v = [Vec3(0.5,0.5,0.5), Vec3(-0.5,0.5,0.5), Vec3(0.5,-0.5,0.5), Vec3(0.5,0.5,-0.5), Vec3(-0.5,-0.5,0.5), Vec3(0.5,-0.5,-0.5), Vec3(-0.5,0.5,-0.5), Vec3(-0.5,-0.5,-0.5)]
+        #self.r = self.len_cube * 2 ** 0.5
 
         if self.check():
             self.draw()
@@ -36,11 +37,14 @@ class OctreeNode:
         if not self.stop:
             for dC in self.v:
                 self.child.append(__OctreeNode(self, self.len_cube/2,\
-                        self.level+1, self.center + self.dC * length / 2))
+                        self.level+1, self.center + self.dC * length))
+                        #self.level+1, self.center + self.dC * length / 2))
 
     def check(self):
         #if dist higher then sphere radius then stop dividind
-        if VBase3.length(self.center) > self.r:
+        
+        #TODO resolve r to right variable
+        if VBase3.length(self.center) > r:
             self.stop = True
         #stop at bottom level
         if self.len_cube == 1:
@@ -55,6 +59,7 @@ class OctreeNode:
 
 class VoxObject:
     max_len = 256
+    r = 0.5* max_len * 2 ** 0.5
     def __init__(self, world):
         self.world = world
         self.root = OctreeNode(self.world, self.max_len)
