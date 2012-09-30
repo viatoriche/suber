@@ -20,6 +20,7 @@ class Config():
     factor_down_size = 32
 
     size_chank = 8
+    cube_size = 1
 
     default_height_level = 1
 

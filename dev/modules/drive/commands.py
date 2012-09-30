@@ -4,14 +4,14 @@
 # License:      GPL (see http://www.gnu.org/licenses/gpl.txt)
 """Commands handlers modul"""
 import random, pickle, sys
-from modules.world.map2d import Map_generator_2D
-from modules.world.map3d import map2d_to_3d
-from modules.drive.support import ThreadDo
-from modules.drive.world import generate_map_texture, show_terrain, MapTree, World
-from modules.drive.textures import textures
-from pandac.PandaModules import Texture
-from pandac.PandaModules import loadPrcFileData
+
 from config import Config
+from modules.drive.support import ThreadDo
+from modules.drive.textures import textures
+from modules.drive.world import World
+from modules.world.map2d import Map_generator_2D
+from modules.world.map3d import Map3d
+from pandac.PandaModules import loadPrcFileData
 
 class Command_Handler():
     """Handler for all commands
@@ -65,24 +65,11 @@ class Command_Handler():
                 self.cmd_write([global_map_gen.maps.show_acii()])
             elif self.game.mode == 'GUI':
                 self.cmd_write(['Start convertation 2d -> 3d'])
-                self.game.world.map_2d = global_map_gen.maps[complete_i]
-                map3d = map2d_to_3d(self.game.world.map_2d, seed)
-                try:
-                    for ch in self.game.world.chanks_map[self.game.world.level]:
-                        self.game.world.chanks_map[self.game.world.level][ch].destroy()
-                except KeyError:
-                    pass
-                if self.game.world:
-                    self.game.world.water_node.hide()
-                self.game.world = World()
-                self.game.world.chank_changed = True
-                self.game.world.level = self.config.root_level
-                self.game.world.map_tree = MapTree(self.game)
-                self.game.world.map_tree.map3d = map3d
-                self.game.world.map_tree.coords = (0, 0, 0)
-                self.game.world.new = True
-                self.game.process.default_cam(self.game.world.level)
-                show_terrain(self.game, base.camera.getPos(), self.config.root_level)
+                self.game.world.map_2d = global_map_gen.end_map
+                map3d = Map3d()
+                map3d.get_from_2d(self.game.world.map_2d, seed)
+                self.game.world.map_3d = map3d
+                self.game.world.new()
             self.cmd_write(['Map generation process has been completed. Seed: {0}'.format(\
                                                 self.game.world.seed)])
 
@@ -109,10 +96,11 @@ class Command_Handler():
         docstring for cmd_show_map
         """
         if self.minimap:
-            textures['world_map'] = generate_map_texture(self.game.world.map_tree, 1)
+            #textures['world_map'] = generate_map_texture(self.game.world.map_tree, 1)
             self.game.process.screen_images.add_image('world_map', 
                                             textures['world_map'], 
                                             scale = 0.2, pos = (-1.12, 0, 0.79))
+            #self.game.process.screen_images['world_map'].show()
 
     def cmd_hide_map(self, params = []):
         """

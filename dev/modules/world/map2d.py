@@ -36,6 +36,7 @@ class MapDict2D(dict):
                     self[x,y] = fill
 
         self.size = size
+        self.water_z = 0
 
 
 

@@ -14,10 +14,10 @@ from direct.showbase.ShowBase import ShowBase
 from modules.drive.camera import CamFree
 from modules.drive.support import generate_hash
 from modules.drive.textures import textures
-from modules.drive.world import show_terrain
 from panda3d.core import TextNode, LODNode, NodePath
 from pandac.PandaModules import TransparencyAttrib
 from pandac.PandaModules import loadPrcFileData
+from modules.drive.world import World
 
 loadPrcFileData("editor-startup", "show-frame-rate-meter #t")
 
@@ -106,69 +106,47 @@ class GUI():
 
         args:
             game - game object
+            app - PandaApp
+            camFree - camera
+            screen_mages - all images
+            screem_buttons - all buttons
+            entries = text edits
         """
+
         self.game = game
         self.app = PandaApp()
-        self.app.disableMouse()
-        self.camFree = CamFree(showterrain = self.show_terrain)
-        self.app.camera.setHpr(0, -90, 0)
-        self.default_cam(self.config.root_level)
+
         self.screen_images = OnscreenImages()
         self.screen_texts = OnscreenTexts()
         self.buttons = DirectButtons()
         self.entries = DirectEntries()
-        self.lod = LODNode('suber')
-        self.lod_node = NodePath(self.lod)
-        self.lod_node.reparentTo(render)
+
+        #self.lod = LODNode('suber')
+        #self.lod_node = NodePath(self.lod)
+        #self.lod_node.reparentTo(render)
         #render.setShaderInput('time', 0)
         self.buttons.add_button(name = 'Exit', text = ("Exit", "Exit", "Exit", "disabled"),
-                                    pos = (1.23, 0, -0.95),
-                                    scale = 0.07, command=self.game.stop)
-
-        self.buttons.add_button(name = 'Down', text = ("Down", "Down", "Down", "disabled"),
-                                    pos = (1.23, 0, 0.7),
-                                    scale = 0.07, command = self.down)
-        self.buttons.add_button(name = 'Up', text = ("Up", "Up", "Up", "disabled"),
-                                    pos = (1.23, 0, 0.8),
-                                    scale = 0.07, command = self.up)
+                               pos = (1.23, 0, -0.95),
+                               scale = 0.07, command=self.game.stop)
 
         self.screen_texts.add_text(name = 'status',
-                                        text = 'Hello! Suber was started!',
-                                        pos = (-1.3, -0.95), scale = 0.07)
+                               text = 'Hello! Suber was started!',
+                               pos = (-1.3, -0.95), scale = 0.07)
         self.entries.add_entry(name = 'console',text = "" , 
                                pos = (-1.29, 0, -0.85), 
                                scale=0.07,command=self.game.cmd_handle,
-            initialText="", width = 37, numLines = 1,focus=0)
+                               initialText="", width = 37, numLines = 1,focus=0)
 
         textures['sight'] = loader.loadTexture('res/textures/sight.png')
         self.screen_images.add_image('sight', 
-                                            textures['sight'], 
-                                            scale = 0.05, pos = (0, 0, 0))
+                               textures['sight'], 
+                               scale = 0.05, pos = (0, 0, 0))
         self.screen_images['sight'].setTransparency(TransparencyAttrib.MAlpha)
+        self.game.world = World(self, self.game)
+        self.camFree = CamFree(self.game)
+        self.app.camera.setHpr(0, -90, 0)
+        self.app.camera.setPos(0, 0, 512)
 
-
-    def default_cam(self, level):
-        self.camFree.level = level
-
-
-    def down(self):
-        level = self.game.world.level
-        if level>=self.config.land_level:
-            return
-        level += 1
-        self.camFree.level = level
-        self.show_terrain(level)
-
-    def up(self):
-        level = self.game.world.level
-        if level<=self.config.root_level:
-            return
-        level -= 1
-        self.camFree.level = level
-        self.show_terrain(level)
-
-    def show_terrain(self, level):
-        show_terrain(self.game, base.camera.getPos(), level)
 
     def write(self, text):
         """

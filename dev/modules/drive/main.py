@@ -11,7 +11,6 @@ import logging
 from modules.drive.commands import Command_Handler
 from modules.drive.console import Console_UI
 from modules.drive.graph import GUI
-from modules.drive.world import World
 from config import Config
 
 class Root():
@@ -50,8 +49,6 @@ class Game(Root):
             self.process = Console_UI(self)
         elif self.mode == 'GUI':
             self.process = GUI(self)
-
-        self.world = World()
 
     def cmd_handle(self, cmd):
         self.command_handler.cmd_handle(cmd)

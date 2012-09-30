@@ -7,14 +7,14 @@ from pandac.PandaModules import Vec3, WindowProperties
 
 class CamFree(DirectObject.DirectObject):
     config = Config()
-    def __init__(self, limit_Z = (-1024,1024),
-                       showterrain = lambda x: x):
+    def __init__(self, game):
         base.disableMouse()
 
+        self.game = game
+        self.showterrain = game.world.show
         self.level = self.config.root_level
         self.high_level = self.config.root_level
         self.low_level = self.config.land_level
-        camera.setPos(0, 0, 64)
         base.camLens.setFar(2000)
 
         self.keyMap = {"FORWARD":0, "BACK":0, "RIGHT":0,
@@ -39,28 +39,24 @@ class CamFree(DirectObject.DirectObject):
         self.accept("wheel_up", self.CamSpeed, [1.1])
         self.accept("wheel_down", self.CamSpeed, [0.9])
 
-        self.SpeedCam = 0.2
-        self.SpeedRot = 0.05 # 
-        self.SpeedMult = 5 # lshift
-        self.limit_Z = limit_Z
-
-        #self.textSpeed = OnscreenText(pos = (0.9, -0.9), scale = 0.1)
+        self.SpeedCam = 0.1
+        self.SpeedRot = 0.05
+        self.SpeedMult = 5
 
         self.CursorOffOn = 'On'
 
         self.props = WindowProperties()
 
-        taskMgr.add(self.CamControl, 'CamControl') #???????? ??? ??????? ???????
-        self.showterrain = showterrain
+        taskMgr.add(self.CamControl, 'CamControl')
 
-    def setKey(self, key, value): # ??????? ??? ?????????? ? ??????? "keyMap" ????? ? ????????
+    def setKey(self, key, value):
         self.keyMap[key] = value
 
-    def CamSpeed(self, sd): # ??????? ????????? ???????? ??????
+    def CamSpeed(self, sd):
         self.SpeedCam *= sd
 
-    def CamControl(self, task): # ??????? ?????????? ???????
-        if (self.keyMap["Mouse3"] != 0): # ?????????? ??????? ???? ?????? ?????? ?????? ????
+    def CamControl(self, task):
+        if (self.keyMap["Mouse3"] != 0):
             if (self.CursorOffOn == 'On'):
                 self.props.setCursorHidden(True)
                 base.win.requestProperties(self.props)
@@ -75,43 +71,26 @@ class CamFree(DirectObject.DirectObject):
             y = md.getY()
             z = camera.getZ()
 
-            #self.SpeedCam = (abs(z)+64)/256.0
-
-
             Speed = self.SpeedCam
 
             if (self.keyMap["LSHIFT"]!=0):
                 Speed = self.SpeedCam*self.SpeedMult
             if (self.keyMap["FORWARD"]!=0):
                 camera.setPos(camera.getPos()+dirFB*Speed)
-                camera.setZ(z)
+                #camera.setZ(z)
             if (self.keyMap["BACK"]!=0):
                 camera.setPos(camera.getPos()-dirFB*Speed)
-                camera.setZ(z)
+                #camera.setZ(z)
             if (self.keyMap["RIGHT"]!=0):
                 camera.setPos(camera.getPos()+dirRL*Speed)
-                camera.setZ(z)
+                #camera.setZ(z)
             if (self.keyMap["LEFT"]!=0):
                 camera.setPos(camera.getPos()-dirRL*Speed)
-                camera.setZ(z)
+                #camera.setZ(z)
             if (self.keyMap["UPWARDS"]!=0):
                 camera.setZ(camera.getZ()+Speed)
             if (self.keyMap["DOWNWARDS"]!=0):
                 camera.setZ(camera.getZ()-Speed)
-
-#            if camera.getZ() < self.limit_Z[0]:
-                #if self.level > self.high_level:
-                    #camera.setZ(self.join_Z[1])
-                    #self.level -= 1
-                #else:
-                    #camera.setZ(self.join_Z[0])
-
-            #elif camera.getZ() > self.limit_Z[1]:
-                #if self.level < self.max_level:
-                    #camera.setZ(self.join_Z[0])
-                    #self.level += 1
-                #else:
-                    #camera.setZ(self.join_Z[1])
 
             if base.win.movePointer(0, base.win.getXSize()/2, base.win.getYSize()/2):
                 camera.setH(camera.getH() -  (x - base.win.getXSize()/2)*self.SpeedRot)
@@ -122,7 +101,7 @@ class CamFree(DirectObject.DirectObject):
                     camera.setP(90)
 
             #print self.level
-            self.showterrain(self.level)
+            self.showterrain()
 
         else:
             self.CursorOffOn = 'On'
