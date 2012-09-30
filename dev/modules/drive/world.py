@@ -18,12 +18,13 @@ class OctreeNode:
 
     stop = False
     child = []
-    def __init__(self, world, len_cube, parent=None,\
+    def __init__(self, vox, len_cube, parent=None,\
                        level = 1, center = Vec3(0,0,0)):
         self.parent = parent
         self.level = level
         self.center = center
-        self.world = world
+        self.world = vox.world
+        self.vox = vox
         self.len_cube = len_cube
         self.cube = self.world.cubik
         #self.v = [Vec3(0,0,-1), Vec3(0,0,1), Vec3(0,-1,0), Vec3(0,1,0), Vec3(-1,0,0), Vec3(1,0,0)]
@@ -42,9 +43,7 @@ class OctreeNode:
 
     def check(self):
         #if dist higher then sphere radius then stop dividind
-        
-        #TODO resolve r to right variable
-        if VBase3.length(self.center) > r:
+        if VBase3.length(self.center) > self.vox.r:
             self.stop = True
         #stop at bottom level
         if self.len_cube == 1:
@@ -62,7 +61,7 @@ class VoxObject:
     r = 0.5* max_len * 2 ** 0.5
     def __init__(self, world):
         self.world = world
-        self.root = OctreeNode(self.world, self.max_len)
+        self.root = OctreeNode(self, self.max_len)
 
 
 class World():
