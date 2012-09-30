@@ -327,6 +327,7 @@ class Map_generator_2D():
         yield iteration, 'start align'
         self.maps.align(iteration)
         self.maps.align(iteration)
+        self.end_map = self.maps[iteration]
 
         yield iteration, 'finish'
 

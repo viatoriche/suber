@@ -77,15 +77,15 @@ class MapTree():
         """
         x, y, z = self.parent.coords
         start_x, start_y = self.name
-        cur_x = (x - (start_x * self.config.factor)) * self.config.factor
-        cur_y = (y - (start_y * self.config.factor)) * self.config.factor
+        cur_x = (x - (start_x * self.config.factor_down_size)) * self.config.factor_down
+        cur_y = (y - (start_y * self.config.factor_down_size)) * self.config.factor_down
         self.coords = (cur_x, cur_y, 64)
 
     def down(self):
         """Create new MapTree and join
         """
         x, y, z = self.coords
-        name = x / self.config.factor, y / self.config.factor
+        name = x / self.config.factor_down_size, y / self.config.factor_down_size
         return MapTree(self.game, self, name)
 
     def change_parent_coords(self):
@@ -94,25 +94,25 @@ class MapTree():
         if self.parent:
             cur_x, cur_y, cur_z = self.coords
             start_x, start_y = self.name
-            x = (cur_x / self.config.factor) + (start_x * self.config.factor)
-            y = (cur_y / self.config.factor) + (start_y * self.config.factor)
+            x = (cur_x / self.config.factor_down) + (start_x * self.config.factor_down_size)
+            y = (cur_y / self.config.factor_down) + (start_y * self.config.factor_down_size)
             self.parent.coords = (x, y, 64)
             #print 'Parent: ', self.parent.coords, ' self: ', self.coords
 
     def get_cache_map_height(self, mX, mY, X, Y):
         parentX, parentY = 0, 0
         nameX, nameY = mX, mY
-        if nameX > self.config.factor_tor:
-            nameX = nameX - self.config.factor
+        if nameX > self.config.factor_down_tor:
+            nameX = nameX - self.config.factor_down
             parentX = 1
         elif nameX < 0:
-            nameX = nameX + self.config.factor
+            nameX = nameX + self.config.factor_down
             parentX = -1
-        if nameY > self.config.factor_tor:
-            nameY = nameY - self.config.factor
+        if nameY > self.config.factor_down_tor:
+            nameY = nameY - self.config.factor_down
             parentY = 1
         elif nameY < 0:
-            nameY = nameY + self.config.factor
+            nameY = nameY + self.config.factor_down
             parentY = -1
 
         if not self.parent.parent:
@@ -137,17 +137,17 @@ class MapTree():
 
         parentX, parentY = 0, 0
         nameX, nameY = mX, mY
-        if nameX > self.config.factor_tor:
-            nameX = nameX - self.config.factor
+        if nameX > self.config.factor_down_tor:
+            nameX = nameX - self.config.factor_down
             parentX = 1
         elif nameX < 0:
-            nameX = nameX + self.config.factor
+            nameX = nameX + self.config.factor_down
             parentX = -1
-        if nameY > self.config.factor_tor:
-            nameY = nameY - self.config.factor
+        if nameY > self.config.factor_down_tor:
+            nameY = nameY - self.config.factor_down
             parentY = 1
         elif nameY < 0:
-            nameY = nameY + self.config.factor
+            nameY = nameY + self.config.factor_down
             parentY = -1
 
         if not self.parent.parent:
@@ -158,25 +158,25 @@ class MapTree():
             parent_map = self.parent.get_map(parentX, parentY, Join = False)
 
 
-        x = (X / self.config.factor) + (nameX * self.config.factor)
-        y = (Y / self.config.factor) + (nameY * self.config.factor)
+        x = (X / self.config.factor_down) + (nameX * self.config.factor_down_size)
+        y = (Y / self.config.factor_down) + (nameY * self.config.factor_down_size)
 
         return parent_map[x, y]
 
     def change_cache_map_height(self, mX, mY, X, Y, height):
         parentX, parentY = 0, 0
         nameX, nameY = mX, mY
-        if nameX > self.config.factor_tor:
-            nameX = nameX - self.config.factor
+        if nameX > self.config.factor_down_tor:
+            nameX = nameX - self.config.factor_down
             parentX = 1
         elif nameX < 0:
-            nameX = nameX + self.config.factor
+            nameX = nameX + self.config.factor_down
             parentX = -1
-        if nameY > self.config.factor_tor:
-            nameY = nameY - self.config.factor
+        if nameY > self.config.factor_down_tor:
+            nameY = nameY - self.config.factor_down
             parentY = 1
         elif nameY < 0:
-            nameY = nameY + self.config.factor
+            nameY = nameY + self.config.factor_down
             parentY = -1
 
         if not self.parent.parent:
@@ -216,17 +216,17 @@ class MapTree():
     def get_cache_map_height(self, mX, mY, X, Y):
         parentX, parentY = 0, 0
         nameX, nameY = mX, mY
-        if nameX > self.config.factor_tor:
-            nameX = nameX - self.config.factor
+        if nameX > self.config.factor_down_tor:
+            nameX = nameX - self.config.factor_down
             parentX = 1
         elif nameX < 0:
-            nameX = nameX + self.config.factor
+            nameX = nameX + self.config.factor_down
             parentX = -1
-        if nameY > self.config.factor_tor:
-            nameY = nameY - self.config.factor
+        if nameY > self.config.factor_down_tor:
+            nameY = nameY - self.config.factor_down
             parentY = 1
         elif nameY < 0:
-            nameY = nameY + self.config.factor
+            nameY = nameY + self.config.factor_down
             parentY = -1
 
         if not self.parent.parent:
@@ -260,17 +260,17 @@ class MapTree():
 
 
             parentX, parentY = 0, 0
-            if nameX > self.config.factor_tor:
-                nameX = nameX - self.config.factor
+            if nameX > self.config.factor_down_tor:
+                nameX = nameX - self.config.factor_down
                 parentX = 1
             elif nameX < 0:
-                nameX = nameX + self.config.factor
+                nameX = nameX + self.config.factor_down
                 parentX = -1
-            if nameY > self.config.factor_tor:
-                nameY = nameY - self.config.factor
+            if nameY > self.config.factor_down_tor:
+                nameY = nameY - self.config.factor_down
                 parentY = 1
             elif nameY < 0:
-                nameY = nameY + self.config.factor
+                nameY = nameY + self.config.factor_down
                 parentY = -1
 
             if Join:
@@ -300,7 +300,7 @@ class MapTree():
                 parent_nameX = self.parent.name[0] + parentX
                 parent_nameY = self.parent.name[1] + parentY
                 if (parentX, parentY) != (0, 0):
-                    print 'NEW PARENT on ', self.game.world.level, ' JOIN: ', Join
+                    print 'NEW PARENT on ', self.game.world.level, ' JOIN: ', Join, ' -> ', parentX, parentY
                     new_source_map = self.parent.get_map(parentX, parentY, Join = Join)
                 else:
                     new_source_map = source_map
@@ -338,13 +338,15 @@ class MapTree():
             cube_z = 'unk'
             pass
 
+        f = self.config.factor_down_size
+
         if self.parent:
             par_x, par_y, par_z = self.parent.coords
             return 'L:{8} * X: {0}, Y: {1} -> {2}:{3} * UX: {4}, UY: {5} -> {6}:{7} | cube = {9} | {10}'.format(
-                cur_x, cur_y, cur_x/16, cur_y/16, par_x, par_y, par_x/16, par_y/16, level, cube_z, cam)
+                cur_x, cur_y, cur_x/f, cur_y/f, par_x, par_y, par_x/f, par_y/f, level, cube_z, cam)
         else:
             return 'L:{4} * X: {0}, Y: {1} -> {2}:{3} | cube z = {5} | {6}'.format(
-                cur_x, cur_y, cur_x/16, cur_y/16, level, cube_z, cam)
+                cur_x, cur_y, cur_x/f, cur_y/f, level, cube_z, cam)
 
 
     #def up
@@ -359,7 +361,7 @@ class World():
     # chanks {level: {(x, y): Chank}}, where x, y = X*mode_game, Y*mode_game with cubes
     chanks_map = {}
     config = Config()
-    size_chank = config.factor
+    size_chank = config.size_chank
     # modelles with texture for cubes
     types = {}
     wayX, wayY = [], []
@@ -399,7 +401,8 @@ class World():
         textures['sand'].setMagfilter(Texture.FTLinearMipmapLinear)
         textures['sand'].setMinfilter(Texture.FTLinearMipmapLinear)
 
-        self.water_node.create(0, 0, (self.config.factor_double,  self.config.factor_double))
+        self.water_node.create(0, 0, (self.config.size_chank * self.config.count_chanks * 2,
+                                      self.config.size_chank * self.config.count_chanks * 2))
         self.cube_size = 1
         self.cube_z = 10000
 
@@ -430,8 +433,10 @@ def show_terrain(game, cam_coords, level):
     def get_height(level, h):
         if h == 0:
             return 0
+        # real size on land level
         high_level = abs(h)
-        factor = game.config.factor
+        # what level - real?
+        factor = game.config.land_level
         mod = math.log(high_level, factor)
         return int((((level+1) ** mod) ** 2) / h)
 
@@ -478,16 +483,16 @@ def show_terrain(game, cam_coords, level):
 
         # 63 --> 0 ---GO +1 ... 1 -> 0 --- GO -1
 
-        if game.world.wayX == [63, 0]:
+        if game.world.wayX == [game.config.factor_double_tor, 0]:
             mapX = +1
 
-        if game.world.wayX == [0, 63]:
+        if game.world.wayX == [0, game.config.factor_double_tor]:
             mapX = -1
 
-        if game.world.wayY == [63, 0]:
+        if game.world.wayY == [game.config.factor_double_tor, 0]:
             mapY = +1
 
-        if game.world.wayY == [0, 63]:
+        if game.world.wayY == [0, game.config.factor_double_tor]:
             mapY = -1
 
         if mapX != 0 or mapY != 0:
@@ -604,14 +609,20 @@ def show_terrain(game, cam_coords, level):
                         else:
                             if height <= cur_map.water_z:
                                 height = cur_map.water_z + 1
-                            if cur_map[(cX, cY)] in range(game.config.land_mount_level[0], game.config.land_mount_level[1]+1):
-                                cubes[(cube_X, cube_Y, height - game.world.cube_z)] = game.config.land_mount_level
+                            if cur_map[(cX, cY)] in range(game.config.land_mount_level[0],
+                                                          game.config.land_mount_level[1]+1):
+                                cubes[(cube_X, cube_Y,
+                                       height - game.world.cube_z)] = game.config.land_mount_level
 
-                            elif cur_map[(cX, cY)] in range(game.config.low_mount_level[0], game.config.low_mount_level[1]+1):
-                                cubes[(cube_X, cube_Y, height - game.world.cube_z)] = game.config.low_mount_level
+                            elif cur_map[(cX, cY)] in range(game.config.low_mount_level[0],
+                                                            game.config.low_mount_level[1]+1):
+                                cubes[(cube_X, cube_Y,
+                                height - game.world.cube_z)] = game.config.low_mount_level
 
-                            elif cur_map[(cX, cY)] in range(game.config.mid_mount_level[0], game.config.mid_mount_level[1]+1):
-                                cubes[(cube_X, cube_Y, height - game.world.cube_z)] = game.config.mid_mount_level
+                            elif cur_map[(cX, cY)] in range(game.config.mid_mount_level[0],
+                                                            game.config.mid_mount_level[1]+1):
+                                cubes[(cube_X, cube_Y, 
+                                    height - game.world.cube_z)] = game.config.mid_mount_level
 
                             else:
                                 cubes[(cube_X, cube_Y, height - game.world.cube_z)] = game.config.high_mount_level
@@ -642,7 +653,7 @@ def show_terrain(game, cam_coords, level):
     Paint()
     if change_level:
         change_level = False
-        base.camera.setZ(get_height(level, cur_map[(X, Y)])+16)
+        base.camera.setZ(get_height(level, cur_map[(X, Y)])+64)
 
 def generate_map_texture(map_tree, factor):
     map_world = map_tree.map3d

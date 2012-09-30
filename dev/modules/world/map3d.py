@@ -51,8 +51,8 @@ class Map3d(dict):
                     else:
                         self.mount_levels[(x, y)] = self.config.land_mount_level
 
-        for x in xrange(self.config.factor):
-            for y in xrange(self.config.factor):
+        for x in xrange(self.config.factor_down):
+            for y in xrange(self.config.factor_down):
                 self.land_seeds[x,y] = random.randint(0, sys.maxint)
 
     def get_land_size(self):
@@ -285,13 +285,13 @@ class Map3d(dict):
             if height == None:
                 x, y = item
                 if x < 0:
-                    x = x + self.config.factor
+                    x = x + self.config.factor_double
                 elif x > self.config.factor_double_tor:
-                    x = x - self.config.factor
+                    x = self.config.factor_double - x
                 if y < 0:
-                    y = y + self.config.factor
+                    y = y + self.config.factor_double
                 elif y > self.config.factor_double_tor:
-                    y = y - self.config.factor
+                    y = self.config.factor_double - y
                 height = self[(x, y)]
 
             #self[item] = height
@@ -557,16 +557,17 @@ class Map3d(dict):
             t = time.time()
             add_heights()
             start = 0
-            for x in xrange(1):
-                square_diamond(start, start, self.size, 500)
+            #for x in xrange(1):
+                #square_diamond(start, start, self.size, 500)
                 #align_it(-1, 1)
             print 'First generate: ', time.time()  - t
         else:
             t = time.time()
             #start = self.size / 4
-            start = -self.size
+            #start = -self.size
+            start = 0
             print start, self.size+(abs(start)*2)
-            square_diamond(start, start, self.size+(abs(start)*2), 1)
+            #square_diamond(start, start, self.size+(abs(start)*2), 1)
             print 'square: ', time.time()  - t
             t = time.time()
             #smooth_all_coasts()
@@ -590,8 +591,8 @@ def map2d_to_3d(map2d, seed):
         else:
             map3d[coords] = map3d.water_z+1
 
-    for x in xrange(config.factor):
-        for y in xrange(config.factor):
+    for x in xrange(config.factor_down):
+        for y in xrange(config.factor_down):
             map3d.land_seeds[x, y] = random.randint(0, sys.maxint)
 
     map3d.gen_random_heights(True)
@@ -610,8 +611,8 @@ def generate_heights(map_tree, source_map, start_x, start_y, DontGen = False, Di
     map3d.map_y = start_y
     for x in xrange(map3d.size):
         for y in xrange(map3d.size):
-            sx = (x / config.factor) + (start_x * config.factor)
-            sy = (y / config.factor) + (start_y * config.factor)
+            sx = (x / config.factor_down) + (start_x * config.factor_down_size)
+            sy = (y / config.factor_down) + (start_y * config.factor_down_size)
             # heights
             if DontGen and (x, y) in DictMap:
                 height = DictMap[(x, y)]

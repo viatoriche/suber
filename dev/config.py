@@ -10,10 +10,16 @@ class Config():
     factor_tor = 7
     factor_double_tor = 63
     cube_meter = 1
-    land_level = 8
+    land_level = 24
     root_level = 0
     count_chanks = 6
+    # one cube = 2 cube
     factor_down = 2
+    factor_down_tor = 1
+    # 0x63 = 0x31 + 32x63
+    factor_down_size = 32
+
+    size_chank = 8
 
     default_height_level = 1
 
