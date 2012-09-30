@@ -14,6 +14,7 @@ from modules.drive.textures import textures
 from pandac.PandaModules import Texture, TextureStage
 from panda3d.core import VBase3
 from config import Config
+from pandac.PandaModules import NodePath, PandaNode
 
 class OctreeNode:
 
@@ -23,16 +24,24 @@ class OctreeNode:
     child = []
     def __init__(self, vox, len_cube, parent=None,\
                        level = 1, center = Vec3(0,0,0)):
+
+        print 'Create node: ', len_cube, level, center
         self.parent = parent
         self.level = level
         self.center = center
         self.world = vox.world
         self.vox = vox
         self.len_cube = len_cube
-        self.cube = self.world.cubik
+        self.cube_size = len_cube
+        self.cube_z = len_cube
+        self.cube = CubeModel(self.cube_size, self.cube_size, self.cube_z)
+        #self.my_cube = PandaNode('cube_'.format(random.random()))
+        self.cube.reparentTo(render)
+        self.cube.setTexture(textures['water'])
+        #self.cube.copyTo(self.my_cube)
 
-        if self.check():
-            self.draw()
+        self.check()
+        self.draw()
 
     #LOD HERE!
     def divide(self):
@@ -44,21 +53,21 @@ class OctreeNode:
         if not self.stop:
             for dC in self.vox.v:
                 self.child.append(OctreeNode(self.vox, self.len_cube/2, self, \
-                        self.level+1, self.center + self.dC * self.length))
+                        self.level+1, self.center + dC * self.len_cube))
 
     def check(self):
         #if dist higher then sphere radius then stop dividind
 
         #TODO: make perlin noise integration
-        X = self.center[0]
-        Y = self.center[1]
-        Z = self.center[2]
+        #X = self.center[0]
+        #Y = self.center[1]
+        #Z = self.center[2]
 
         #convert cube center XYZ coordinates to xy texture coordinates
 
         #see wiki sphere coordinates
-        x = math.atan(math.sqrt(X ** 2 + Y ** 2) / Z)
-        y = math.atan(Y / X)
+        #x = math.atan(math.sqrt(X ** 2 + Y ** 2) / Z)
+        #y = math.atan(Y / X)
 
         # if VBase3.length(self.center) > r+height_map_value(x,y,self.level):
 
@@ -69,16 +78,19 @@ class OctreeNode:
         if self.len_cube == 1:
             self.stop = True
 
-        return not self.stop
-
     def draw(self):
-        if self.level == 1:
-            self.cube.setScale(self.len_cube/2, self.len_cube/2,
-                               self.len_cube/2)
-            self.cube.setPos(self.center)
+        #if self.level == 1:
+        if self.parent:
+            self.parent.cube.hide()
+        print self.center
+        self.cube.setScale(self.len_cube/2, self.len_cube/2,
+                           self.len_cube/2)
+        self.cube.setPos(self.center)
+
+        self.divide()
 
 class VoxObject:
-    max_len = 256
+    max_len = 40
     r = 0.5* max_len * 2 ** 0.5
     v = [Vec3(0.5,0.5,0.5), Vec3(-0.5,0.5,0.5),
          Vec3(0.5,-0.5,0.5), Vec3(0.5,0.5,-0.5),
