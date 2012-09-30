@@ -6,6 +6,7 @@ World
 
 import random
 import sys
+import math
 
 from modules.drive.shapeGenerator import Cube as CubeModel
 from panda3d.core import Vec3
@@ -43,21 +44,21 @@ class OctreeNode:
         if not self.stop:
             for dC in self.vox.v:
                 self.child.append(OctreeNode(self.vox, self.len_cube/2, self, \
-                        self.level+1, self.center + self.dC * length))
+                        self.level+1, self.center + self.dC * self.length))
 
     def check(self):
         #if dist higher then sphere radius then stop dividind
 
         #TODO: make perlin noise integration
-        #X = self.center[0]
-        #Y = self.center[1]
-        #Z = self.center[2]
+        X = self.center[0]
+        Y = self.center[1]
+        Z = self.center[2]
 
         #convert cube center XYZ coordinates to xy texture coordinates
 
         #see wiki sphere coordinates
-        #x = arctg(sqrt(X**2+Y**2)/Z)
-        #y = arctg(Y/X)
+        x = math.atan(math.sqrt(X ** 2 + Y ** 2) / Z)
+        y = math.atan(Y / X)
 
         # if VBase3.length(self.center) > r+height_map_value(x,y,self.level):
 
@@ -67,6 +68,7 @@ class OctreeNode:
         #stop at bottom level
         if self.len_cube == 1:
             self.stop = True
+
         return not self.stop
 
     def draw(self):
