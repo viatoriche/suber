@@ -16,7 +16,9 @@ from config import Config
 
 class OctreeNode:
 
+    # stop value
     stop = False
+    # exist = True #make voxel deletable by player
     child = []
     def __init__(self, vox, len_cube, parent=None,\
                        level = 1, center = Vec3(0,0,0)):
@@ -27,21 +29,38 @@ class OctreeNode:
         self.vox = vox
         self.len_cube = len_cube
         self.cube = self.world.cubik
-        #self.v = [Vec3(0,0,-1), Vec3(0,0,1), Vec3(0,-1,0), Vec3(0,1,0), Vec3(-1,0,0), Vec3(1,0,0)]
-        self.v = [Vec3(0.5,0.5,0.5), Vec3(-0.5,0.5,0.5), Vec3(0.5,-0.5,0.5), Vec3(0.5,0.5,-0.5), Vec3(-0.5,-0.5,0.5), Vec3(0.5,-0.5,-0.5), Vec3(-0.5,0.5,-0.5), Vec3(-0.5,-0.5,-0.5)]
-        #self.r = self.len_cube * 2 ** 0.5
 
         if self.check():
             self.draw()
 
+    #LOD HERE!
     def divide(self):
+        #TODO: add #exist chech
+        #TODO: add distance check to make LOD
+        # divide if distance from camera to node is lower than trigger value
+        # triger_dist = self.lengh*const #const = 5 distances for example
+        #if VBase3.length(self.center-camera) < trigger_dist :
         if not self.stop:
-            for dC in self.v:
-                self.child.append(__OctreeNode(self, self.len_cube/2,\
+            for dC in self.vox.v:
+                self.child.append(OctreeNode(self.vox, self.len_cube/2, self, \
                         self.level+1, self.center + self.dC * length))
-                        #self.level+1, self.center + self.dC * length / 2))
 
     def check(self):
+        #if dist higher then sphere radius then stop dividind
+
+        #TODO: make perlin noise integration
+        #X = self.center[0]
+        #Y = self.center[1]
+        #Z = self.center[2]
+
+        #convert cube center XYZ coordinates to xy texture coordinates
+
+        #see wiki sphere coordinates
+        #x = arctg(sqrt(X**2+Y**2)/Z)
+        #y = arctg(Y/X)
+
+        # if VBase3.length(self.center) > r+height_map_value(x,y,self.level):
+
         #if dist higher then sphere radius then stop dividind
         if VBase3.length(self.center) > self.vox.r:
             self.stop = True
@@ -52,13 +71,18 @@ class OctreeNode:
 
     def draw(self):
         if self.level == 1:
-            #TODO: SHOW CUBE HERE
-            self.cube.setScale(self.len_cube/2, self.len_cube/2, self.len_cube/2)
+            self.cube.setScale(self.len_cube/2, self.len_cube/2,
+                               self.len_cube/2)
             self.cube.setPos(self.center)
 
 class VoxObject:
     max_len = 256
     r = 0.5* max_len * 2 ** 0.5
+    v = [Vec3(0.5,0.5,0.5), Vec3(-0.5,0.5,0.5),
+         Vec3(0.5,-0.5,0.5), Vec3(0.5,0.5,-0.5),
+         Vec3(-0.5,-0.5,0.5), Vec3(0.5,-0.5,-0.5),
+         Vec3(-0.5,0.5,-0.5), Vec3(-0.5,-0.5,-0.5)]
+
     def __init__(self, world):
         self.world = world
         self.root = OctreeNode(self, self.max_len)
