@@ -25,7 +25,7 @@ class OctreeNode:
     def __init__(self, vox, len_cube, parent=None,\
                        level = 1, center = Vec3(0,0,0)):
 
-        print 'Create node: ', len_cube, level, center
+        #print 'Create node: ', len_cube, level, center
         self.parent = parent
         self.level = level
         self.center = center
@@ -72,6 +72,7 @@ class OctreeNode:
         # if VBase3.length(self.center) > r+height_map_value(x,y,self.level):
 
         #if dist higher then sphere radius then stop dividind
+        print self.center, VBase3.length(self.center), self.vox.r
         if VBase3.length(self.center) > self.vox.r:
             self.stop = True
         #stop at bottom level
@@ -80,9 +81,9 @@ class OctreeNode:
 
     def draw(self):
         #if self.level == 1:
-        if self.parent:
-            self.parent.cube.hide()
-        print self.center
+        #if self.parent:
+            #self.parent.cube.hide()
+        #print self.center
         self.cube.setScale(self.len_cube/2, self.len_cube/2,
                            self.len_cube/2)
         self.cube.setPos(self.center)
@@ -90,12 +91,14 @@ class OctreeNode:
         self.divide()
 
 class VoxObject:
-    max_len = 40
-    r = 0.5* max_len * 2 ** 0.5
-    v = [Vec3(0.5,0.5,0.5), Vec3(-0.5,0.5,0.5),
-         Vec3(0.5,-0.5,0.5), Vec3(0.5,0.5,-0.5),
-         Vec3(-0.5,-0.5,0.5), Vec3(0.5,-0.5,-0.5),
-         Vec3(-0.5,0.5,-0.5), Vec3(-0.5,-0.5,-0.5)]
+    max_len = 8
+    #r = 0.5* max_len * 2 ** 0.5
+    #r = 0.25* max_len * (2 ** 0.5)
+    r = 0.25* max_len * (3 ** 0.5)
+    v = [Vec3(0.25,0.25,0.25), Vec3(-0.25,0.25,0.25),
+         Vec3(0.25,-0.25,0.25), Vec3(0.25,0.25,-0.25),
+         Vec3(-0.25,-0.25,0.25), Vec3(0.25,-0.25,-0.25),
+         Vec3(-0.25,0.25,-0.25), Vec3(-0.25,-0.25,-0.25)]
 
     def __init__(self, world):
         self.world = world
