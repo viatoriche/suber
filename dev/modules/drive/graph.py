@@ -145,7 +145,7 @@ class GUI():
         self.game.world = World(self, self.game)
         self.camFree = CamFree(self.game)
         self.app.camera.setHpr(0, -90, 0)
-        self.app.camera.setPos(0, 0, 2000)
+        #self.app.camera.setPos(0, 0, 200)
 
 
     def write(self, text):

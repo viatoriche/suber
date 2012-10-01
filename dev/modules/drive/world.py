@@ -7,6 +7,7 @@ World
 import random
 import sys
 import math
+import time
 
 from modules.drive.shapeGenerator import Cube as CubeModel
 from panda3d.core import Vec3
@@ -15,13 +16,22 @@ from pandac.PandaModules import Texture, TextureStage
 from panda3d.core import VBase3
 from config import Config
 from pandac.PandaModules import NodePath, PandaNode
+from panda3d.core import RigidBodyCombiner, NodePath
 
-class OctreeNode:
+class QuadroTreeNode:
+    """Node - one cube, which may divide on 4 cubes, when camera is near
+
+    Node = X, Y, where Z - height from perlin noize generator -> perlin(x, y, level)
+
+    X,Y this is one of 64 x 64 global map height
+
+    level - depend of height camera
+    """
 
     # stop value
     stop = False
     # exist = True #make voxel deletable by player
-    child = []
+    childs = {}
     def __init__(self, vox, len_cube, parent=None,\
                        level = 1, center = Vec3(0,0,0)):
 
@@ -31,29 +41,30 @@ class OctreeNode:
         self.center = center
         self.world = vox.world
         self.vox = vox
+        self.voxmap = vox.voxmap
         self.len_cube = len_cube
-        self.cube_size = len_cube
-        self.cube_z = len_cube
-        self.cube = CubeModel(self.cube_size, self.cube_size, self.cube_z)
-        #self.my_cube = PandaNode('cube_'.format(random.random()))
-        self.cube.reparentTo(render)
-        self.cube.setTexture(textures['water'])
-        #self.cube.copyTo(self.my_cube)
-
-        self.check()
-        self.draw()
+        #self.cube = self.vox.cube
 
     #LOD HERE!
     def divide(self):
         #TODO: add #exist chech
         #TODO: add distance check to make LOD
         # divide if distance from camera to node is lower than trigger value
-        # triger_dist = self.lengh*const #const = 5 distances for example
-        #if VBase3.length(self.center-camera) < trigger_dist :
-        if not self.stop:
-            for dC in self.vox.v:
-                self.child.append(OctreeNode(self.vox, self.len_cube/2, self, \
-                        self.level+1, self.center + dC * self.len_cube))
+        #const = 5 distances for example
+        trigger_dist = self.len_cube*5
+        #print trigger_dist, VBase3.length(self.center - base.camera.getPos())
+        #print self.center, base.camera.getPos()
+        length = VBase3.length(self.center - self.voxmap.camPos)
+        #print length, '<', trigger_dist
+        if length < trigger_dist :
+            if not self.stop:
+                for dC in self.vox.v:
+                    name = self.center + dC * (self.len_cube)
+                    self.childs[name] = QuadroTreeNode(self.vox, self.len_cube/2.0, self, \
+                        self.level+1, name)
+                    self.childs[name].repaint()
+        else:
+            self.stop = True
 
     def check(self):
         #if dist higher then sphere radius then stop dividind
@@ -72,37 +83,125 @@ class OctreeNode:
         # if VBase3.length(self.center) > r+height_map_value(x,y,self.level):
 
         #if dist higher then sphere radius then stop dividind
-        print self.center, VBase3.length(self.center), self.vox.r
-        if VBase3.length(self.center) > self.vox.r:
+        if self.len_cube == 1.0:
             self.stop = True
-        #stop at bottom level
-        if self.len_cube == 1:
-            self.stop = True
+            return
 
+        #if VBase3.length(self.center) < self.vox.r + (self.len_cube * 0.5 * math.sqrt(2)):
+            #self.stop = False
+            #return
+
+        #if VBase3.length(self.center) > self.vox.r - (self.len_cube * 0.5 * math.sqrt(2)):
+            #self.stop = True
+
+        #stop at bottom level
     def draw(self):
         #if self.level == 1:
-        #if self.parent:
-            #self.parent.cube.hide()
         #print self.center
-        self.cube.setScale(self.len_cube/2, self.len_cube/2,
-                           self.len_cube/2)
-        self.cube.setPos(self.center)
+        #if self.len_cube == 1:
+        self.vox.voxels[self.center, self.len_cube] = False
+        if self.stop or self.len_cube == 1.0:
+            self.vox.voxels[self.center, self.len_cube] = True
 
+    def repaint(self):
+        self.stop = False
+        self.check()
         self.divide()
+        self.draw()
 
-class VoxObject:
-    max_len = 8
+
+
+class VoxObject():
     #r = 0.5* max_len * 2 ** 0.5
     #r = 0.25* max_len * (2 ** 0.5)
-    r = 0.25* max_len * (3 ** 0.5)
-    v = [Vec3(0.25,0.25,0.25), Vec3(-0.25,0.25,0.25),
-         Vec3(0.25,-0.25,0.25), Vec3(0.25,0.25,-0.25),
-         Vec3(-0.25,-0.25,0.25), Vec3(0.25,-0.25,-0.25),
-         Vec3(-0.25,0.25,-0.25), Vec3(-0.25,-0.25,-0.25)]
+    #r = 0.25* max_len * (3 ** 0.5)
+    v = [
+         Vec3(0., 0.5, 0.5), Vec3(0.5, 0., 0.5),
+         Vec3(0., 0., 0.5), Vec3(0.5, 0.5, 0.5),
+         ]
 
-    def __init__(self, world):
+    config = Config()
+
+    def __init__(self, voxmap, world, center, max_len):
+
+        #self.rigid = RigidBodyCombiner('sphere {0}'.format(random.random()))
+        self.center = center
+
+        #self.cube = CubeModel(1, 1, 1)
+        #self.cube.setTexture(textures['black'])
+        self.max_len = max_len
+        self.voxmap = voxmap
+
         self.world = world
-        self.root = OctreeNode(self, self.max_len)
+
+        #self.combiner = NodePath(self.rigid)
+        #self.combiner.reparentTo(render)
+        self.root = QuadroTreeNode(self, self.max_len, center = self.center)
+        self.voxels = {}
+        self.cubes = {}
+
+        self.generate()
+        self.show()
+
+    def generate(self):
+        self.root.repaint()
+
+    def show(self):
+        # TODO: add delete cube event
+        collect = False
+        t = time.time()
+        for voxel in self.voxels:
+            if self.voxels[voxel]:
+                if not self.cubes.has_key(voxel):
+                    self.cubes[voxel] = CubeModel(voxel[1], voxel[1], voxel[1])
+                    mid_mount_level = self.config.mid_mount_level
+                    self.cubes[voxel].setTexture(textures[mid_mount_level])
+                    self.cubes[voxel].setPos(voxel[0])
+                    self.cubes[voxel].reparentTo(render)
+                else:
+                    if self.cubes[voxel].isHidden():
+                        self.cubes[voxel].show()
+            else:
+                if self.cubes.has_key(voxel):
+                    if not self.cubes[voxel].isHidden():
+                        self.cubes[voxel].hide()
+
+
+        print 'Go voxels: ', time.time() - t
+        #if collect:
+            #t = time.time()
+            ##self.rigid.collect()
+            #print 'collect: ', time.time() - t
+
+
+class VoxMap():
+    max_len = 256
+    def __init__(self, world, size, level):
+        self.world = world
+        self.level = level
+        self.size = size
+        self.voxes = {}
+        base.camera.setPos(self.max_len/2, self.max_len/2, self.max_len/16)
+        self.camPos = base.camera.getPos()
+        self.create()
+
+    def show(self):
+        if VBase3.length(self.camPos - base.camera.getPos()) >=5:
+            for vox in self.voxes.values():
+                self.camPos = base.camera.getPos()
+                self.world.game.write('CamPos: {0}'.format(self.camPos))
+                t = time.time()
+                vox.generate()
+                print 'gen: ', time.time() - t
+                t = time.time()
+                vox.show()
+                print 'show: ', time.time() - t
+
+    def create(self):
+        for x in xrange(-self.size, self.size+1):
+            for y in xrange(-self.size, self.size+1):
+                name = Vec3(x*self.max_len, y*self.max_len, -self.max_len)
+                self.voxes[name] = VoxObject(self, self.world, name, self.max_len)
 
 
 class World():
@@ -140,6 +239,10 @@ class World():
         textures['water'].setMagfilter(Texture.FTLinearMipmapLinear)
         textures['water'].setMinfilter(Texture.FTLinearMipmapLinear)
 
+        textures['black'] = loader.loadTexture("res/textures/black.png")
+        textures['black'].setMagfilter(Texture.FTLinearMipmapLinear)
+        textures['black'].setMinfilter(Texture.FTLinearMipmapLinear)
+
         textures['sand'] = loader.loadTexture("res/textures/sand.png")
         textures['sand'].setMagfilter(Texture.FTLinearMipmapLinear)
         textures['sand'].setMinfilter(Texture.FTLinearMipmapLinear)
@@ -167,7 +270,7 @@ class World():
         self.cubik.reparentTo(self.gui.app.render)
         self.cubik.setTexture(textures[high_mount_level],1)
 
-        self.vox = VoxObject(self)
+        self.vox_map = VoxMap(self, 0, 1)
 
     def new(self):
         """New world
@@ -180,7 +283,7 @@ class World():
         self.cubik.setTexScale(ts, 0.5, 0.5)
 
     def show(self):
-        pass
+        self.vox_map.show()
 
 # vi: ft=python:tw=0:ts=4
 

@@ -15,7 +15,7 @@ class CamFree(DirectObject.DirectObject):
         self.level = self.config.root_level
         self.high_level = self.config.root_level
         self.low_level = self.config.land_level
-        base.camLens.setFar(20000)
+        #base.camLens.setFar(200000000)
 
         self.keyMap = {"FORWARD":0, "BACK":0, "RIGHT":0,
                        "LEFT":0, "Mouse3":0, "LSHIFT":0,
@@ -39,7 +39,6 @@ class CamFree(DirectObject.DirectObject):
         self.accept("wheel_up", self.CamSpeed, [1.1])
         self.accept("wheel_down", self.CamSpeed, [0.9])
 
-        self.SpeedCam = 1
         self.SpeedRot = 0.05
         self.SpeedMult = 5
 
@@ -65,6 +64,8 @@ class CamFree(DirectObject.DirectObject):
             dirFB = base.camera.getMat().getRow3(1)
             dirTT = base.camera.getMat().getRow3(2)
             dirRL = base.camera.getMat().getRow3(0)
+
+            self.SpeedCam = camera.getZ()*0.01
 
             md = base.win.getPointer(0)
             x = md.getX()

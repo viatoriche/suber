@@ -29,13 +29,6 @@ class Chank(RigidBodyCombiner):
         self.node = NodePath(self)
 
         self.node.reparentTo(render)
-        # Why dont work? =(
-        #if not lod_node:
-            #self.node.reparentTo(render)
-        #else:
-            #lod.addSwitch(10.0, 5.0)
-            #self.node.reparentTo(lod_node)
-        #self.node.flattenLight()
         self.active = False
 
     def new(self, cubes):
