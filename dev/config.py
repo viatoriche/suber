@@ -26,9 +26,9 @@ class Config():
 
     # height cubes
     land_mount_level = 1, 200
-    low_mount_level = 200, 1000
-    mid_mount_level = 1000, 3000
-    high_mount_level = 3000, 10000
+    low_mount_level = 201, 1000
+    mid_mount_level = 1001, 3000
+    high_mount_level = 3001, 10000
 
     # 5%
     factor_high_mount = 5

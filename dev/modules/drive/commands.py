@@ -66,9 +66,9 @@ class Command_Handler():
             elif self.game.mode == 'GUI':
                 self.cmd_write(['Start convertation 2d -> 3d'])
                 self.game.world.map_2d = global_map_gen.end_map
-                #map3d = Map3d()
-                #map3d.get_from_2d(self.game.world.map_2d, seed)
-                #self.game.world.map_3d = map3d
+                # TODO: calculate real size of world
+                map3d = Map3d(self.game.world.map_2d, seed, self.game.world.map_2d.size)
+                self.game.world.map_3d = map3d
                 self.game.world.new()
             self.cmd_write(['Map generation process has been completed. Seed: {0}'.format(\
                                                 self.game.world.seed)])

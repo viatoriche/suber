@@ -38,11 +38,14 @@ class QuadroTreeNode:
         #print 'Create node: ', len_cube, level, center
         self.parent = parent
         self.level = level
-        self.center = center
-        self.world = vox.world
         self.vox = vox
+        self.world = vox.world
         self.voxmap = vox.voxmap
         self.len_cube = len_cube
+        x = center[0]
+        y = center[1]
+        z = self.world.map_3d[x, y]
+        self.center = Vec3(x, y, z)
         #self.cube = self.vox.cube
 
     #LOD HERE!
@@ -51,11 +54,24 @@ class QuadroTreeNode:
         #TODO: add distance check to make LOD
         # divide if distance from camera to node is lower than trigger value
         #const = 5 distances for example
-        trigger_dist = self.len_cube*5
-        #print trigger_dist, VBase3.length(self.center - base.camera.getPos())
-        #print self.center, base.camera.getPos()
+
+        # realizm = 64, but video ram - ebanko =(
+        # lets const = 8
+
+        camZ = self.voxmap.camZ - self.voxmap.land_z
+        if camZ > 30000:
+            trigger_dist = self.len_cube * 8
+        elif camZ > 20000 and camZ <= 30000:
+            trigger_dist = self.len_cube * 7
+        elif camZ > 10000 and camZ <= 20000:
+            trigger_dist = self.len_cube * 6
+        elif camZ > 5000 and camZ <= 10000:
+            trigger_dist = self.len_cube * 5
+        else:
+            trigger_dist = self.len_cube * 4
+
         length = VBase3.length(self.center - self.voxmap.camPos)
-        #print length, '<', trigger_dist
+
         if length < trigger_dist :
             if not self.stop:
                 for dC in self.vox.v:
@@ -99,9 +115,12 @@ class QuadroTreeNode:
         #if self.level == 1:
         #print self.center
         #if self.len_cube == 1:
-        self.vox.voxels[self.center, self.len_cube] = False
-        if self.stop or self.len_cube == 1.0:
-            self.vox.voxels[self.center, self.len_cube] = True
+        self.vox.voxels[self.center, self.len_cube, self.level] = False
+        if self.len_cube == 1.0:
+            self.vox.voxels[self.center, self.len_cube, self.level] = True
+            return
+        if self.stop:
+            self.vox.voxels[self.center, self.len_cube, self.level] = True
 
     def repaint(self):
         self.stop = False
@@ -112,30 +131,22 @@ class QuadroTreeNode:
 
 
 class VoxObject():
-    #r = 0.5* max_len * 2 ** 0.5
-    #r = 0.25* max_len * (2 ** 0.5)
-    #r = 0.25* max_len * (3 ** 0.5)
     v = [
-         Vec3(0., 0.5, 0.5), Vec3(0.5, 0., 0.5),
-         Vec3(0., 0., 0.5), Vec3(0.5, 0.5, 0.5),
+         Vec3(0., 0.5, 0.), Vec3(0.5, 0., 0.),
+         Vec3(0., 0., 0.), Vec3(0.5, 0.5, 0.),
          ]
 
     config = Config()
 
     def __init__(self, voxmap, world, center, max_len):
 
-        #self.rigid = RigidBodyCombiner('sphere {0}'.format(random.random()))
         self.center = center
 
-        #self.cube = CubeModel(1, 1, 1)
-        #self.cube.setTexture(textures['black'])
         self.max_len = max_len
         self.voxmap = voxmap
 
         self.world = world
 
-        #self.combiner = NodePath(self.rigid)
-        #self.combiner.reparentTo(render)
         self.root = QuadroTreeNode(self, self.max_len, center = self.center)
         self.voxels = {}
         self.cubes = {}
@@ -144,58 +155,77 @@ class VoxObject():
         self.show()
 
     def generate(self):
+        for voxel in self.voxels:
+            self.voxels[voxel] = False
         self.root.repaint()
 
     def show(self):
         # TODO: add delete cube event
-        collect = False
-        t = time.time()
         for voxel in self.voxels:
             if self.voxels[voxel]:
                 if not self.cubes.has_key(voxel):
-                    self.cubes[voxel] = CubeModel(voxel[1], voxel[1], voxel[1])
+                    self.cubes[voxel] = CubeModel(voxel[1], voxel[1], 10000)
                     mid_mount_level = self.config.mid_mount_level
-                    self.cubes[voxel].setTexture(textures[mid_mount_level])
-                    self.cubes[voxel].setPos(voxel[0])
+                    height = voxel[0][2]
+
+                    # texturization
+                    if height <= 0:
+                        self.cubes[voxel].setTexture(textures['sand'])
+                    elif height >= self.config.land_mount_level[0] and height <= self.config.land_mount_level[1]:
+                        self.cubes[voxel].setTexture(textures[self.config.land_mount_level])
+                    elif height >= self.config.low_mount_level[0] and height <= self.config.low_mount_level[1]:
+                        self.cubes[voxel].setTexture(textures[self.config.low_mount_level])
+                    elif height >= self.config.mid_mount_level[0] and height <= self.config.mid_mount_level[1]:
+                        self.cubes[voxel].setTexture(textures[self.config.mid_mount_level])
+                    elif height >= self.config.high_mount_level[0]:
+                        self.cubes[voxel].setTexture(textures[self.config.high_mount_level])
+
+                    self.cubes[voxel].setPos(voxel[0][0], voxel[0][1], (voxel[0][2]-10000))
                     self.cubes[voxel].reparentTo(render)
                 else:
-                    if self.cubes[voxel].isHidden():
-                        self.cubes[voxel].show()
+                    self.cubes[voxel].show()
             else:
                 if self.cubes.has_key(voxel):
-                    if not self.cubes[voxel].isHidden():
-                        self.cubes[voxel].hide()
-
-
-        print 'Go voxels: ', time.time() - t
-        #if collect:
-            #t = time.time()
-            ##self.rigid.collect()
-            #print 'collect: ', time.time() - t
+                    self.cubes[voxel].hide()
 
 
 class VoxMap():
-    max_len = 256
+    max_len = 16777216
     def __init__(self, world, size, level):
         self.world = world
         self.level = level
         self.size = size
         self.voxes = {}
-        base.camera.setPos(self.max_len/2, self.max_len/2, self.max_len/16)
+        base.camera.setPos(self.max_len/2, self.max_len/2, 20000)
         self.camPos = base.camera.getPos()
+        self.get_coords()
         self.create()
 
+    def get_coords(self):
+        self.camX = int(base.camera.getX())
+        self.camY = int(base.camera.getY())
+        self.camZ = int(base.camera.getZ())
+        self.land_z = self.world.map_3d[self.camX, self.camY]
+
     def show(self):
+        self.get_coords()
+        self.far = abs(((self.camZ) / 100)+1)*500
+        if self.far < 5000:
+            self.far = 5000
+        base.camLens.setFar(self.far)
+        self.world.game.write('CamPos: X: {0}, Y: {1}, Z: {2}, '\
+                              'land height: {3}'.format(self.camX, self.camY, self.camZ,
+                               self.land_z))
+
         if VBase3.length(self.camPos - base.camera.getPos()) >=5:
             for vox in self.voxes.values():
                 self.camPos = base.camera.getPos()
-                self.world.game.write('CamPos: {0}'.format(self.camPos))
                 t = time.time()
                 vox.generate()
-                print 'gen: ', time.time() - t
+                #print 'gen: ', time.time() - t
                 t = time.time()
                 vox.show()
-                print 'show: ', time.time() - t
+                #print 'show: ', time.time() - t
 
     def create(self):
         for x in xrange(-self.size, self.size+1):
@@ -270,7 +300,6 @@ class World():
         self.cubik.reparentTo(self.gui.app.render)
         self.cubik.setTexture(textures[high_mount_level],1)
 
-        self.vox_map = VoxMap(self, 0, 1)
 
     def new(self):
         """New world
@@ -281,6 +310,7 @@ class World():
         ts = TextureStage('world_map_ts')
         self.cubik.setTexture(ts, textures['world_map'])
         self.cubik.setTexScale(ts, 0.5, 0.5)
+        self.vox_map = VoxMap(self, 0, 1)
 
     def show(self):
         self.vox_map.show()
