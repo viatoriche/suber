@@ -45,10 +45,14 @@ class Command_Handler():
         """
         Generate global map template and show it
         """
-        if len(params) >0:
-            seed = int(params[0])
-        else:
-            seed = random.randint(0, sys.maxint)
+        #if len(params) >0:
+            #seed = int(params[0])
+        #else:
+        #    seed = random.randint(0, sys.maxint)
+
+        #seed = 34568
+
+        seed = 2789334
 
         self.game.world.seed = seed
         random.seed(seed)
@@ -99,7 +103,7 @@ class Command_Handler():
             #textures['world_map'] = generate_map_texture(self.game.world.map_tree, 1)
             self.game.process.screen_images.add_image('world_map', 
                                             textures['world_map'], 
-                                            scale = 0.2, pos = (-1.12, 0, 0.79))
+                                            scale = 0.8, pos = (0, 0, 0.1))
             #self.game.process.screen_images['world_map'].show()
 
     def cmd_hide_map(self, params = []):

@@ -9,14 +9,48 @@ import sys
 import math
 import time
 
+from modules.drive.landplane import LandNode
 from modules.drive.shapeGenerator import Cube as CubeModel
 from panda3d.core import Vec3
 from modules.drive.textures import textures
 from pandac.PandaModules import Texture, TextureStage
 from panda3d.core import VBase3
 from config import Config
-from pandac.PandaModules import NodePath, PandaNode
-from panda3d.core import RigidBodyCombiner, NodePath
+from pandac.PandaModules import TransparencyAttrib, Texture, TextureStage
+
+class WaterNode():
+    """Water plane for nya
+
+    """
+    def __init__(self, water_z):
+        self.water_z = water_z
+        self.create(0, 0, (16777216/8, 16777216/8))
+
+    def create(self, x, y, scale):
+        self.water = LandNode(self.water_z)
+        #textures['water'].setWrapU(Texture.WMRepeat)
+        #textures['water'].setWrapV(Texture.WMRepeat)
+        ts = TextureStage('ts')
+        #ts.setMode(TextureStage.MDecal)
+        self.water.landNP.setTransparency(TransparencyAttrib.MAlpha)
+        self.water.landNP.setTexture(ts, textures['water'])
+        scale_x, scale_y = scale
+        self.water.landNP.setTexScale(ts, scale_x, scale_y)
+
+    def show(self):
+        self.water.landNP.show()
+
+    def hide(self):
+        self.water.landNP.hide()
+
+    def reset(self, x, y):
+        #self.Destroy()
+        #self.create(x, y)
+        self.water.landNP.show()
+        try:
+            self.water.landNP.setPos(x, y, self.water_z)
+        except:
+            pass
 
 class QuadroTreeNode:
     """Node - one cube, which may divide on 4 cubes, when camera is near
@@ -42,9 +76,9 @@ class QuadroTreeNode:
         self.world = vox.world
         self.voxmap = vox.voxmap
         self.len_cube = len_cube
-        x = center[0]
-        y = center[1]
-        z = self.world.map_3d[x, y]
+        x = int(center[0])
+        y = int(center[1])
+        z = int(self.world.map_3d[x, y])
         self.center = Vec3(x, y, z)
         #self.cube = self.vox.cube
 
@@ -58,17 +92,19 @@ class QuadroTreeNode:
         # realizm = 64, but video ram - ebanko =(
         # lets const = 8
 
+        factor = 1
+
         camZ = self.voxmap.camZ - self.voxmap.land_z
         if camZ > 30000:
-            trigger_dist = self.len_cube * 8
+            trigger_dist = self.len_cube * 8 * factor
         elif camZ > 20000 and camZ <= 30000:
-            trigger_dist = self.len_cube * 7
+            trigger_dist = self.len_cube * 7 * factor
         elif camZ > 10000 and camZ <= 20000:
-            trigger_dist = self.len_cube * 6
+            trigger_dist = self.len_cube * 6 * factor
         elif camZ > 5000 and camZ <= 10000:
-            trigger_dist = self.len_cube * 5
+            trigger_dist = self.len_cube * 5 * factor
         else:
-            trigger_dist = self.len_cube * 4
+            trigger_dist = self.len_cube * 4 * factor
 
         length = VBase3.length(self.center - self.voxmap.camPos)
 
@@ -166,7 +202,7 @@ class VoxObject():
                 if not self.cubes.has_key(voxel):
                     self.cubes[voxel] = CubeModel(voxel[1], voxel[1], 10000)
                     mid_mount_level = self.config.mid_mount_level
-                    height = voxel[0][2]
+                    height = int(voxel[0][2])
 
                     # texturization
                     if height <= 0:
@@ -196,7 +232,7 @@ class VoxMap():
         self.level = level
         self.size = size
         self.voxes = {}
-        base.camera.setPos(self.max_len/2, self.max_len/2, 20000)
+        base.camera.setPos(self.max_len/2, self.max_len/2, 2500000)
         self.camPos = base.camera.getPos()
         self.get_coords()
         self.create()
@@ -205,7 +241,7 @@ class VoxMap():
         self.camX = int(base.camera.getX())
         self.camY = int(base.camera.getY())
         self.camZ = int(base.camera.getZ())
-        self.land_z = self.world.map_3d[self.camX, self.camY]
+        self.land_z = int(self.world.map_3d[self.camX, self.camY])
 
     def show(self):
         self.get_coords()
@@ -300,11 +336,14 @@ class World():
         self.cubik.reparentTo(self.gui.app.render)
         self.cubik.setTexture(textures[high_mount_level],1)
 
+        #self.water = WaterNode(1)
+        #self.water.show()
+
 
     def new(self):
         """New world
         """
-        textures['world_map'] = textures.get_map_2d_tex(self.map_2d)
+        textures['world_map'] = textures.get_map_3d_tex(self, 512)
         textures['world_map'].setWrapU(Texture.WMMirrorOnce)
         textures['world_map'].setWrapV(Texture.WMMirrorOnce)
         ts = TextureStage('world_map_ts')
@@ -314,6 +353,7 @@ class World():
 
     def show(self):
         self.vox_map.show()
+        pass
 
 # vi: ft=python:tw=0:ts=4
 

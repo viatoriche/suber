@@ -78,8 +78,7 @@ class LandNode():
         self.landNP.reparentTo(render)
         self.landNP.setHpr(0,-90,0)
         self.landNP.setPos(0,0,z)
-        self.landNP.setScale(self.config.factor * (self.config.count_chanks*2), 0,\
-                           self.config.factor * (self.config.count_chanks*2))
+        self.landNP.setScale(16777216, 0, 16777216)
         self.landNP.hide()
         self.landNP.setTransparency(TransparencyAttrib.MAlpha )
 

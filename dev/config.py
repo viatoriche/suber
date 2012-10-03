@@ -5,6 +5,7 @@ Global config
 """
 
 class Config():
+    size_world = 16777216
     factor = 8
     factor_double = 64
     factor_tor = 7
@@ -31,12 +32,12 @@ class Config():
     high_mount_level = 3001, 10000
 
     # 5%
-    factor_high_mount = 5
+    factor_high_mount = 30
     # 10%
-    factor_mid_mount = 15
-    # 30%
-    factor_low_mount = 45
-    # 55%
+    factor_mid_mount = 40
+    # 35%
+    factor_low_mount = 60
+    # 50%
     factor_land_mount = 100
 
     name_game = 'Suber'
