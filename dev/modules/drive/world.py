@@ -9,7 +9,7 @@ import sys
 import math
 import time
 
-from modules.drive.landplane import LandNode
+from modules.drive.landplane import LandNode, ChunkModel
 from modules.drive.shapeGenerator import Cube as CubeModel
 from panda3d.core import Vec3
 from modules.drive.textures import textures
@@ -17,14 +17,19 @@ from pandac.PandaModules import Texture, TextureStage
 from panda3d.core import VBase3
 from config import Config
 from pandac.PandaModules import TransparencyAttrib, Texture, TextureStage
+from modules.drive.support import ThreadPandaDo
+import sys
+
+#sys.setrecursionlimit(65535)
 
 class WaterNode():
     """Water plane for nya
 
     """
+    config = Config()
     def __init__(self, water_z):
         self.water_z = water_z
-        self.create(0, 0, (16777216/8, 16777216/8))
+        self.create(0, 0, (self.config.size_world/8, self.config.size_world/8))
 
     def create(self, x, y, scale):
         self.water = LandNode(self.water_z)
@@ -61,178 +66,185 @@ class QuadroTreeNode:
 
     level - depend of height camera
     """
-
-    # stop value
-    stop = False
     # exist = True #make voxel deletable by player
     childs = {}
-    def __init__(self, vox, len_cube, parent=None,\
-                       level = 1, center = Vec3(0,0,0)):
+    def __init__(self, chunks_clt, len_chunk, parent=None,\
+                       level = 1, center = (0,0,0)):
 
-        #print 'Create node: ', len_cube, level, center
+        #print 'Create node: ', len_chunk, level, center
         self.parent = parent
         self.level = level
-        self.vox = vox
-        self.world = vox.world
-        self.voxmap = vox.voxmap
-        self.len_cube = len_cube
-        x = int(center[0])
-        y = int(center[1])
-        z = int(self.world.map_3d[x, y])
-        self.center = Vec3(x, y, z)
-        #self.cube = self.vox.cube
-
-    #LOD HERE!
-    def divide(self):
-        #TODO: add #exist chech
-        #TODO: add distance check to make LOD
-        # divide if distance from camera to node is lower than trigger value
-        #const = 5 distances for example
-
-        # realizm = 64, but video ram - ebanko =(
-        # lets const = 8
-
-        factor = 1
-
-        camZ = self.voxmap.camZ - self.voxmap.land_z
-        if camZ > 30000:
-            trigger_dist = self.len_cube * 8 * factor
-        elif camZ > 20000 and camZ <= 30000:
-            trigger_dist = self.len_cube * 7 * factor
-        elif camZ > 10000 and camZ <= 20000:
-            trigger_dist = self.len_cube * 6 * factor
-        elif camZ > 5000 and camZ <= 10000:
-            trigger_dist = self.len_cube * 5 * factor
-        else:
-            trigger_dist = self.len_cube * 4 * factor
-
-        length = VBase3.length(self.center - self.voxmap.camPos)
-
-        if length < trigger_dist :
-            if not self.stop:
-                for dC in self.vox.v:
-                    name = self.center + dC * (self.len_cube)
-                    self.childs[name] = QuadroTreeNode(self.vox, self.len_cube/2.0, self, \
-                        self.level+1, name)
-                    self.childs[name].repaint()
-        else:
-            self.stop = True
-
-    def check(self):
-        #if dist higher then sphere radius then stop dividind
-
-        #TODO: make perlin noise integration
-        #X = self.center[0]
-        #Y = self.center[1]
-        #Z = self.center[2]
-
-        #convert cube center XYZ coordinates to xy texture coordinates
-
-        #see wiki sphere coordinates
-        #x = math.atan(math.sqrt(X ** 2 + Y ** 2) / Z)
-        #y = math.atan(Y / X)
-
-        # if VBase3.length(self.center) > r+height_map_value(x,y,self.level):
-
-        #if dist higher then sphere radius then stop dividind
-        if self.len_cube == 1.0:
-            self.stop = True
-            return
-
-        #if VBase3.length(self.center) < self.vox.r + (self.len_cube * 0.5 * math.sqrt(2)):
-            #self.stop = False
-            #return
-
-        #if VBase3.length(self.center) > self.vox.r - (self.len_cube * 0.5 * math.sqrt(2)):
-            #self.stop = True
-
-        #stop at bottom level
-    def draw(self):
-        #if self.level == 1:
-        #print self.center
-        #if self.len_cube == 1:
-        self.vox.voxels[self.center, self.len_cube, self.level] = False
-        if self.len_cube == 1.0:
-            self.vox.voxels[self.center, self.len_cube, self.level] = True
-            return
-        if self.stop:
-            self.vox.voxels[self.center, self.len_cube, self.level] = True
+        self.chunks_clt = chunks_clt
+        self.world = chunks_clt.world
+        self.chunks_map = chunks_clt.chunks_map
+        self.len_chunk = len_chunk
+        x = center[0]
+        y = center[1]
+        z = 0
+        self.center = x, y, z
+        #if self.parent:
+            #print '>>>>>>>>> init: --- show : ', self.center, ' parent: ', self.parent.center
+        #else:
+            #print '>>>>>>>>> init: --- show : ', self.center, ' parent: NONE. I am ROOT'
+        self.show()
+        #print 'init: ', center, len_chunk
 
     def repaint(self):
-        self.stop = False
-        self.check()
-        self.divide()
-        self.draw()
+        if self.len_chunk > self.chunks_map.chunk_len:
+            factor = 1
+            trigger_dist = self.len_chunk * factor
+            # self.chunks_map.camPos
+            length_cam = VBase3.length(Vec3(self.center) - self.chunks_map.camPos)
+            if length_cam < trigger_dist:
+                #print '\t~~~~~~~~ Cam dist ok: ---- ', self.center, ' cam: ', trigger_dist, length_cam
+                self.hide()
+                self.divide()
+            else:
+                #print '\t~~~~~~~~ Cam dist not ok ----- show myself: ', self.center, ' cam: ', trigger_dist, length_cam
+                #self.hide_childs()
+                self.show()
+        else:
+            #print '\t:::::::: repaint: len <= min_len  -- show'
+            self.show()
+
+    def show_childs(self):
+        for child in self.childs:
+            self.childs[child].show()
+
+    def hide_childs(self):
+        for child in self.childs:
+            self.childs[child].hide()
 
 
+    def divide(self):
+        #print '\t\t\t xxx START DIVIDE: ', self.center
+        self.childs = {}
+        new_len = self.len_chunk/2
+        new_center = self.len_chunk/4
+        #name = self.center + dC * self.len_chunk
+        # <- up
+        name = self.center[0] - new_center, self.center[1] - new_center, 0
+        self.childs[name] = QuadroTreeNode(self.chunks_clt, new_len, self, \
+                self.level+1, name)
+        self.childs[name].repaint()
+        # -> up
+        name = self.center[0] + new_center, self.center[1] - new_center, 0
+        self.childs[name] = QuadroTreeNode(self.chunks_clt, new_len, self, \
+                self.level+1, name)
+        self.childs[name].repaint()
+        # <- down
+        name = self.center[0] - new_center, self.center[1] + new_center, 0
+        self.childs[name] = QuadroTreeNode(self.chunks_clt, new_len, self, \
+                self.level+1, name)
+        self.childs[name].repaint()
+        # -> down
+        name = self.center[0] + new_center, self.center[1] + new_center, 0
+        self.childs[name] = QuadroTreeNode(self.chunks_clt, new_len, self, \
+                self.level+1, name)
+        self.childs[name].repaint()
 
-class VoxObject():
-    v = [
-         Vec3(0., 0.5, 0.), Vec3(0.5, 0., 0.),
-         Vec3(0., 0., 0.), Vec3(0.5, 0.5, 0.),
-         ]
+        #print '\t+++++++ DIVIDE SHOW ++++++++', self.center
+        #self.show()
+
+        #for child in self.childs:
+            ##print 'Child of ', self.center, ' ----> ', child
+            #if not self.childs[child].isHidden:
+                #print '\t\t========== Child: ', child, ' not hidden, hide myself: ', self.center
+                #self.hide()
+                #break
+
+    def show(self):
+        self.isHidden = False
+        self.chunks_clt.chunks[self.center, self.len_chunk, self.level] = True
+
+    def hide(self):
+        self.isHidden = True
+        self.chunks_clt.chunks[self.center, self.len_chunk, self.level] = False
+
+class ChunksCollection():
+    #v = [
+         #Vec3(0., 0.5, 0.), Vec3(0.5, 0., 0.),
+         #Vec3(0., 0., 0.), Vec3(0.5, 0.5, 0.),
+         #]
 
     config = Config()
+    chunks = {}
+    thread_done = True
 
-    def __init__(self, voxmap, world, center, max_len):
+    def __init__(self, chunks_map, world, center, max_len):
 
         self.center = center
 
         self.max_len = max_len
-        self.voxmap = voxmap
+        self.chunks_map = chunks_map
 
         self.world = world
 
         self.root = QuadroTreeNode(self, self.max_len, center = self.center)
-        self.voxels = {}
-        self.cubes = {}
+        self.chunks_models = {}
 
         self.generate()
         self.show()
 
     def generate(self):
-        for voxel in self.voxels:
-            self.voxels[voxel] = False
+        for chunk in self.chunks:
+            self.chunks[chunk] = False
         self.root.repaint()
 
     def show(self):
         # TODO: add delete cube event
-        for voxel in self.voxels:
-            if self.voxels[voxel]:
-                if not self.cubes.has_key(voxel):
-                    self.cubes[voxel] = CubeModel(voxel[1], voxel[1], 10000)
-                    mid_mount_level = self.config.mid_mount_level
-                    height = int(voxel[0][2])
 
-                    # texturization
-                    if height <= 0:
-                        self.cubes[voxel].setTexture(textures['sand'])
-                    elif height >= self.config.land_mount_level[0] and height <= self.config.land_mount_level[1]:
-                        self.cubes[voxel].setTexture(textures[self.config.land_mount_level])
-                    elif height >= self.config.low_mount_level[0] and height <= self.config.low_mount_level[1]:
-                        self.cubes[voxel].setTexture(textures[self.config.low_mount_level])
-                    elif height >= self.config.mid_mount_level[0] and height <= self.config.mid_mount_level[1]:
-                        self.cubes[voxel].setTexture(textures[self.config.mid_mount_level])
-                    elif height >= self.config.high_mount_level[0]:
-                        self.cubes[voxel].setTexture(textures[self.config.high_mount_level])
-
-                    self.cubes[voxel].setPos(voxel[0][0], voxel[0][1], (voxel[0][2]-10000))
-                    self.cubes[voxel].reparentTo(render)
-                else:
-                    self.cubes[voxel].show()
+        for chunk_model in self.chunks_models:
+            if not self.chunks[chunk_model]:
+                if not self.chunks_models[chunk_model].isHidden():
+                    self.chunks_models[chunk_model].hide()
             else:
-                if self.cubes.has_key(voxel):
-                    self.cubes[voxel].hide()
+                if self.chunks_models[chunk_model].isHidden():
+                    self.chunks_models[chunk_model].show()
 
+        for chunk in self.chunks:
+            if not self.chunks_models.has_key(chunk):
+                # TODO: CubeModel --> ChunkModel
+                #self.chunks_models[chunk] = CubeModel(chunk[1], chunk[1], chunk[1])
+                #self.chunks_models[chunk] = ChunkModel(self.world, chunk[0][0], chunk[0][1], chunk[1])
+                self.chunks_models[chunk] = ChunkModel(self.world, chunk[0][0], chunk[0][1], chunk[1])
+                self.chunks_models[chunk].reparentTo(render)
+                #self.chunks_models[chunk].setZ(chunk[2])
+                #height = self.world.map_3d[chunk[0][0], chunk[0][1]]
+                #texturization
+                #if height <= 0:
+                    #self.chunks_models[chunk].setTexture(textures['sand'])
+                #elif height >= self.config.land_mount_level[0] and height <= self.config.land_mount_level[1]:
+                    #self.chunks_models[chunk].setTexture(textures[self.config.land_mount_level])
+                #elif height >= self.config.low_mount_level[0] and height <= self.config.low_mount_level[1]:
+                    #self.chunks_models[chunk].setTexture(textures[self.config.low_mount_level])
+                #elif height >= self.config.mid_mount_level[0] and height <= self.config.mid_mount_level[1]:
+                    #self.chunks_models[chunk].setTexture(textures[self.config.mid_mount_level])
+                #elif height >= self.config.high_mount_level[0]:
+                    #self.chunks_models[chunk].setTexture(textures[self.config.high_mount_level])
 
-class VoxMap():
-    max_len = 16777216
+                #self.chunks_models[chunk].setPos(chunk[0][0]+random.randint(0, 10000), chunk[0][1]+random.randint(0, 10000), 0)
+                #print 'Create: ', chunk
+
+            #if self.chunks[chunk]:
+                #if self.chunks_models[chunk].isHidden():
+                    #self.chunks_models[chunk].show()
+            #else:
+                #if not self.chunks_models[chunk].isHidden():
+                    #self.chunks_models[chunk].hide()
+
+class ChunksMap():
+    config = Config()
+    chunk_len = 16
     def __init__(self, world, size, level):
         self.world = world
         self.level = level
         self.size = size
-        self.voxes = {}
-        base.camera.setPos(self.max_len/2, self.max_len/2, 2500000)
+        self.max_len = self.config.size_world
+        self.chunks_clts = {}
+        #base.camera.setPos(self.max_len/2, self.max_len/2, 53000000)
+        base.camera.setPos(0, 0, 10)
+        #base.camera.setPos(0, 0, 25000000)
         self.camPos = base.camera.getPos()
         self.get_coords()
         self.create()
@@ -242,32 +254,28 @@ class VoxMap():
         self.camY = int(base.camera.getY())
         self.camZ = int(base.camera.getZ())
         self.land_z = int(self.world.map_3d[self.camX, self.camY])
+        self.far = self.max_len*5
+        if self.far < 2000:
+            self.far = 2000
+        base.camLens.setFar(self.far)
+        self.camPos = base.camera.getPos()
 
     def show(self):
-        self.get_coords()
-        self.far = abs(((self.camZ) / 100)+1)*500
-        if self.far < 5000:
-            self.far = 5000
-        base.camLens.setFar(self.far)
-        self.world.game.write('CamPos: X: {0}, Y: {1}, Z: {2}, '\
+        if self.camPos != base.camera.getPos():
+            self.get_coords()
+            self.world.game.write('CamPos: X: {0}, Y: {1}, Z: {2}, '\
                               'land height: {3}'.format(self.camX, self.camY, self.camZ,
                                self.land_z))
 
-        if VBase3.length(self.camPos - base.camera.getPos()) >=5:
-            for vox in self.voxes.values():
-                self.camPos = base.camera.getPos()
-                t = time.time()
-                vox.generate()
-                #print 'gen: ', time.time() - t
-                t = time.time()
-                vox.show()
-                #print 'show: ', time.time() - t
+            for chunks_clt in self.chunks_clts.values():
+                chunks_clt.generate()
+                chunks_clt.show()
 
     def create(self):
         for x in xrange(-self.size, self.size+1):
             for y in xrange(-self.size, self.size+1):
-                name = Vec3(x*self.max_len, y*self.max_len, -self.max_len)
-                self.voxes[name] = VoxObject(self, self.world, name, self.max_len)
+                name = (x*self.max_len)+(self.max_len / 2), (y*self.max_len) + (self.max_len / 2), 0
+                self.chunks_clts[name] = ChunksCollection(self, self.world, name, self.max_len)
 
 
 class World():
@@ -332,9 +340,9 @@ class World():
         self.types['sand'] = CubeModel(self.cube_size, self.cube_size, self.cube_z)
         self.types['sand'].setTexture(textures['sand'],1)
 
-        self.cubik = CubeModel(self.cube_size, self.cube_size, self.cube_z)
-        self.cubik.reparentTo(self.gui.app.render)
-        self.cubik.setTexture(textures[high_mount_level],1)
+        #self.cubik = CubeModel(self.cube_size, self.cube_size, self.cube_z)
+        #self.cubik.reparentTo(self.gui.app.render)
+        #self.cubik.setTexture(textures[high_mount_level],1)
 
         #self.water = WaterNode(1)
         #self.water.show()
@@ -347,13 +355,12 @@ class World():
         textures['world_map'].setWrapU(Texture.WMMirrorOnce)
         textures['world_map'].setWrapV(Texture.WMMirrorOnce)
         ts = TextureStage('world_map_ts')
-        self.cubik.setTexture(ts, textures['world_map'])
-        self.cubik.setTexScale(ts, 0.5, 0.5)
-        self.vox_map = VoxMap(self, 0, 1)
+        #self.cubik.setTexture(ts, textures['world_map'])
+        #self.cubik.setTexScale(ts, 0.5, 0.5)
+        self.chunks_map = ChunksMap(self, 0, 1)
 
     def show(self):
-        self.vox_map.show()
-        pass
+        self.chunks_map.show()
 
 # vi: ft=python:tw=0:ts=4
 

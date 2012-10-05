@@ -3,68 +3,93 @@
 """
 land plane
 """
-from pandac.PandaModules import Filename, CardMaker
-from pandac.PandaModules import NodePath, WindowProperties,TextureStage, Texture
-from pandac.PandaModules import Vec3,Vec4,Point3
-from pandac.PandaModules import Plane
-from pandac.PandaModules import PlaneNode
-from pandac.PandaModules import PStatClient
-from pandac.PandaModules import CullFaceAttrib
-from pandac.PandaModules import RenderState
-from pandac.PandaModules import ShaderAttrib, TransparencyAttrib
-from panda3d.core import RigidBodyCombiner, NodePath, Vec3
+
 import time
 from config import Config
+from panda3d.core import CardMaker
+from panda3d.core import Geom, GeomTriangles, GeomVertexWriter
+from panda3d.core import GeomNode
+from panda3d.core import GeomVertexFormat, GeomVertexData
+from panda3d.core import NodePath
+from pandac.PandaModules import CardMaker
+from pandac.PandaModules import NodePath
+from pandac.PandaModules import TransparencyAttrib
 
-class Chank(RigidBodyCombiner):
+class ChunkModel(NodePath):
+    """Chunk for quick render and create cube-objects
+
+    world - link to world object
+    X, Y = start coordinates
     """
-        self.cubes[(x,y,z)] = name of type, or 'NULL'
+    def __init__(self, world, X, Y, size):
+        NodePath.__init__(self, 'ChunkModel_{0}-{1}_{2}'.format(X, Y, size))
+        self.world = world
+        self.X = X
+        self.Y = Y
+        self.size = size
+        self.create()
+        #return self.create()
 
-        types:
-            {'name': model}
-    """
-    def __init__(self, name, types, lod_node = None, lod = None):
-        RigidBodyCombiner.__init__(self, name)
-        self.types = types
-        self.node = NodePath(self)
+    def create(self):
+        """create chunk
 
-        self.node.reparentTo(render)
-        self.active = False
+        """
+        form = GeomVertexFormat.getV3n3cpt2()
+        vdata = GeomVertexData('chunk_{0}-{1}_{2}'.format(self.X, self.Y, self.size),
+                               form, Geom.UHDynamic)
+        vertex = GeomVertexWriter(vdata, 'vertex')
+        #normal = GeomVertexWriter(vdata, 'normal')
+        color = GeomVertexWriter(vdata, 'color')
+        texcoord = GeomVertexWriter(vdata, 'texcoord')
+        tris = []
+        j = 0
+        t = time.time()
+        size_voxel = self.size / 16
+        #print 'CHUNK MODEL INIT: ',self.X, self.Y, self.size,\
+              #'\n\t\tvoxel size: ', size_voxel,\
+              #'\n\t\tstart X, Y: ', self.X - (self.size / 2), self.Y - (self.size / 2)
 
-    def new(self, cubes):
-        #tim = time.time()
-        self.cubes = cubes
-        for cube in cubes:
-            f = self.types[cubes[cube]].copyTo(self.node)
-            f.setPos(cube)
-        #print 'copy: ', time.time() - tim
-        #tim = time.time()
-        self.collect()
-        #print 'collect: ', time.time() - tim
-        self.active = True
+        for x in xrange(self.X - (self.size / 2), self.X + (self.size / 2), size_voxel):
+            for y in xrange(self.Y - (self.size / 2), self.Y + (self.size / 2), size_voxel):
+                #z = self.world.map_3d[x, y]
+                z = 0
+                #print '\t\t\t\t X, Y: ',x, y
+                vertex.addData3f(x, y, z)
+                vertex.addData3f(x + size_voxel, y, z)
+                vertex.addData3f(x + size_voxel, y+size_voxel, z)
+                vertex.addData3f(x, y+size_voxel, z)
+                #print '\t\t\tvertexes: 1 - ',x, y, z, ' | 2 - ', x+size_voxel, y, z, ' | 3 - ', x + size_voxel, y + size_voxel, z, ' | 4 - ', x, y+size_voxel, z
 
-    def show(self):
-        if not self.active:
-            self.node.show()
-            self.active = True
+                tri1=GeomTriangles(Geom.UHDynamic)
+                tri1.addVertex(j)
+                tri1.addVertex(j+1)
+                tri1.addVertex(j+3)
 
-    def hide(self):
-        if self.active:
-            self.node.hide()
-            self.active = False
+                tri2=GeomTriangles(Geom.UHDynamic)
+                tri2.addConsecutiveVertices(j+1, 3)
+                j += 4
 
-    def setPos(self, *args, **params):
-        self.node.setPos(*args, **params)
+                tris.append(tri1)
+                tris.append(tri2)
 
-    def setX(self, *args, **params):
-        self.node.setX(*args, **params)
+                color.addData4f(1.0, 0.0, 0.0, 1.0)
+                color.addData4f(0.0, 1.0, 0.0, 1.0)
+                color.addData4f(0.0, 0.0, 1.0, 1.0)
+                color.addData4f(1.0, 0.0, 1.0, 1.0)
 
-    def setY(self, *args, **params):
-        self.node.setY(*args, **params)
+        texcoord.addData2f(0.0, 1.0)
+        texcoord.addData2f(0.0, 0.0)
+        texcoord.addData2f(1.0, 0.0)
+        texcoord.addData2f(1.0, 1.0)
 
-    def destroy(self):
-        self.node.removeNode()
-        self.active = False
+        chunk_data = Geom(vdata)
+        for tri in tris:
+            chunk_data.addPrimitive(tri)
+
+        geom_node = GeomNode('chunk_node_{0}_{1}_{2}'.format(self.X, self.Y, self.size))
+        geom_node.addGeom(chunk_data)
+        nodePath = self.attachNewNode(geom_node)
+        return nodePath
 
 class LandNode():
     """Water / Land

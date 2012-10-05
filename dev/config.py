@@ -5,7 +5,9 @@ Global config
 """
 
 class Config():
-    size_world = 16777216
+    #size_world = 16777216
+    size_mod = 24
+    size_world = 2**size_mod
     factor = 8
     factor_double = 64
     factor_tor = 7

@@ -9,16 +9,16 @@ import math
 class GeometryData:
   def __init__(self):
     pass
-  
+
   def getVertex(self, i):
     return self.vertices[i]
-  
+
   def getNormal(self, i):
     return self.normal[i]
-  
+
   def getTriangle(self, i):
     return self.triangles[i]
-  
+
   def getUv(self, i):
     return self.uv[i]
 
@@ -41,7 +41,7 @@ class IcosaederData(GeometryData):
       ( b, -a, 0),
       ( a,  0,-b),
     ]
-  
+
   triangles = (
       ( 2,  1,  0),
       ( 2,  3,  1),
@@ -64,7 +64,7 @@ class IcosaederData(GeometryData):
       ( 3, 10, 11),
       (11,  1,  3),
     )
-  
+
   lines = {
       0: [ 1, 2, 5, 6, 7],
       1: [ 0, 2, 3, 6,11],
@@ -79,19 +79,19 @@ class IcosaederData(GeometryData):
      10: [ 3, 4, 8, 9,11],
      11: [ 1, 3, 6, 8,10]
     }
-  
+
   def __init__(self, radius=1.0):
     GeometryData.__init__(self)
     self.radius = radius
-  
+
   def getVertex(self, i):
     #v = Vec3(self.vertices[i][0] * self.radius, self.vertices[i][1] * self.radius, self.vertices[i][2] * self.radius)
     #print "ico", v.length()
     return [self.vertices[i][0] * self.radius, self.vertices[i][1] * self.radius, self.vertices[i][2] * self.radius]
-  
+
   def getNormal(self, i):
     return self.vertices[i]
-  
+
   def getUv(self, i):
     x,y,z = self.vertices[i]
     u = -((math.atan2(x,y)) / math.pi) / 2.0 + 0.5
@@ -129,8 +129,8 @@ class Cube2Data(GeometryData):
       [1,0], [1,1], [0,1], # 6
       [1,1], [0,1], [0,0], # 7
     )
-  
-  
+
+
   def __init__(self, width, height, depth):
     GeometryData.__init__(self)
     self.vertices = list()
@@ -141,14 +141,14 @@ class Cube2Data(GeometryData):
           self.vertices.append([x,y,z])
           self.vertices.append([x,y,z])
           self.vertices.append([x,y,z])
-          
+
           nx = (x-width/2.)/(width/2.0)
           self.normal.append([nx,0,0])
           ny = (y-height/2.)/(height/2.0)
           self.normal.append([0,ny,0])
           nz = (z-depth/2.)/(depth/2.0)
           self.normal.append([0,0,nz])
-  
+
   def getUv(self, i):
     return self.uv[i]
 
@@ -172,7 +172,7 @@ class SphereData(GeometryData):
         z = -math.sin(theta) * math.sin(phi)
         self.vertices.append( (x,z,y) )
         self.uv.append( (thetaS, phiS))
-    
+
     self.triangles = list()
     for j in xrange(heightSegments-2):
       for i in xrange(widthSegments-1):
@@ -181,12 +181,12 @@ class SphereData(GeometryData):
         v2 = (j  )*widthSegments + i+1
         if not inverted: self.triangles.append( (v2,v1,v0) )
         else:            self.triangles.append( (v0,v1,v2) )
-        v0 = (j  )*widthSegments + i  
-        v1 = (j+1)*widthSegments + i  
+        v0 = (j  )*widthSegments + i
+        v1 = (j+1)*widthSegments + i
         v2 = (j+1)*widthSegments + i+1
         if not inverted: self.triangles.append( (v2,v1,v0) )
         else:            self.triangles.append( (v0,v1,v2) )
-  
+
   def getVertex(self, i):
     return [self.vertices[i][0] * self.radius, self.vertices[i][1] * self.radius, self.vertices[i][2] * self.radius]
   def getUv(self, i):
@@ -222,7 +222,7 @@ class TubeWallData(GeometryData):
       else:
         self.normal.append( (-xn,-yn,0) )
       self.uv.append( (partial, 1.) )
-    
+
     self.triangles = list()
     if not inverted:
       for i in xrange(0,radiusSegments-1):
@@ -232,10 +232,10 @@ class TubeWallData(GeometryData):
       for i in xrange(0,radiusSegments-1):
         self.triangles.append( [i*2  ,i*2+1,i*2+2] )
         self.triangles.append( [i*2+2,i*2+1,i*2+3] )
-  
+
   def getUv(self, i):
     return self.uv[i]
-  
+
   def getNormal(self, i):
     return self.normal[i]
 
@@ -254,7 +254,7 @@ class CircleData(GeometryData):
       self.uv.append([x/2.+.5,y/2.+.5])
       self.vertices.append( (x*innerRadius,y*innerRadius,0) )
       self.uv.append([x*innerRadius/outerRadius/2.+.5,y*innerRadius/outerRadius/2.+.5])
-    
+
     self.triangles = list()
     if not inverted:
       for i in xrange(0,radiusSegments-1):
@@ -264,7 +264,7 @@ class CircleData(GeometryData):
       for i in xrange(0,radiusSegments-1):
         self.triangles.append( [i*2  ,i*2+1,i*2+2] )
         self.triangles.append( [i*2+2,i*2+1,i*2+3] )
-  
+
   def getUv(self, i):
     return self.uv[i]
   def getNormal(self, i):
@@ -280,17 +280,17 @@ class CircleData(GeometryData):
 class Geometry(NodePath):
   def __init__(self):
     NodePath.__init__(self, 'Geometry')
-  
+
   def addGeometry(self, geomData):
     debugGui = dict()
-    
+
     format = GeomVertexFormat.getV3n3t2()
     vdata = GeomVertexData('name', format, Geom.UHStatic)
     vertex = GeomVertexWriter(vdata, 'vertex')
     normal = GeomVertexWriter(vdata, 'normal')
     texcoord = GeomVertexWriter(vdata, 'texcoord')
     prim = GeomTriangles(Geom.UHStatic)
-    
+
     postphonedTriangles = list()
     vtxTargetId0 = vtxTargetId1 = vtxTargetId2 = None
     vtxDataCounter = 0
@@ -306,36 +306,36 @@ class Geometry(NodePath):
       n0 = geomData.getNormal(vtxSourceId0)
       n1 = geomData.getNormal(vtxSourceId1)
       n2 = geomData.getNormal(vtxSourceId2)
-      
+
       # make it wrap nicely
       if min(uvx0,uvx1,uvx2) < .25 and max(uvx0,uvx1,uvx2) > 0.75:
         if uvx0 < 0.25: uvx0 += 1.0
         if uvx1 < 0.25: uvx1 += 1.0
         if uvx2 < 0.25: uvx2 += 1.0
-      
+
       vertex.addData3f(*v0)
       normal.addData3f(*n0)
       texcoord.addData2f(*uv0)
       vtxTargetId0 = vtxDataCounter
       vtxDataCounter += 1
-    
+
       vertex.addData3f(*v1)
       normal.addData3f(*n1)
       texcoord.addData2f(*uv1)
       vtxTargetId1 = vtxDataCounter
       vtxDataCounter += 1
-    
+
       vertex.addData3f(*v2)
       normal.addData3f(*n2)
       texcoord.addData2f(*uv2)
       vtxTargetId2 = vtxDataCounter
       vtxDataCounter += 1
-      
+
       prim.addVertex(vtxTargetId0)
       prim.addVertex(vtxTargetId1)
       prim.addVertex(vtxTargetId2)
       prim.closePrimitive()
-      
+
       if False:
         if vtxSourceId0 not in debugGui:
           i = InfoTextBillaboarded(render)
@@ -355,13 +355,13 @@ class Geometry(NodePath):
           i.billboardNodePath.setPos(Vec3(x2,y2,z2)*1.1)
           i.setText('%i: %.1f %.1f %.1f\n%.1f %.1f' % (vtxSourceId2, x2,y2,z2, nx2, ny2))
           debugGui[vtxSourceId2] = i
-    
+
     geom = Geom(vdata)
     geom.addPrimitive(prim)
-    
+
     node = GeomNode('gnode')
     node.addGeom(geom)
-    
+
     nodePath = self.attachNewNode(node)
     return nodePath
 

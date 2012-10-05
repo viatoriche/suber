@@ -65,7 +65,7 @@ class TileMap(dict):
                 self[coord] = random.randint(1, self.config.land_mount_level[1])
 
             for coord in oceans:
-                self[coord] = random.randint(-self.config.land_mount_level[1], 0)
+                self[coord] = random.randint(-self.config.land_mount_level[1]*3, 0)
 
             # add low heights for lands
             count_land = int(round(len(lands) * config.factor_low_mount / 100.))
@@ -410,7 +410,7 @@ class TileMap(dict):
 
                 self[coord] = height
 
-        add_heights()
+        #add_heights()
         for x in xrange(1):
             square_diamond(
                         sx = 0,
@@ -425,13 +425,13 @@ class Map3d(dict):
        Values = Heights
     """
     # World size 2 ** 24, in meters
-    world_size = 16777216
     config = Config()
     perlin = {}
     def __init__(self, map2d, seed, size, *args, **params):
         dict.__init__(self, *args, **params)
         self.global_template = TileMap(map2d.size, map2d.copy())
         self.seed = seed
+        self.world_size = self.config.size_world
         self.mod = self.world_size / map2d.size
         random.seed(seed)
         # generate 2 octaves for lands
@@ -439,7 +439,7 @@ class Map3d(dict):
             seed = random.randint(0, sys.maxint)
             self.perlin[level] = (PerlinNoise2(sx = self.world_size, sy = self.world_size,
                                        table_size = self.world_size, seed = seed))
-            self.perlin[level].setScale((2 ** 21) / (2 ** level))
+            self.perlin[level].setScale((2 ** (self.config.size_mod-3)) / (2 ** level))
 
         print 'generate_pre_heights: '
         t = time.time()
@@ -506,27 +506,19 @@ class Map3d(dict):
     def __getitem__(self, item):
         """If item not in dict, when perlin generate and return
         """
-        #x, y = item
-        #x = abs(x)
-        #y = abs(y)
+        # TODO: add cache to hard
         if item in self:
             return dict.__getitem__(self, item)
         else:
             # generate perlin height
-            #print 'item: ', x, y
             x, y = item
-
-            # octaves  = global map, + 6 octaves perlin = 7
 
             height = self.template_height(x, y)
 
             for level in self.perlin:
                 p = self.perlin[level](x, y)
-                #p = ((p + 1)/2.)**4
                 height += p * height
 
-            # memory fault =(
-            #self[x, y] = height
             return height
 
 if __name__ == "__main__":
