@@ -15,6 +15,7 @@ class CamFree(DirectObject.DirectObject):
         self.level = self.config.root_level
         self.high_level = self.config.root_level
         self.low_level = self.config.land_level
+        self.root_node = self.game.world.root_node
         #base.camLens.setFar(30000)
 
         self.keyMap = {"FORWARD":0, "BACK":0, "RIGHT":0,
@@ -65,7 +66,7 @@ class CamFree(DirectObject.DirectObject):
             dirTT = base.camera.getMat().getRow3(2)
             dirRL = base.camera.getMat().getRow3(0)
 
-            self.SpeedCam = abs(camera.getZ()*0.01)
+            self.SpeedCam = abs(camera.getZ(self.root_node)*0.01)
             if self.SpeedCam < 1:
                 self.SpeedCam = 1
 
@@ -79,16 +80,20 @@ class CamFree(DirectObject.DirectObject):
             if (self.keyMap["LSHIFT"]!=0):
                 Speed = self.SpeedCam*self.SpeedMult
             if (self.keyMap["FORWARD"]!=0):
-                camera.setPos(camera.getPos()+dirFB*Speed)
+                #camera.setPos(camera.getPos()+dirFB*Speed)
+                self.root_node.setPos(self.root_node.getPos()-dirFB*Speed)
                 #camera.setZ(z)
             if (self.keyMap["BACK"]!=0):
-                camera.setPos(camera.getPos()-dirFB*Speed)
+                #camera.setPos(camera.getPos()-dirFB*Speed)
+                self.root_node.setPos(self.root_node.getPos()+dirFB*Speed)
                 #camera.setZ(z)
             if (self.keyMap["RIGHT"]!=0):
-                camera.setPos(camera.getPos()+dirRL*Speed)
+                #camera.setPos(camera.getPos()+dirRL*Speed)
+                self.root_node.setPos(self.root_node.getPos()-dirRL*Speed)
                 #camera.setZ(z)
             if (self.keyMap["LEFT"]!=0):
-                camera.setPos(camera.getPos()-dirRL*Speed)
+                #camera.setPos(camera.getPos()-dirRL*Speed)
+                self.root_node.setPos(self.root_node.getPos()+dirRL*Speed)
                 #camera.setZ(z)
             if (self.keyMap["UPWARDS"]!=0):
                 camera.setZ(camera.getZ()+Speed)

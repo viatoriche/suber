@@ -13,6 +13,7 @@ from modules.drive.landplane import LandNode, ChunkModel
 from modules.drive.shapeGenerator import Cube as CubeModel
 from panda3d.core import Vec3
 from modules.drive.textures import textures
+from panda3d.core import NodePath
 from pandac.PandaModules import Texture, TextureStage
 from panda3d.core import VBase3
 from config import Config
@@ -208,7 +209,8 @@ class ChunksCollection():
                 #self.chunks_models[chunk] = CubeModel(chunk[1], chunk[1], chunk[1])
                 #self.chunks_models[chunk] = ChunkModel(self.world, chunk[0][0], chunk[0][1], chunk[1])
                 self.chunks_models[chunk] = ChunkModel(self.world, chunk[0][0], chunk[0][1], chunk[1])
-                self.chunks_models[chunk].reparentTo(render)
+                #self.world.root_node.attachNewNode(self.chunks_models[chunk])
+                self.chunks_models[chunk].reparentTo(self.world.root_node)
                 #self.chunks_models[chunk].setZ(chunk[2])
                 #height = self.world.map_3d[chunk[0][0], chunk[0][1]]
                 #texturization
@@ -245,23 +247,23 @@ class ChunksMap():
         #base.camera.setPos(self.max_len/2, self.max_len/2, 53000000)
         base.camera.setPos(0, 0, 10)
         #base.camera.setPos(0, 0, 25000000)
-        self.camPos = base.camera.getPos()
+        self.camPos = base.camera.getPos(self.world.root_node)
         self.get_coords()
         self.create()
 
     def get_coords(self):
-        self.camX = int(base.camera.getX())
-        self.camY = int(base.camera.getY())
-        self.camZ = int(base.camera.getZ())
+        self.camX = int(base.camera.getX(self.world.root_node))
+        self.camY = int(base.camera.getY(self.world.root_node))
+        self.camZ = int(base.camera.getZ(self.world.root_node))
         self.land_z = int(self.world.map_3d[self.camX, self.camY])
-        self.far = self.max_len*5
+        self.far = self.max_len
         if self.far < 2000:
             self.far = 2000
         base.camLens.setFar(self.far)
-        self.camPos = base.camera.getPos()
+        self.camPos = base.camera.getPos(self.world.root_node)
 
     def show(self):
-        if self.camPos != base.camera.getPos():
+        if self.camPos != base.camera.getPos(self.world.root_node):
             self.get_coords()
             self.world.game.write('CamPos: X: {0}, Y: {1}, Z: {2}, '\
                               'land height: {3}'.format(self.camX, self.camY, self.camZ,
@@ -287,6 +289,9 @@ class World():
         self.gui = gui
         self.loader = self.gui.app.loader
         loader = self.loader
+        self.root_node = NodePath('ROOT')
+        self.root_node.reparentTo(render)
+        self.root_node.setX(-100000)
 
         land_mount_level = self.config.land_mount_level
         low_mount_level = self.config.low_mount_level
@@ -321,24 +326,24 @@ class World():
         textures['sand'].setMagfilter(Texture.FTLinearMipmapLinear)
         textures['sand'].setMinfilter(Texture.FTLinearMipmapLinear)
 
-        self.cube_size = self.config.cube_size
-        self.cube_z = 1
-        self.types = {}
+        #self.cube_size = self.config.cube_size
+        #self.cube_z = 1
+        #self.types = {}
 
-        self.types[land_mount_level] = CubeModel(self.cube_size, self.cube_size, self.cube_z)
-        self.types[land_mount_level].setTexture(textures[land_mount_level],1)
+        #self.types[land_mount_level] = CubeModel(self.cube_size, self.cube_size, self.cube_z)
+        #self.types[land_mount_level].setTexture(textures[land_mount_level],1)
 
-        self.types[low_mount_level] = CubeModel(self.cube_size, self.cube_size, self.cube_z)
-        self.types[low_mount_level].setTexture(textures[low_mount_level],1)
+        #self.types[low_mount_level] = CubeModel(self.cube_size, self.cube_size, self.cube_z)
+        #self.types[low_mount_level].setTexture(textures[low_mount_level],1)
 
-        self.types[mid_mount_level] = CubeModel(self.cube_size, self.cube_size, self.cube_z)
-        self.types[mid_mount_level].setTexture(textures[mid_mount_level],1)
+        #self.types[mid_mount_level] = CubeModel(self.cube_size, self.cube_size, self.cube_z)
+        #self.types[mid_mount_level].setTexture(textures[mid_mount_level],1)
 
-        self.types[high_mount_level] = CubeModel(self.cube_size, self.cube_size, self.cube_z)
-        self.types[high_mount_level].setTexture(textures[high_mount_level],1)
+        #self.types[high_mount_level] = CubeModel(self.cube_size, self.cube_size, self.cube_z)
+        #self.types[high_mount_level].setTexture(textures[high_mount_level],1)
 
-        self.types['sand'] = CubeModel(self.cube_size, self.cube_size, self.cube_z)
-        self.types['sand'].setTexture(textures['sand'],1)
+        #self.types['sand'] = CubeModel(self.cube_size, self.cube_size, self.cube_z)
+        #self.types['sand'].setTexture(textures['sand'],1)
 
         #self.cubik = CubeModel(self.cube_size, self.cube_size, self.cube_z)
         #self.cubik.reparentTo(self.gui.app.render)

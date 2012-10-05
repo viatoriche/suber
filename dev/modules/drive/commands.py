@@ -144,6 +144,12 @@ class Command_Handler():
         if name_cmd in self.run_cmd:
             self.run_cmd[name_cmd](self, params)
 
+    def cmd_info(self, params = []):
+        """render.analyze()
+
+        """
+        print render.analyze()
+
     run_cmd = { 
                 'exit': cmd_exit,
                 'createmap': cmd_create_global_map,
@@ -155,6 +161,7 @@ class Command_Handler():
                 'load': cmd_load,
                 'minimap': cmd_minimap,
                 'seed': cmd_seed,
+                'info': cmd_info,
               }
 # vi: ts=4 sw=4
 
