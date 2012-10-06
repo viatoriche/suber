@@ -150,6 +150,11 @@ class Command_Handler():
         """
         print render.analyze()
 
+    def cmd_show_tex(self, params = []):
+        self.game.process.screen_images.add_image('world_blocks',
+                                            textures['world_blocks'],
+                                            scale = 0.8, pos = (0, 0, 0.1))
+
     run_cmd = { 
                 'exit': cmd_exit,
                 'createmap': cmd_create_global_map,
@@ -162,6 +167,7 @@ class Command_Handler():
                 'minimap': cmd_minimap,
                 'seed': cmd_seed,
                 'info': cmd_info,
+                'showtex': cmd_show_tex,
               }
 # vi: ts=4 sw=4
 

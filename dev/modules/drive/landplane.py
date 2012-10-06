@@ -4,16 +4,84 @@
 land plane
 """
 
-import time
 from config import Config
+from modules.drive.textures import textures
 from panda3d.core import CardMaker
 from panda3d.core import Geom, GeomTriangles, GeomVertexWriter
 from panda3d.core import GeomNode
 from panda3d.core import GeomVertexFormat, GeomVertexData
-from panda3d.core import NodePath
+from panda3d.core import Vec3
 from pandac.PandaModules import CardMaker
 from pandac.PandaModules import NodePath
+from pandac.PandaModules import TextureStage
 from pandac.PandaModules import TransparencyAttrib
+
+#you cant normalize in-place so this is a helper function
+def myNormalize(myVec):
+    myVec.normalize()
+    return myVec
+
+#helper function to make a square given the Lower-Left-Hand and Upper-Right-Hand corners
+def makeSquare(x1,y1,z1, x2,y2,z2, tex_coord):
+    format=GeomVertexFormat.getV3n3t2()
+    vdata=GeomVertexData('square', format, Geom.UHStatic)
+
+    vertex=GeomVertexWriter(vdata, 'vertex')
+    normal=GeomVertexWriter(vdata, 'normal')
+    texcoord=GeomVertexWriter(vdata, 'texcoord')
+
+    #make sure we draw the sqaure in the right plane
+    if x1!=x2:
+        vertex.addData3f(x1, y1, z1)
+        vertex.addData3f(x2, y1, z1)
+        vertex.addData3f(x2, y2, z2)
+        vertex.addData3f(x1, y2, z2)
+
+        normal.addData3f(myNormalize(Vec3(2*x1-1, 2*y1-1, 2*z1-1)))
+        normal.addData3f(myNormalize(Vec3(2*x2-1, 2*y1-1, 2*z1-1)))
+        normal.addData3f(myNormalize(Vec3(2*x2-1, 2*y2-1, 2*z2-1)))
+        normal.addData3f(myNormalize(Vec3(2*x1-1, 2*y2-1, 2*z2-1)))
+
+    else:
+        vertex.addData3f(x1, y1, z1)
+        vertex.addData3f(x2, y2, z1)
+        vertex.addData3f(x2, y2, z2)
+        vertex.addData3f(x1, y1, z2)
+
+        normal.addData3f(myNormalize(Vec3(2*x1-1, 2*y1-1, 2*z1-1)))
+        normal.addData3f(myNormalize(Vec3(2*x2-1, 2*y2-1, 2*z1-1)))
+        normal.addData3f(myNormalize(Vec3(2*x2-1, 2*y2-1, 2*z2-1)))
+        normal.addData3f(myNormalize(Vec3(2*x1-1, 2*y1-1, 2*z2-1)))
+
+    #adding different colors to the vertex for visibility
+
+    u1, v1, u2, v2 = tex_coord
+
+    texcoord.addData2f(u1, v2)
+    texcoord.addData2f(u1, v1)
+    texcoord.addData2f(u2, v1)
+    texcoord.addData2f(u2, v2)
+
+    #quads arent directly supported by the Geom interface
+    #you might be interested in the CardMaker class if you are
+    #interested in rectangle though
+    tri1=GeomTriangles(Geom.UHStatic)
+    tri2=GeomTriangles(Geom.UHStatic)
+
+    tri1.addVertex(0)
+    tri1.addVertex(1)
+    tri1.addVertex(3)
+
+    tri2.addConsecutiveVertices(1,3)
+
+    tri1.closePrimitive()
+    tri2.closePrimitive()
+
+    square=Geom(vdata)
+    square.addPrimitive(tri1)
+    square.addPrimitive(tri2)
+
+    return square
 
 class ChunkModel(NodePath):
     """Chunk for quick render and create cube-objects
@@ -21,12 +89,14 @@ class ChunkModel(NodePath):
     world - link to world object
     X, Y = start coordinates
     """
-    def __init__(self, world, X, Y, size):
+    config = Config()
+    def __init__(self, world, X, Y, size, chunk_len):
         NodePath.__init__(self, 'ChunkModel_{0}-{1}_{2}'.format(X, Y, size))
         self.world = world
         self.X = X
         self.Y = Y
         self.size = size
+        self.chunk_len = chunk_len
         self.create()
         #return self.create()
 
@@ -34,62 +104,55 @@ class ChunkModel(NodePath):
         """create chunk
 
         """
-        form = GeomVertexFormat.getV3n3cpt2()
-        vdata = GeomVertexData('chunk_{0}-{1}_{2}'.format(self.X, self.Y, self.size),
-                               form, Geom.UHDynamic)
-        vertex = GeomVertexWriter(vdata, 'vertex')
-        #normal = GeomVertexWriter(vdata, 'normal')
-        color = GeomVertexWriter(vdata, 'color')
-        texcoord = GeomVertexWriter(vdata, 'texcoord')
-        tris = []
-        j = 0
-        t = time.time()
-        size_voxel = self.size / 16
-        #print 'CHUNK MODEL INIT: ',self.X, self.Y, self.size,\
-              #'\n\t\tvoxel size: ', size_voxel,\
-              #'\n\t\tstart X, Y: ', self.X - (self.size / 2), self.Y - (self.size / 2)
+        cubes = []
+        size_voxel = self.size / self.chunk_len
+        size2 = self.size / 2
+        start_x = self.X - size2
+        start_y = self.Y - size2
+        size_x = self.X + size2
+        size_y = self.Y + size2
+        Z = {}
 
-        for x in xrange(self.X - (self.size / 2), self.X + (self.size / 2), size_voxel):
-            for y in xrange(self.Y - (self.size / 2), self.Y + (self.size / 2), size_voxel):
-                #z = self.world.map_3d[x, y]
-                z = 0
-                #print '\t\t\t\t X, Y: ',x, y
-                vertex.addData3f(x, y, z)
-                vertex.addData3f(x + size_voxel, y, z)
-                vertex.addData3f(x + size_voxel, y+size_voxel, z)
-                vertex.addData3f(x, y+size_voxel, z)
-                #print '\t\t\tvertexes: 1 - ',x, y, z, ' | 2 - ', x+size_voxel, y, z, ' | 3 - ', x + size_voxel, y + size_voxel, z, ' | 4 - ', x, y+size_voxel, z
+        for x in xrange(start_x-size_voxel, size_x+size_voxel, size_voxel):
+            for y in xrange(start_y-size_voxel, size_y+size_voxel, size_voxel):
+                Z[x, y] = self.world.map_3d[x, y]
 
-                tri1=GeomTriangles(Geom.UHDynamic)
-                tri1.addVertex(j)
-                tri1.addVertex(j+1)
-                tri1.addVertex(j+3)
+        for x in xrange(start_x, size_x, size_voxel):
+            for y in xrange(start_y, size_y, size_voxel):
+                dx = x + size_voxel
+                dy = y + size_voxel
+                z = Z[x, y]
+                dz = z - (size_voxel * 10)
 
-                tri2=GeomTriangles(Geom.UHDynamic)
-                tri2.addConsecutiveVertices(j+1, 3)
-                j += 4
+                cube = []
 
-                tris.append(tri1)
-                tris.append(tri2)
+                tex_coord = textures.get_block_uv_height(z)
 
-                color.addData4f(1.0, 0.0, 0.0, 1.0)
-                color.addData4f(0.0, 1.0, 0.0, 1.0)
-                color.addData4f(0.0, 0.0, 1.0, 1.0)
-                color.addData4f(1.0, 0.0, 1.0, 1.0)
+                cube.append( makeSquare(x, y, z,    dx, dy, z,  tex_coord) )
 
-        texcoord.addData2f(0.0, 1.0)
-        texcoord.addData2f(0.0, 0.0)
-        texcoord.addData2f(1.0, 0.0)
-        texcoord.addData2f(1.0, 1.0)
+                if z > Z[x - size_voxel, y]:
+                    cube.append( makeSquare(x, y, z,    x, dy, dz,  tex_coord) )
+                if z > Z[x + size_voxel, y]:
+                    cube.append( makeSquare(dx, y, z,    dx, dy, dz,  tex_coord) )
 
-        chunk_data = Geom(vdata)
-        for tri in tris:
-            chunk_data.addPrimitive(tri)
+                if z > Z[x, y - size_voxel]:
+                    cube.append( makeSquare(x, y, z,    dx, y, dz,  tex_coord) )
+                if z > Z[x, y + size_voxel]:
+                    cube.append( makeSquare(x, dy, z,    dx, dy, dz,  tex_coord) )
 
-        geom_node = GeomNode('chunk_node_{0}_{1}_{2}'.format(self.X, self.Y, self.size))
-        geom_node.addGeom(chunk_data)
-        nodePath = self.attachNewNode(geom_node)
-        return nodePath
+
+                cubes.append(cube)
+
+        chunk_geom = GeomNode('chunk_geom')
+        for cube in cubes:
+            for square in cube:
+                chunk_geom.addGeom(square)
+
+        self.attachNewNode(chunk_geom)
+        self.setTwoSided(True)
+        ts = TextureStage('ts')
+        self.setTexture(ts, textures['world_blocks'])
+        self.setTexScale(ts, 1, 1)
 
 class LandNode():
     """Water / Land

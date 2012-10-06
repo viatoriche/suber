@@ -512,6 +512,15 @@ class Map3d(dict):
         else:
             # generate perlin height
             x, y = item
+            if x < 0:
+                x = x + self.world_size
+            if y < 0:
+                y = y + self.world_size
+
+            if x >= self.world_size:
+                x = x - self.world_size
+            if y >= self.world_size:
+                y = y - self.world_size
 
             height = self.template_height(x, y)
 

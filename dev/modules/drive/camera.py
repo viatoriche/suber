@@ -12,9 +12,6 @@ class CamFree(DirectObject.DirectObject):
 
         self.game = game
         self.showterrain = game.world.show
-        self.level = self.config.root_level
-        self.high_level = self.config.root_level
-        self.low_level = self.config.land_level
         self.root_node = self.game.world.root_node
         #base.camLens.setFar(30000)
 
@@ -47,7 +44,7 @@ class CamFree(DirectObject.DirectObject):
 
         self.props = WindowProperties()
 
-        taskMgr.add(self.CamControl, 'CamControl')
+        taskMgr.add(self.CamControl, 'CamControl', priority = 255)
 
     def setKey(self, key, value):
         self.keyMap[key] = value
@@ -96,9 +93,11 @@ class CamFree(DirectObject.DirectObject):
                 self.root_node.setPos(self.root_node.getPos()+dirRL*Speed)
                 #camera.setZ(z)
             if (self.keyMap["UPWARDS"]!=0):
-                camera.setZ(camera.getZ()+Speed)
+                #camera.setZ(camera.getZ()+Speed)
+                self.root_node.setZ(self.root_node.getZ()-Speed)
             if (self.keyMap["DOWNWARDS"]!=0):
-                camera.setZ(camera.getZ()-Speed)
+                #camera.setZ(camera.getZ()-Speed)
+                self.root_node.setZ(self.root_node.getZ()+Speed)
 
             if base.win.movePointer(0, base.win.getXSize()/2, base.win.getYSize()/2):
                 camera.setH(camera.getH() -  (x - base.win.getXSize()/2)*self.SpeedRot)
@@ -109,7 +108,7 @@ class CamFree(DirectObject.DirectObject):
                     camera.setP(90)
 
             #print self.level
-            self.showterrain()
+            #self.showterrain()
 
         else:
             self.CursorOffOn = 'On'

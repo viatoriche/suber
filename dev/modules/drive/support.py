@@ -6,7 +6,7 @@ License: GPL (see http://www.gnu.org/licenses/gpl.txt)
 support Classes and functions for drive
 """
 
-from direct.stdpy import threading as panda_threading
+from direct.stdpy import threading2 as panda_threading
 import threading
 
 def generate_hash(dic = {}):
