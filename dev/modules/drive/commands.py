@@ -172,7 +172,37 @@ class Command_Handler():
             print 'Chunks models:', len(chct.chunks_models), ' * Show:', sm, ' / Hide:',\
                    hm, ' * attached:',am, ' / detached:', dm
             print 'Chunks (state dict):', len(chct.chunks), ' * active:', cht, ' / passive:', chf
+            print 'DX, DY: ', self.game.world.chunks_map.DX, self.game.world.chunks_map.DY
+            print 'CharX, CharY: ', self.game.world.chunks_map.charX, self.game.world.chunks_map.charY
+            print 'CamX, CamY: ', self.game.world.chunks_map.camX, self.game.world.chunks_map.camY
 
+    def cmd_teleport(self, params = []):
+        """Teleportation camera of X, Y, Z
+
+        params[0] - X
+        params[1] - Y
+        params[2] - Z
+
+        if params == []
+            then random X,Y,Z
+        """
+        if len(params) == 0:
+            x = random.randint(0, self.game.world.chunks_map.size_world)
+            y = random.randint(0, self.game.world.chunks_map.size_world)
+            z = random.randint(-self.game.world.chunks_map.size_region, self.game.world.chunks_map.size_region)
+        else:
+            try:
+                x = params[0]
+                y = params[1]
+            except:
+                return
+            try:
+                z = params[2]
+            except:
+                z = 0
+
+        coords = x, y, z
+        self.game.world.chunks_map.set_char_coord(coords)
 
     def cmd_show_tex(self, params = []):
         self.game.process.screen_images.add_image('world_blocks',
@@ -192,6 +222,8 @@ class Command_Handler():
                 'seed': cmd_seed,
                 'info': cmd_info,
                 'showtex': cmd_show_tex,
+                'teleport': cmd_teleport,
+                'port': cmd_teleport,
               }
 # vi: ts=4 sw=4
 

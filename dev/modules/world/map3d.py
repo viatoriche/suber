@@ -410,7 +410,7 @@ class TileMap(dict):
 
                 self[coord] = height
 
-        add_heights()
+        #add_heights()
         for x in xrange(1):
             square_diamond(
                         sx = 0,

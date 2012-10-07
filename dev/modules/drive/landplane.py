@@ -90,55 +90,61 @@ class ChunkModel(NodePath):
     X, Y = start coordinates
     """
     config = Config()
-    def __init__(self, world, X, Y, size, chunk_len):
+    def __init__(self, world, X, Y, size, chunk_len, DX, DY):
         NodePath.__init__(self, 'ChunkModel_{0}-{1}_{2}'.format(X, Y, size))
         self.world = world
         self.X = X
         self.Y = Y
+        self.DX = DX
+        self.DY = DY
         self.size = size
         self.chunk_len = chunk_len
+        self.size_voxel = self.size / self.chunk_len
+        self.size2 = self.size / 2
+        self.start_x = self.X - self.size2
+        self.start_y = self.Y - self.size2
+        self.size_x = self.X + self.size2
+        self.size_y = self.Y + self.size2
+        self.Z = {}
+
+        for x in xrange(self.start_x-self.size_voxel, self.size_x+self.size_voxel, self.size_voxel):
+            for y in xrange(self.start_y-self.size_voxel, self.size_y+self.size_voxel, self.size_voxel):
+                self.Z[x, y] = self.world.map_3d[x, y]
+
         self.create()
-        #return self.create()
 
     def create(self):
         """create chunk
 
         """
         cubes = []
-        size_voxel = self.size / self.chunk_len
-        size2 = self.size / 2
-        start_x = self.X - size2
-        start_y = self.Y - size2
-        size_x = self.X + size2
-        size_y = self.Y + size2
-        Z = {}
-
-        for x in xrange(start_x-size_voxel, size_x+size_voxel, size_voxel):
-            for y in xrange(start_y-size_voxel, size_y+size_voxel, size_voxel):
-                Z[x, y] = self.world.map_3d[x, y]
-
-        for x in xrange(start_x, size_x, size_voxel):
-            for y in xrange(start_y, size_y, size_voxel):
-                dx = x + size_voxel
-                dy = y + size_voxel
-                z = Z[x, y]
-                dz = z - (size_voxel * 10)
+        for x in xrange(self.start_x, self.size_x, self.size_voxel):
+            for y in xrange(self.start_y, self.size_y, self.size_voxel):
+                dx = x + self.size_voxel
+                dy = y + self.size_voxel
+                z = self.Z[x, y]
+                dz = z - (self.size_voxel * 10)
 
                 cube = []
 
+                sq_x = x - self.DX
+                sq_y = y - self.DY
+                sq_dx = dx - self.DX
+                sq_dy = dy - self.DY
+
                 tex_coord = textures.get_block_uv_height(z)
 
-                cube.append( makeSquare(x, y, z,    dx, dy, z,  tex_coord) )
+                cube.append( makeSquare(sq_x, sq_y, z,    sq_dx, sq_dy, z,  tex_coord) )
 
-                if z > Z[x - size_voxel, y]:
-                    cube.append( makeSquare(x, y, z,    x, dy, dz,  tex_coord) )
-                if z > Z[x + size_voxel, y]:
-                    cube.append( makeSquare(dx, y, z,    dx, dy, dz,  tex_coord) )
+                if z > self.Z[x - self.size_voxel, y]:
+                    cube.append( makeSquare(sq_x, sq_y, z,    sq_x, sq_dy, dz,  tex_coord) )
+                if z > self.Z[x + self.size_voxel, y]:
+                    cube.append( makeSquare(sq_dx, sq_y, z,    sq_dx, sq_dy, dz,  tex_coord) )
 
-                if z > Z[x, y - size_voxel]:
-                    cube.append( makeSquare(x, y, z,    dx, y, dz,  tex_coord) )
-                if z > Z[x, y + size_voxel]:
-                    cube.append( makeSquare(x, dy, z,    dx, dy, dz,  tex_coord) )
+                if z > self.Z[x, y - self.size_voxel]:
+                    cube.append( makeSquare(sq_x, sq_y, z,    sq_dx, sq_y, dz,  tex_coord) )
+                if z > self.Z[x, y + self.size_voxel]:
+                    cube.append( makeSquare(sq_x, sq_dy, z,    sq_dx, sq_dy, dz,  tex_coord) )
 
 
                 cubes.append(cube)
@@ -153,6 +159,14 @@ class ChunkModel(NodePath):
         ts = TextureStage('ts')
         self.setTexture(ts, textures['world_blocks'])
         self.setTexScale(ts, 1, 1)
+
+    #def setX(self, X):
+        #x = X - self.size2
+        #NodePath.setX(self, x)
+
+    #def setY(self, Y):
+        #y = Y - self.size2
+        #NodePath.setY(self, y)
 
 class LandNode():
     """Water / Land

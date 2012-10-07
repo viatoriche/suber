@@ -77,27 +77,27 @@ class CamFree(DirectObject.DirectObject):
             if (self.keyMap["LSHIFT"]!=0):
                 Speed = self.SpeedCam*self.SpeedMult
             if (self.keyMap["FORWARD"]!=0):
-                #camera.setPos(camera.getPos()+dirFB*Speed)
-                self.root_node.setPos(self.root_node.getPos()-dirFB*Speed)
+                camera.setPos(camera.getPos()+dirFB*Speed)
+                #self.root_node.setPos(self.root_node.getPos()-dirFB*Speed)
                 #camera.setZ(z)
             if (self.keyMap["BACK"]!=0):
-                #camera.setPos(camera.getPos()-dirFB*Speed)
-                self.root_node.setPos(self.root_node.getPos()+dirFB*Speed)
+                camera.setPos(camera.getPos()-dirFB*Speed)
+                #self.root_node.setPos(self.root_node.getPos()+dirFB*Speed)
                 #camera.setZ(z)
             if (self.keyMap["RIGHT"]!=0):
-                #camera.setPos(camera.getPos()+dirRL*Speed)
-                self.root_node.setPos(self.root_node.getPos()-dirRL*Speed)
+                camera.setPos(camera.getPos()+dirRL*Speed)
+                #self.root_node.setPos(self.root_node.getPos()-dirRL*Speed)
                 #camera.setZ(z)
             if (self.keyMap["LEFT"]!=0):
-                #camera.setPos(camera.getPos()-dirRL*Speed)
-                self.root_node.setPos(self.root_node.getPos()+dirRL*Speed)
+                camera.setPos(camera.getPos()-dirRL*Speed)
+                #self.root_node.setPos(self.root_node.getPos()+dirRL*Speed)
                 #camera.setZ(z)
             if (self.keyMap["UPWARDS"]!=0):
-                #camera.setZ(camera.getZ()+Speed)
-                self.root_node.setZ(self.root_node.getZ()-Speed)
+                camera.setZ(camera.getZ()+Speed)
+                #self.root_node.setZ(self.root_node.getZ()-Speed)
             if (self.keyMap["DOWNWARDS"]!=0):
-                #camera.setZ(camera.getZ()-Speed)
-                self.root_node.setZ(self.root_node.getZ()+Speed)
+                camera.setZ(camera.getZ()-Speed)
+                #self.root_node.setZ(self.root_node.getZ()+Speed)
 
             if base.win.movePointer(0, base.win.getXSize()/2, base.win.getYSize()/2):
                 camera.setH(camera.getH() -  (x - base.win.getXSize()/2)*self.SpeedRot)
