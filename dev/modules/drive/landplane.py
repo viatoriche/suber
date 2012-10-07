@@ -90,13 +90,11 @@ class ChunkModel(NodePath):
     X, Y = start coordinates
     """
     config = Config()
-    def __init__(self, world, X, Y, size, chunk_len, DX, DY):
+    def __init__(self, world, X, Y, size, chunk_len):
         NodePath.__init__(self, 'ChunkModel_{0}-{1}_{2}'.format(X, Y, size))
         self.world = world
         self.X = X
         self.Y = Y
-        self.DX = DX
-        self.DY = DY
         self.size = size
         self.chunk_len = chunk_len
         self.size_voxel = self.size / self.chunk_len
@@ -118,7 +116,9 @@ class ChunkModel(NodePath):
 
         """
         cubes = []
+        sq_x = sq_y  = 0
         for x in xrange(self.start_x, self.size_x, self.size_voxel):
+            sq_dx = sq_x + 1
             for y in xrange(self.start_y, self.size_y, self.size_voxel):
                 dx = x + self.size_voxel
                 dy = y + self.size_voxel
@@ -127,10 +127,7 @@ class ChunkModel(NodePath):
 
                 cube = []
 
-                sq_x = x - self.DX
-                sq_y = y - self.DY
-                sq_dx = dx - self.DX
-                sq_dy = dy - self.DY
+                sq_dy = sq_y + 1
 
                 tex_coord = textures.get_block_uv_height(z)
 
@@ -149,6 +146,10 @@ class ChunkModel(NodePath):
 
                 cubes.append(cube)
 
+                sq_y += 1
+            sq_x += 1
+            sq_y = 0
+
         chunk_geom = GeomNode('chunk_geom')
         for cube in cubes:
             for square in cube:
@@ -159,14 +160,15 @@ class ChunkModel(NodePath):
         ts = TextureStage('ts')
         self.setTexture(ts, textures['world_blocks'])
         self.setTexScale(ts, 1, 1)
+        self.setScale(self.size_voxel, self.size_voxel, 1)
 
-    #def setX(self, X):
-        #x = X - self.size2
-        #NodePath.setX(self, x)
+    def setX(self, DX):
+        x = self.X - self.size2 - DX
+        NodePath.setX(self, x)
 
-    #def setY(self, Y):
-        #y = Y - self.size2
-        #NodePath.setY(self, y)
+    def setY(self, DY):
+        y = self.Y - self.size2 - DY
+        NodePath.setY(self, y)
 
 class LandNode():
     """Water / Land

@@ -191,26 +191,25 @@ class ChunksCollection():
             else:
                 if self.chunks_models[chunk_model].isHidden():
                     self.chunks_models[chunk_model].show()
-                #self.chunks_models[chunk_model].setX(0)
-                #self.chunks_models[chunk_model].setY(0)
+                self.chunks_models[chunk_model].setX(self.chunks_map.DX)
+                self.chunks_models[chunk_model].setY(self.chunks_map.DY)
 
         for chunk in self.chunks:
             if not self.chunks_models.has_key(chunk):
                 # size of chunk
-                if chunk[1] < self.chunks_map.size_region:
-                    self.chunks_models[chunk] = ChunkModel(self.world,
-                                                           chunk[0][0], chunk[0][1], chunk[1],
-                                                           self.chunks_map.chunk_len,
-                                                           self.chunks_map.DX, self.chunks_map.DY)
-                    self.chunks_models[chunk].reparentTo(self.world.root_node)
-                    #self.chunks_models[chunk].setX(0)
-                    #self.chunks_models[chunk].setY(0)
+                self.chunks_models[chunk] = ChunkModel(self.world,
+                                                       chunk[0][0], chunk[0][1], chunk[1],
+                                                       self.chunks_map.chunk_len
+                                                       )
+                self.chunks_models[chunk].reparentTo(self.world.root_node)
+                self.chunks_models[chunk].setX(self.chunks_map.DX)
+                self.chunks_models[chunk].setY(self.chunks_map.DY)
 
-                    #print 'New coords: X: ', chunk[0][0], ' -> ', self.chunks_models[chunk].getX(),\
-                                      #'Y: ', chunk[0][1], ' -> ', self.chunks_models[chunk].getY(), ' len: ', chunk[1]
+                #print 'New coords: X: ', chunk[0][0], ' -> ', self.chunks_models[chunk].getX(),\
+                                  #'Y: ', chunk[0][1], ' -> ', self.chunks_models[chunk].getY(), ' len: ', chunk[1]
 
-                    if not self.chunks[chunk]:
-                        self.chunks_models[chunk].hide()
+                if not self.chunks[chunk]:
+                    self.chunks_models[chunk].hide()
 
 class ChunksMap():
     config = Config()
@@ -243,10 +242,10 @@ class ChunksMap():
         self.camY = int(base.camera.getY(self.world.root_node))
         self.camZ = int(base.camera.getZ(self.world.root_node))
         self.land_z = int(self.world.map_3d[self.camX, self.camY])
-        if self.camZ > self.size_region:
-            self.camZ = self.size_region
-        if self.camZ < -self.size_region:
-            self.camZ = -self.size_region
+        #if self.camZ > self.size_region:
+            #self.camZ = self.size_region
+        #if self.camZ < -self.size_region:
+            #self.camZ = -self.size_region
         self.far = self.camZ*10
         self.charX += d_charX
         self.charY += d_charY
@@ -306,10 +305,10 @@ class ChunksMap():
         self.camX = self.charX - ((self.charX / self.size_region) * self.size_region)
         self.camY = self.charY - ((self.charY / self.size_region) * self.size_region)
         self.camZ = z
-        if self.camZ > self.size_region:
-            self.camZ = self.size_region
-        if self.camZ < -self.size_region:
-            self.camZ = -self.size_region
+        #if self.camZ > self.size_region:
+            #self.camZ = self.size_region
+        #if self.camZ < -self.size_region:
+            #self.camZ = -self.size_region
 
     def show(self):
         if self.camPos != base.camera.getPos(self.world.root_node):
