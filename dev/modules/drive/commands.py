@@ -148,7 +148,31 @@ class Command_Handler():
         """render.analyze()
 
         """
+        print '\n'
+        print 'All info stat: '
         print render.analyze()
+        for chct in self.game.world.chunks_map.chunks_clts.values():
+            hm = sm = dm = am = 0
+            for ch_m in chct.chunks_models:
+                if chct.chunks_models[ch_m].isHidden():
+                    hm += 1
+                else:
+                    sm += 1
+                if chct.chunks_models[ch_m].hasParent():
+                    am += 1
+                else:
+                    dm += 1
+            cht = chf = 0
+            for ch in chct.chunks:
+                if chct.chunks[ch]:
+                    cht += 1
+                else:
+                    chf += 1
+
+            print 'Chunks models:', len(chct.chunks_models), ' * Show:', sm, ' / Hide:',\
+                   hm, ' * attached:',am, ' / detached:', dm
+            print 'Chunks (state dict):', len(chct.chunks), ' * active:', cht, ' / passive:', chf
+
 
     def cmd_show_tex(self, params = []):
         self.game.process.screen_images.add_image('world_blocks',

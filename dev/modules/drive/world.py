@@ -86,13 +86,12 @@ class QuadroTreeNode:
 
     def repaint(self):
         if self.len_chunk > self.chunks_map.chunk_len:
-            factor = 1
-            trigger_dist = self.len_chunk * factor
-            trigger_dist2 = self.len_chunk * factor * 3
+            divide_dist = self.len_chunk
+            show_dist = self.chunks_map.far
             length_cam = VBase3.length(Vec3(self.center) - self.chunks_map.camPos)
-            if length_cam < trigger_dist:
+            if length_cam < divide_dist:
                 self.divide()
-            elif length_cam < trigger_dist2:
+            elif length_cam < show_dist:
                 self.show()
         else:
             self.show()
@@ -161,6 +160,7 @@ class ChunksCollection():
     def generate(self):
         for chunk in self.chunks:
             self.chunks[chunk] = False
+        #self.chunks = {}
         self.root.repaint()
 
     def show(self):
@@ -168,6 +168,19 @@ class ChunksCollection():
 
         for chunk_model in self.chunks_models:
             if not self.chunks[chunk_model]:
+                length_cam = VBase3.length(Vec3(chunk_model[0]) - self.chunks_map.camPos)
+                detach_dist = self.chunks_map.far * 4
+                attach_dist = self.chunks_map.far * 2
+
+                if length_cam >= detach_dist:
+                    #print 'detach: ', chunk_model
+                    if self.chunks_models[chunk_model].hasParent():
+                        self.chunks_models[chunk_model].detachNode()
+                if length_cam <= attach_dist:
+                    #print 'attach: ', chunk_model
+                    if not self.chunks_models[chunk_model].hasParent():
+                        self.chunks_models[chunk_model].reparentTo(self.world.root_node)
+
                 if not self.chunks_models[chunk_model].isHidden():
                     self.chunks_models[chunk_model].hide()
             else:
@@ -193,10 +206,11 @@ class ChunksMap():
         self.max_len = self.config.size_world
         self.chunk_len = 4
         self.chunks_clts = {}
-        self.world.root_node.setPos(-self.max_len/2, -self.max_len/2, -2000000)
+        self.world.root_node.setPos(-self.max_len/2, -self.max_len/2, -10000)
         base.camera.setPos(0, 0, 0)
         #base.camera.setPos(0, 0, 25000000)
         self.camPos = base.camera.getPos(self.world.root_node)
+        base.camLens.setFar(100000)
         self.get_coords()
         self.create()
 
@@ -205,10 +219,10 @@ class ChunksMap():
         self.camY = int(base.camera.getY(self.world.root_node))
         self.camZ = int(base.camera.getZ(self.world.root_node))
         self.land_z = int(self.world.map_3d[self.camX, self.camY])
-        self.far = self.camZ*5
-        if self.far < 2000:
-            self.far = 2000
-        base.camLens.setFar(self.far)
+        self.far = self.camZ*10
+        if self.far < 1000:
+            self.far = 1000
+        base.camLens.setFar(self.far*2)
         self.camPos = base.camera.getPos(self.world.root_node)
 
     def show(self):
@@ -218,15 +232,13 @@ class ChunksMap():
                               'land height: {3}'.format(self.camX, self.camY, self.camZ,
                                self.land_z))
 
-            print base.camera.getPos()
-
             for chunks_clt in self.chunks_clts.values():
-                t = time.time()
+                #t = time.time()
                 chunks_clt.generate()
-                print 'Chunks generate: ', time.time() - t
-                t = time.time()
+                #print 'Chunks generate: ', time.time() - t
+                #t = time.time()
                 chunks_clt.show()
-                print 'Chunks show: ', time.time() - t
+                #print 'Chunks show: ', time.time() - t
 
     def create(self):
         for x in xrange(-self.size, self.size+1):
