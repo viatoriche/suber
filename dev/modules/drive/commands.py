@@ -13,6 +13,8 @@ from modules.world.map2d import Map_generator_2D
 from modules.world.map3d import Map3d
 from pandac.PandaModules import loadPrcFileData
 
+loadPrcFileData("", "window-title {0}".format(Config().name_game))
+
 class Command_Handler():
     """Handler for all commands
     """
@@ -45,14 +47,14 @@ class Command_Handler():
         """
         Generate global map template and show it
         """
-        #if len(params) >0:
-            #seed = int(params[0])
-        #else:
-        #    seed = random.randint(0, sys.maxint)
+        if len(params) >0:
+            seed = int(params[0])
+        else:
+            seed = random.randint(0, sys.maxint)
 
         #seed = 34568
 
-        seed = 2789334
+        #seed = 2789334
 
         self.game.world.seed = seed
         random.seed(seed)
@@ -82,7 +84,6 @@ class Command_Handler():
 
 
         self.cmd_write(['Map generation process has been started'])
-        loadPrcFileData("", "window-title Suber")
 
 
 

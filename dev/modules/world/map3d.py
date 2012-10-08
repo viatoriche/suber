@@ -189,7 +189,10 @@ class TileMap(dict):
                 if count_land > 0:
                     dx = random.randint(-1,1)
                     dy = random.randint(-1,1)
-                    coord = land_coords[random.randint(0, len(land_coords) - 1)]
+                    try:
+                        coord = land_coords[random.randint(0, len(land_coords) - 1)]
+                    except ValueError:
+                        coord = ocean_coords[random.randint(0, len(ocean_coords) - 1)]
                     coord = coord[0] + dx, coord[1] + dy
                     #if coord not in land_coords:
                     self[coord] = random.randint(self.config.high_mount_level[0],
@@ -439,7 +442,7 @@ class Map3d(dict):
             seed = random.randint(0, sys.maxint)
             self.perlin[level] = (PerlinNoise2(sx = self.world_size, sy = self.world_size,
                                        table_size = self.world_size, seed = seed))
-            self.perlin[level].setScale((2 ** (self.config.size_mod-3)) / (2 ** level))
+            self.perlin[level].setScale((2 ** (self.config.size_mod-2)) / (2 ** level))
 
         print 'generate_pre_heights: '
         t = time.time()

@@ -19,9 +19,14 @@ from panda3d.core import VBase3
 from config import Config
 from pandac.PandaModules import TransparencyAttrib, Texture, TextureStage
 from modules.drive.support import ThreadPandaDo
+from panda3d.core import TPLow
 import sys
 
 #sys.setrecursionlimit(65535)
+
+class Sky():
+    def __init__(self):
+        base.setBackgroundColor(116, 165, 233)
 
 class WaterNode():
     """Water plane for nya
@@ -170,27 +175,25 @@ class ChunksCollection():
         # TODO: add delete cube event
 
         for chunk_model in self.chunks_models:
-            if not self.chunks[chunk_model]:
-                length_cam = VBase3.length(Vec3(chunk_model[0]) - Vec3(self.chunks_map.charX,
+            length_cam = VBase3.length(Vec3(chunk_model[0]) - Vec3(self.chunks_map.charX,
                                                                        self.chunks_map.charY,
                                                                        self.chunks_map.camZ))
-                detach_dist = self.chunks_map.far * 1.01
-                attach_dist = self.chunks_map.far
+            detach_dist = attach_dist = self.chunks_map.far
+            if not self.chunks[chunk_model]:
 
                 if length_cam > detach_dist:
-                    #print 'detach: ', chunk_model
                     if self.chunks_models[chunk_model].hasParent():
                         self.chunks_models[chunk_model].detachNode()
-                if length_cam <= attach_dist:
-                    #print 'attach: ', chunk_model
-                    if not self.chunks_models[chunk_model].hasParent():
-                        self.chunks_models[chunk_model].reparentTo(self.world.root_node)
 
                 if not self.chunks_models[chunk_model].isHidden():
                     self.chunks_models[chunk_model].hide()
             else:
+                if not self.chunks_models[chunk_model].hasParent():
+                    self.chunks_models[chunk_model].reparentTo(self.world.root_node)
+
                 if self.chunks_models[chunk_model].isHidden():
                     self.chunks_models[chunk_model].show()
+
                 self.chunks_models[chunk_model].setX(self.chunks_map.DX)
                 self.chunks_models[chunk_model].setY(self.chunks_map.DY)
 
@@ -236,19 +239,17 @@ class ChunksMap():
         self.create()
 
     def get_coords(self):
-        d_charX = int(base.camera.getX(self.world.root_node)) - self.camX
-        d_charY = int(base.camera.getY(self.world.root_node)) - self.camY
-        self.camX = int(base.camera.getX(self.world.root_node))
-        self.camY = int(base.camera.getY(self.world.root_node))
-        self.camZ = int(base.camera.getZ(self.world.root_node))
+        d_charX = base.camera.getX(self.world.root_node) - self.camX
+        d_charY = base.camera.getY(self.world.root_node) - self.camY
+        self.camX, self.camY, self.camZ = base.camera.getPos(self.world.root_node)
         #if self.camZ > self.size_region:
             #self.camZ = self.size_region
         #if self.camZ < -self.size_region:
             #self.camZ = -self.size_region
-        self.far = self.camZ*10
+        self.far = self.camZ*self.config.factor_far
         self.charX += d_charX
         self.charY += d_charY
-        self.land_z = int(self.world.map_3d[self.charX, self.charY])
+        self.land_z = int(self.world.map_3d[int(self.charX), int(self.charY)])
         if self.far < 1000:
             self.far = 1000
         base.camLens.setFar(self.far*2)
@@ -274,8 +275,8 @@ class ChunksMap():
             self.charY = self.size_world - 1
             self.camY = self.size_region - 1
 
-        self.DX = (self.charX / self.size_region) * self.size_region
-        self.DY = (self.charY / self.size_region) * self.size_region
+        self.DX = (int(self.charX) / self.size_region) * self.size_region
+        self.DY = (int(self.charY) / self.size_region) * self.size_region
 
         base.camera.setPos(self.world.root_node, self.camX, self.camY, self.camZ)
         self.camPos = base.camera.getPos(self.world.root_node)
@@ -314,8 +315,8 @@ class ChunksMap():
     def repaint(self):
         self.get_coords()
         self.world.game.write('CamPos: X: {0}, Y: {1}, Z: {2}, '\
-                          'land height: {3} | Char: X: {4}, Y: {5}'.format(self.camX, self.camY, self.camZ,
-                           self.land_z, self.charX, self.charY))
+                          'land height: {3} | Char: X: {4}, Y: {5}'.format(int(self.camX), int(self.camY), int(self.camZ),
+                           self.land_z, int(self.charX), int(self.charY)))
 
         for chunks_clt in self.chunks_clts.values():
             chunks_clt.generate()
@@ -367,12 +368,17 @@ class World():
         #self.cubik.setTexScale(ts, 0.5, 0.5)
         self.chunks_map = ChunksMap(self, 0, 1)
         self.chunks_map.set_char_coord((self.config.size_world/2, self.config.size_world/2, 10000))
-        taskMgr.add(self.show, 'WorldShow', priority = 1)
+        self.sky = Sky()
+        taskMgr.setupTaskChain('move_char', numThreads = 1, tickClock = False,
+                       threadPriority = TPLow, frameBudget = 1)
+        taskMgr.add(self.show, 'WorldShow', taskChain = 'move_char')
+
 
     def show(self, task):
         """Task for showing of world
         """
         self.chunks_map.show()
+        time.sleep(1)
         return task.cont
 
 # vi: ft=python:tw=0:ts=4

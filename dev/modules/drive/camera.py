@@ -64,8 +64,8 @@ class CamFree(DirectObject.DirectObject):
             dirRL = base.camera.getMat().getRow3(0)
 
             self.SpeedCam = abs(camera.getZ(self.root_node)*0.01)
-            if self.SpeedCam < 2:
-                self.SpeedCam = 2
+            if self.SpeedCam < 1:
+                self.SpeedCam = 1
 
             md = base.win.getPointer(0)
             x = md.getX()

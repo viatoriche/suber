@@ -14,6 +14,8 @@ class Config():
 
     # detalized /2
     chunk_len = 4
+    # Z * far
+    factor_far = 25
 
     land_mount_level = 1, 200
     low_mount_level = 201, 1000

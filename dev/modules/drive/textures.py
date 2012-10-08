@@ -51,9 +51,29 @@ class TextureCollection(dict):
                 if height <= 0:
                     image.setPixel(x, y, (0, 0, 255-color))
                 else:
-                    image.setPixel(x, y, (0, color, 0))
+                    if height <= self.config.low_mount_level[1]:
+                        r = 0
+                        g = 100+color
+                        b = 0
+                        image.setPixel(x, y, (r, g, b))
+                    elif height > self.config.low_mount_level[1]:
+                        r = color
+                        g = color
+                        b = color
+                        if r > 255:
+                            r = 255
+                        if g > 255:
+                            r = 255
+                        if b > 255:
+                            b = 255
+                        image.setPixel(x, y, (r, g, b))
 
-        image.write('/tmp/{0}.png'.format(size))
+        image.write('world.png'.format(size))
+
+        #for x in xrange(-1, 2):
+            #for y in xrange(-1, 2):
+               #image.setPixel(int(world.chunks_map.charX)+x, int(world.chunks_map.charY)+y, (255, 0, 0))
+
         texture = Texture()
         texture.load(image)
         return texture
