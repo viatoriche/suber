@@ -26,7 +26,7 @@ import sys
 
 class Sky():
     def __init__(self):
-        base.setBackgroundColor(116, 165, 233)
+        base.setBackgroundColor(0, 136, 255)
 
 class WaterNode():
     """Water plane for nya
@@ -242,41 +242,34 @@ class ChunksMap():
         d_charX = base.camera.getX(self.world.root_node) - self.camX
         d_charY = base.camera.getY(self.world.root_node) - self.camY
         self.camX, self.camY, self.camZ = base.camera.getPos(self.world.root_node)
-        #if self.camZ > self.size_region:
-            #self.camZ = self.size_region
-        #if self.camZ < -self.size_region:
-            #self.camZ = -self.size_region
+
         self.far = self.camZ*self.config.factor_far
+
         self.charX += d_charX
         self.charY += d_charY
+
         self.land_z = int(self.world.map_3d[int(self.charX), int(self.charY)])
+
         if self.far < 1000:
             self.far = 1000
         base.camLens.setFar(self.far*2)
-        if self.camX < 0:
-            self.camX = self.camX + self.size_region
-        if self.camY < 0:
-            self.camY = self.camY + self.size_region
-        if self.camX >= self.size_region:
-            self.camX = self.camX - self.size_region
-        if self.camY >= self.size_region:
-            self.camY = self.camY - self.size_region
 
+        self.test_coord()
+
+    def test_coord(self):
         if self.charX < 0:
             self.charX = 0
-            self.camX = 0
         if self.charY < 0:
             self.charY = 0
-            self.camY = 0
         if self.charX >= self.size_world:
             self.charX = self.size_world - 1
-            self.camX = self.size_region - 1
         if self.charY >= self.size_world:
             self.charY = self.size_world - 1
-            self.camY = self.size_region - 1
 
         self.DX = (int(self.charX) / self.size_region) * self.size_region
         self.DY = (int(self.charY) / self.size_region) * self.size_region
+        self.camX = self.charX - self.DX
+        self.camY = self.charY - self.DY
 
         base.camera.setPos(self.world.root_node, self.camX, self.camY, self.camZ)
         self.camPos = base.camera.getPos(self.world.root_node)
@@ -289,25 +282,9 @@ class ChunksMap():
         x, y, z = coord
         self.charX = x
         self.charY = y
-
-        if self.charX < 0:
-            self.charX = 0
-            self.camX = 0
-        if self.charY < 0:
-            self.charY = 0
-            self.camY = 0
-        if self.charX >= self.size_world:
-            self.charX = self.size_world - 1
-            self.camX = self.size_region - 1
-        if self.charY >= self.size_world:
-            self.charY = self.size_world - 1
-            self.camY = self.size_region - 1
-
-        self.camX = self.charX - ((self.charX / self.size_region) * self.size_region)
-        self.camY = self.charY - ((self.charY / self.size_region) * self.size_region)
         self.camZ = z
-        base.camera.setPos(self.world.root_node, self.camX, self.camY, self.camZ)
-        self.camPos = base.camera.getPos(self.world.root_node)
+
+        self.test_coord()
 
         self.repaint()
 

@@ -13,7 +13,7 @@ class Config():
     root_level = 0
 
     # detalized /2
-    chunk_len = 4
+    chunk_len = 2
     # Z * far
     factor_far = 25
 
