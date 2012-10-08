@@ -528,7 +528,7 @@ class Map3d(dict):
                 p = self.perlin[level](x, y)
                 height += p * height
 
-            return height
+            return int(height)
 
 if __name__ == "__main__":
     maps = __import__('map2d')

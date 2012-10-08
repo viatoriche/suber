@@ -83,6 +83,62 @@ def makeSquare(x1,y1,z1, x2,y2,z2, tex_coord):
 
     return square
 
+def makeSquare_net(coord1, coord2, coord3, coord4, tex_coord):
+    format=GeomVertexFormat.getV3n3t2()
+    vdata=GeomVertexData('square', format, Geom.UHStatic)
+
+    x1, y1, z1 = coord1
+    x2, y2, z2 = coord2
+    x3, y3, z3 = coord3
+    x4, y4, z4 = coord4
+
+    vertex=GeomVertexWriter(vdata, 'vertex')
+    normal=GeomVertexWriter(vdata, 'normal')
+    texcoord=GeomVertexWriter(vdata, 'texcoord')
+
+    #make sure we draw the sqaure in the right plane
+    vertex.addData3f(x1, y1, z1)
+    vertex.addData3f(x2, y2, z2)
+    vertex.addData3f(x3, y3, z3)
+    vertex.addData3f(x4, y4, z4)
+
+    normal.addData3f(myNormalize(Vec3(2*x1-1, 2*y1-1, 2*z1-1)))
+    normal.addData3f(myNormalize(Vec3(2*x2-1, 2*y2-1, 2*z1-1)))
+    normal.addData3f(myNormalize(Vec3(2*x2-1, 2*y2-1, 2*z2-1)))
+    normal.addData3f(myNormalize(Vec3(2*x1-1, 2*y1-1, 2*z2-1)))
+
+    #adding different colors to the vertex for visibility
+
+    u1, v1, u2, v2 = tex_coord
+
+    texcoord.addData2f(u1, v2)
+    texcoord.addData2f(u1, v1)
+    texcoord.addData2f(u2, v1)
+    texcoord.addData2f(u2, v2)
+
+    #quads arent directly supported by the Geom interface
+    #you might be interested in the CardMaker class if you are
+    #interested in rectangle though
+    tri1=GeomTriangles(Geom.UHStatic)
+    tri2=GeomTriangles(Geom.UHStatic)
+
+    tri1.addVertex(0)
+    tri1.addVertex(1)
+    tri1.addVertex(3)
+
+    tri1.addVertex(1)
+    tri1.addVertex(2)
+    tri1.addVertex(3)
+
+
+    tri1.closePrimitive()
+    tri2.closePrimitive()
+
+    square=Geom(vdata)
+    square.addPrimitive(tri1)
+    square.addPrimitive(tri2)
+
+    return square
 class ChunkModel(NodePath):
     """Chunk for quick render and create cube-objects
 
@@ -98,6 +154,8 @@ class ChunkModel(NodePath):
         self.size = size
         self.chunk_len = chunk_len
         self.size_voxel = self.size / self.chunk_len
+        if self.size_voxel <1:
+            self.size_voxel = 1
         self.size2 = self.size / 2
         self.start_x = self.X - self.size2
         self.start_y = self.Y - self.size2
@@ -105,8 +163,10 @@ class ChunkModel(NodePath):
         self.size_y = self.Y + self.size2
         self.Z = {}
 
-        for x in xrange(self.start_x-self.size_voxel, self.size_x+self.size_voxel, self.size_voxel):
-            for y in xrange(self.start_y-self.size_voxel, self.size_y+self.size_voxel, self.size_voxel):
+        for x in xrange(self.start_x-self.size_voxel, self.size_x+\
+                            self.size_voxel, self.size_voxel):
+            for y in xrange(self.start_y-self.size_voxel, self.size_y\
+                            +self.size_voxel, self.size_voxel):
                 self.Z[x, y] = self.world.map_3d[x, y]
 
         self.create()
@@ -131,17 +191,61 @@ class ChunkModel(NodePath):
 
                 tex_coord = textures.get_block_uv_height(z)
 
-                cube.append( makeSquare(sq_x, sq_y, z,    sq_dx, sq_dy, z,  tex_coord) )
+                coord1 = sq_x, sq_y, z
+                coord2 = sq_dx, sq_y, self.Z[x+self.size_voxel, y]
+                coord3 = sq_dx, sq_dy, self.Z[x+self.size_voxel, y+self.size_voxel]
+                coord4 = sq_x, sq_dy, self.Z[x, y+self.size_voxel]
 
-                if z > self.Z[x - self.size_voxel, y]:
-                    cube.append( makeSquare(sq_x, sq_y, z,    sq_x, sq_dy, dz,  tex_coord) )
-                if z > self.Z[x + self.size_voxel, y]:
-                    cube.append( makeSquare(sq_dx, sq_y, z,    sq_dx, sq_dy, dz,  tex_coord) )
+                cube.append( makeSquare_net(coord1, coord2, coord3, coord4, tex_coord) )
 
-                if z > self.Z[x, y - self.size_voxel]:
-                    cube.append( makeSquare(sq_x, sq_y, z,    sq_dx, sq_y, dz,  tex_coord) )
-                if z > self.Z[x, y + self.size_voxel]:
-                    cube.append( makeSquare(sq_x, sq_dy, z,    sq_dx, sq_dy, dz,  tex_coord) )
+
+                # skirt
+
+                if x == self.start_x:
+                    cube.append( makeSquare_net((sq_x, sq_y, z),
+                                    (sq_x, sq_dy, self.Z[x, y + self.size_voxel]),
+                                    (sq_x, sq_dy, self.Z[x, y + self.size_voxel]\
+                                    - (self.size_voxel*10)),
+                                    (sq_x, sq_y, dz),
+                                    tex_coord) )
+                if dx == self.size_x:
+                    cube.append( makeSquare_net((sq_dx, sq_y, self.Z[x +\
+                                    self.size_voxel, y]),
+                                    (sq_dx, sq_dy,
+                                    self.Z[x + self.size_voxel, y + self.size_voxel]),
+                                    (sq_dx, sq_dy, self.Z[x + self.size_voxel,\
+                                    y + self.size_voxel] - (self.size_voxel*10)),
+                                    (sq_dx, sq_y, self.Z[x + self.size_voxel, y]\
+                                    - (self.size_voxel*10)),
+                                    tex_coord) )
+
+                if y == self.start_y:
+                    cube.append( makeSquare_net((sq_x, sq_y, z),
+                                    (sq_dx, sq_y, self.Z[x + self.size_voxel, y]),
+                                    (sq_dx, sq_y,  self.Z[x + self.size_voxel, y]\
+                                     - (self.size_voxel*10)),
+                                    (sq_x, sq_y, dz),
+                                    tex_coord) )
+                if dy == self.size_y:
+                    cube.append( makeSquare_net((sq_x, sq_dy, self.Z[x, y +\
+                                    self.size_voxel]),
+                                    (sq_dx, sq_dy, self.Z[x + self.size_voxel,
+                                     y + self.size_voxel]),
+                                    (sq_dx, sq_dy, self.Z[x + self.size_voxel,\
+                                     y + self.size_voxel] - (self.size_voxel*10)),
+                                    (sq_x, sq_dy, self.Z[x, y + self.size_voxel]\
+                                    - (self.size_voxel*10)),
+                                    tex_coord) )
+
+                #if z > self.Z[x - self.size_voxel, y]:
+                    #cube.append( makeSquare(sq_x, sq_y, z,    sq_x, sq_dy, dz,  tex_coord) )
+                #if z > self.Z[x + self.size_voxel, y]:
+                    #cube.append( makeSquare(sq_dx, sq_y, z,    sq_dx, sq_dy, dz,  tex_coord) )
+
+                #if z > self.Z[x, y - self.size_voxel]:
+                    #cube.append( makeSquare(sq_x, sq_y, z,    sq_dx, sq_y, dz,  tex_coord) )
+                #if z > self.Z[x, y + self.size_voxel]:
+                    #cube.append( makeSquare(sq_x, sq_dy, z,    sq_dx, sq_dy, dz,  tex_coord) )
 
 
                 cubes.append(cube)

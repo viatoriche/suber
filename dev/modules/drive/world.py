@@ -174,10 +174,10 @@ class ChunksCollection():
                 length_cam = VBase3.length(Vec3(chunk_model[0]) - Vec3(self.chunks_map.charX,
                                                                        self.chunks_map.charY,
                                                                        self.chunks_map.camZ))
-                detach_dist = self.chunks_map.far * 4
-                attach_dist = self.chunks_map.far * 2
+                detach_dist = self.chunks_map.far * 1.01
+                attach_dist = self.chunks_map.far
 
-                if length_cam >= detach_dist:
+                if length_cam > detach_dist:
                     #print 'detach: ', chunk_model
                     if self.chunks_models[chunk_model].hasParent():
                         self.chunks_models[chunk_model].detachNode()
@@ -219,7 +219,7 @@ class ChunksMap():
         self.size = size
         self.size_region = self.config.size_region
         self.size_world = self.config.size_world
-        self.chunk_len = 4
+        self.chunk_len = self.config.chunk_len
         self.chunks_clts = {}
         #self.world.root_node.setPos(0, 0, -10000)
         base.camera.setPos(0, 0, 10000)
@@ -241,7 +241,6 @@ class ChunksMap():
         self.camX = int(base.camera.getX(self.world.root_node))
         self.camY = int(base.camera.getY(self.world.root_node))
         self.camZ = int(base.camera.getZ(self.world.root_node))
-        self.land_z = int(self.world.map_3d[self.camX, self.camY])
         #if self.camZ > self.size_region:
             #self.camZ = self.size_region
         #if self.camZ < -self.size_region:
@@ -249,6 +248,7 @@ class ChunksMap():
         self.far = self.camZ*10
         self.charX += d_charX
         self.charY += d_charY
+        self.land_z = int(self.world.map_3d[self.charX, self.charY])
         if self.far < 1000:
             self.far = 1000
         base.camLens.setFar(self.far*2)
@@ -277,7 +277,7 @@ class ChunksMap():
         self.DX = (self.charX / self.size_region) * self.size_region
         self.DY = (self.charY / self.size_region) * self.size_region
 
-        base.camera.setPos(self.camX, self.camY, self.camZ)
+        base.camera.setPos(self.world.root_node, self.camX, self.camY, self.camZ)
         self.camPos = base.camera.getPos(self.world.root_node)
 
     def set_char_coord(self, coord):
@@ -305,25 +305,25 @@ class ChunksMap():
         self.camX = self.charX - ((self.charX / self.size_region) * self.size_region)
         self.camY = self.charY - ((self.charY / self.size_region) * self.size_region)
         self.camZ = z
-        #if self.camZ > self.size_region:
-            #self.camZ = self.size_region
-        #if self.camZ < -self.size_region:
-            #self.camZ = -self.size_region
+        base.camera.setPos(self.world.root_node, self.camX, self.camY, self.camZ)
+        self.camPos = base.camera.getPos(self.world.root_node)
+
+        self.repaint()
+
+
+    def repaint(self):
+        self.get_coords()
+        self.world.game.write('CamPos: X: {0}, Y: {1}, Z: {2}, '\
+                          'land height: {3} | Char: X: {4}, Y: {5}'.format(self.camX, self.camY, self.camZ,
+                           self.land_z, self.charX, self.charY))
+
+        for chunks_clt in self.chunks_clts.values():
+            chunks_clt.generate()
+            chunks_clt.show()
 
     def show(self):
         if self.camPos != base.camera.getPos(self.world.root_node):
-            self.get_coords()
-            self.world.game.write('CamPos: X: {0}, Y: {1}, Z: {2}, '\
-                              'land height: {3} | Char: X: {4}, Y: {5}'.format(self.camX, self.camY, self.camZ,
-                               self.land_z, self.charX, self.charY))
-
-            for chunks_clt in self.chunks_clts.values():
-                #t = time.time()
-                chunks_clt.generate()
-                #print 'Chunks generate: ', time.time() - t
-                #t = time.time()
-                chunks_clt.show()
-                #print 'Chunks show: ', time.time() - t
+            self.repaint()
 
     def create(self):
         for x in xrange(-self.size, self.size+1):
@@ -366,6 +366,7 @@ class World():
         #self.cubik.setTexture(ts, textures['world_map'])
         #self.cubik.setTexScale(ts, 0.5, 0.5)
         self.chunks_map = ChunksMap(self, 0, 1)
+        self.chunks_map.set_char_coord((self.config.size_world/2, self.config.size_world/2, 10000))
         taskMgr.add(self.show, 'WorldShow', priority = 1)
 
     def show(self, task):
