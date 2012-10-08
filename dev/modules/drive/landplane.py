@@ -174,7 +174,7 @@ class LandNode():
     """Water / Land
     """
     config = Config()
-    def __init__(self, z):
+    def __init__(self, z, region):
         maker = CardMaker( 'land' )
 
         #self.landNP = render.attachNewNode(maker.generate())
@@ -182,7 +182,7 @@ class LandNode():
         self.landNP.reparentTo(render)
         self.landNP.setHpr(0,-90,0)
         self.landNP.setPos(0,0,z)
-        self.landNP.setScale(16777216, 0, 16777216)
+        self.landNP.setScale(region**2, 0, region**2)
         self.landNP.hide()
         self.landNP.setTransparency(TransparencyAttrib.MAlpha )
 

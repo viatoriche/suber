@@ -30,10 +30,10 @@ class WaterNode():
     config = Config()
     def __init__(self, water_z):
         self.water_z = water_z
-        self.create(0, 0, (self.config.size_world/8, self.config.size_world/8))
+        self.create(0, 0, (self.config.size_region/2, self.config.size_region/2))
 
     def create(self, x, y, scale):
-        self.water = LandNode(self.water_z)
+        self.water = LandNode(self.water_z, self.config.size_region)
         #textures['water'].setWrapU(Texture.WMRepeat)
         #textures['water'].setWrapV(Texture.WMRepeat)
         ts = TextureStage('ts')
