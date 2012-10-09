@@ -34,6 +34,8 @@ class Config():
     # for tex pack '' - default
     tex_suffix = '64/'
 
+    game = 'native'
+
     name_game = 'Suber'
 
 # vi: ft=python:tw=0:ts=4

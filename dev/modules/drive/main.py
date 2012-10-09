@@ -6,12 +6,12 @@
 
 import os
 import signal
-import logging
-
 from modules.drive.commands import Command_Handler
-from modules.drive.console import Console_UI
 from modules.drive.graph import GUI
+from modules.drive.world import World
 from config import Config
+
+exec('from games.{0}.modules.main import Main as ChildMain'.format(Config().game))
 
 class Root():
     """
@@ -28,39 +28,25 @@ class Game(Root):
     """Main class
 
     """
-    prompt = 'Suber> '
-    tick = 1
     live = True
     config = Config()
 
-    def __init__(self, mode = 'console', cheat_enable = True):
+    def __init__(self, cheat_enable = True):
         Root.__init__(self)
-
 
         self.cheat_enable = cheat_enable
         signal.signal(signal.SIGINT, self.signal_stop)
         signal.signal(signal.SIGTERM, self.signal_stop)
 
-        self.log('Game init')
+        self.process = GUI(self)
+        self.world = World(self.process, self)
+        self.child_game = ChildMain(self)
 
-        self.mode = mode
-        self.command_handler = Command_Handler(self)
-        if self.mode == 'console':
-            self.process = Console_UI(self)
-        elif self.mode == 'GUI':
-            self.process = GUI(self)
-
-    def cmd_handle(self, cmd):
-        self.command_handler.cmd_handle(cmd)
-
-    def write(self, text):
-        self.process.write(text)
+    def write(self, info):
+        self.child_game.write(info)
 
     def start(self):
         self.process.start()
-
-    def log(self, msg):
-        logging.info(msg)
 
     def stop(self):
         self.live = False

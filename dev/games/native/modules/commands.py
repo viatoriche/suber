@@ -6,14 +6,7 @@
 import random, pickle, sys
 
 from config import Config
-from modules.drive.support import ThreadDo
 from modules.drive.textures import textures
-from modules.drive.world import World
-from modules.world.map2d import Map_generator_2D
-from modules.world.map3d import Map3d
-from pandac.PandaModules import loadPrcFileData
-
-loadPrcFileData("", "window-title {0}".format(Config().name_game))
 
 class Command_Handler():
     """Handler for all commands
@@ -58,30 +51,7 @@ class Command_Handler():
 
         print 'Seed of world: ', seed
         self.game.world.seed = seed
-        random.seed(seed)
-
-        def doit():
-            global_map_gen = Map_generator_2D()
-            complete_i = 0
-            print 'Start generate of world'
-            for e, (i, desc) in enumerate(global_map_gen.start()):
-                print '{0} * step: {1} / {2}'.format(e, i,desc)
-                complete_i = i
-            print global_map_gen.maps.get_ascii(3)
-            print 'Start convertation 2d -> 3d'
-            self.game.world.map_2d = global_map_gen.end_map
-            # TODO: calculate real size of world
-            map3d = Map3d(self.game.world.map_2d, seed, self.game.world.map_2d.size)
-            self.game.world.map_3d = map3d
-            self.game.world.new()
-            endstr = 'Map generation process has been completed. Seed: {0}'.format(\
-                                                self.game.world.seed)
-            print endstr
-            self.cmd_write([endstr])
-
-        #ThreadDo(doit).start()
-        doit()
-
+        self.game.world.new()
 
 
 
@@ -213,6 +183,7 @@ class Command_Handler():
     run_cmd = { 
                 'exit': cmd_exit,
                 'createmap': cmd_create_global_map,
+                'create': cmd_create_global_map,
                 'test': testmap,
                 'write': cmd_write,
                 'showmap': cmd_show_map,

@@ -6,21 +6,19 @@ World
 
 import random
 import sys
-import math
 import time
 
-from modules.drive.landplane import LandNode, ChunkModel
-from modules.drive.shapeGenerator import Cube as CubeModel
-from panda3d.core import Vec3, Vec2
-from modules.drive.textures import textures
-from panda3d.core import NodePath
-from pandac.PandaModules import Texture, TextureStage
-from panda3d.core import VBase3
 from config import Config
-from pandac.PandaModules import TransparencyAttrib, Texture, TextureStage
-from modules.drive.support import ThreadPandaDo
+from modules.drive.landplane import LandNode, ChunkModel
+from modules.drive.textures import textures
+from modules.world.map2d import Map_generator_2D
+from panda3d.core import NodePath
 from panda3d.core import TPLow
-import sys
+from panda3d.core import VBase3
+from panda3d.core import Vec3
+from pandac.PandaModules import Texture, TextureStage
+from pandac.PandaModules import TransparencyAttrib, Texture, TextureStage
+from modules.world.map3d import Map3d
 
 #sys.setrecursionlimit(65535)
 
@@ -322,13 +320,15 @@ class World():
         self.root_node = NodePath('ROOT')
         self.root_node.reparentTo(render)
 
-        textures['water'] = loader.loadTexture("res/textures/water.png")
+        textures['water'] = loader.loadTexture("games/{0}/res/textures/water.png".format(self.config.game))
         textures['water'].setMagfilter(Texture.FTLinearMipmapLinear)
         textures['water'].setMinfilter(Texture.FTLinearMipmapLinear)
 
-        textures['black'] = loader.loadTexture("res/textures/black.png")
+        textures['black'] = loader.loadTexture("games/{0}/res/textures/black.png".format(self.config.game))
         textures['black'].setMagfilter(Texture.FTLinearMipmapLinear)
         textures['black'].setMinfilter(Texture.FTLinearMipmapLinear)
+        taskMgr.setupTaskChain('move_char', numThreads = 1, tickClock = False,
+                       threadPriority = TPLow, frameBudget = 1)
 
         #self.water = WaterNode(0.75)
         #self.water.show()
@@ -337,19 +337,37 @@ class World():
     def new(self):
         """New world
         """
+        random.seed(self.seed)
+
+        def create_world():
+            global_map_gen = Map_generator_2D()
+            complete_i = 0
+            print 'Start generate of world'
+            for e, (i, desc) in enumerate(global_map_gen.start()):
+                print '{0} * step: {1} / {2}'.format(e, i,desc)
+                complete_i = i
+            print global_map_gen.maps.get_ascii(3)
+            print 'Start convertation 2d -> 3d'
+            self.game.world.map_2d = global_map_gen.end_map
+            # TODO: calculate real size of world
+            map3d = Map3d(self.game.world.map_2d, self.seed, self.game.world.map_2d.size)
+            self.game.world.map_3d = map3d
+            endstr = 'Map generation process has been completed. Seed: {0}'.format(\
+                                                self.game.world.seed)
+            print endstr
+            #self.cmd_write([endstr])
+
+        #ThreadDo(doit).start()
+        create_world()
+
         textures['world_map'] = textures.get_map_3d_tex(self, 512)
         textures['world_map'].setWrapU(Texture.WMMirrorOnce)
         textures['world_map'].setWrapV(Texture.WMMirrorOnce)
         ts = TextureStage('world_map_ts')
-        #self.cubik.setTexture(ts, textures['world_map'])
-        #self.cubik.setTexScale(ts, 0.5, 0.5)
         self.chunks_map = ChunksMap(self, 0, 1)
         self.chunks_map.set_char_coord((self.config.size_world/2, self.config.size_world/2, 10000))
         self.sky = Sky()
-        taskMgr.setupTaskChain('move_char', numThreads = 1, tickClock = False,
-                       threadPriority = TPLow, frameBudget = 1)
         taskMgr.add(self.show, 'WorldShow', taskChain = 'move_char')
-
 
     def show(self, task):
         """Task for showing of world

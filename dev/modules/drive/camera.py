@@ -11,9 +11,7 @@ class CamFree(DirectObject.DirectObject):
         base.disableMouse()
 
         self.game = game
-        self.showterrain = game.world.show
         self.root_node = self.game.world.root_node
-        #base.camLens.setFar(30000)
 
         self.keyMap = {"FORWARD":0, "BACK":0, "RIGHT":0,
                        "LEFT":0, "Mouse3":0, "LSHIFT":0,

@@ -19,6 +19,7 @@ from pandac.PandaModules import TransparencyAttrib
 from pandac.PandaModules import loadPrcFileData
 from modules.drive.world import World
 
+loadPrcFileData("", "window-title {0}".format(Config().name_game))
 loadPrcFileData("editor-startup", "show-frame-rate-meter #t")
 
 class OnscreenImages(dict):
@@ -121,30 +122,8 @@ class GUI():
         self.buttons = DirectButtons()
         self.entries = DirectEntries()
 
-        #self.lod = LODNode('suber')
-        #self.lod_node = NodePath(self.lod)
-        #self.lod_node.reparentTo(render)
-        #render.setShaderInput('time', 0)
-        self.buttons.add_button(name = 'Exit', text = ("Exit", "Exit", "Exit", "disabled"),
-                               pos = (1.23, 0, -0.95),
-                               scale = 0.07, command=self.game.stop)
-
-        self.screen_texts.add_text(name = 'status',
-                               text = 'Hello! Suber was started!',
-                               pos = (-1.3, -0.95), scale = 0.07)
-        self.entries.add_entry(name = 'console',text = "" , 
-                               pos = (-1.29, 0, -0.85), 
-                               scale=0.07,command=self.game.cmd_handle,
-                               initialText="", width = 37, numLines = 1,focus=0)
-
-        textures['sight'] = loader.loadTexture('res/textures/sight.png')
-        self.screen_images.add_image('sight', 
-                               textures['sight'], 
-                               scale = 0.05, pos = (0, 0, 0))
-        self.screen_images['sight'].setTransparency(TransparencyAttrib.MAlpha)
-        self.game.world = World(self, self.game)
-        self.camFree = CamFree(self.game)
-        self.app.camera.setHpr(0, -90, 0)
+        textures['sight'] = loader.loadTexture('games/{0}/res/textures/sight.png'.format(self.config.game))
+        #self.game.world = World(self, self.game)
         #self.app.camera.setPos(0, 0, 200)
 
 
@@ -158,7 +137,11 @@ class GUI():
         """
         run GUI
         """
-        self.game.cmd_handle('createmap')
+        # start plugin game
+        self.camFree = CamFree(self.game)
+        self.app.camera.setHpr(0, -90, 0)
+
+        self.game.child_game.start()
         self.app.run()
 
 # vi: ft=python:tw=0:ts=4

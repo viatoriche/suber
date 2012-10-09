@@ -82,15 +82,20 @@ class TextureCollection(dict):
     def make_blocks_texmap(self):
         images = []
         # 0 - sand
-        images.append(PNMImage('res/textures/{0}sand.png'.format(Config().tex_suffix)))
+        images.append(PNMImage('games/{0}/res/textures/{1}sand.png'.format(Config().game,
+                                        Config().tex_suffix)))
         # 1 - land
-        images.append(PNMImage('res/textures/{0}land.png'.format(Config().tex_suffix)))
+        images.append(PNMImage('games/{0}/res/textures/{1}land.png'.format(Config().game,
+                                        Config().tex_suffix)))
         # 2 - low_mount
-        images.append(PNMImage("res/textures/{0}low_mount.png".format(Config().tex_suffix)))
+        images.append(PNMImage("games/{0}/res/textures/{1}low_mount.png".format(Config().game,
+                                        Config().tex_suffix)))
         # 3 - mid_mount
-        images.append(PNMImage("res/textures/{0}mid_mount.png".format(Config().tex_suffix)))
+        images.append(PNMImage("games/{0}/res/textures/{1}mid_mount.png".format(Config().game,
+                                        Config().tex_suffix)))
         # 4 - high_mount
-        images.append(PNMImage("res/textures/{0}high_mount.png".format(Config().tex_suffix)))
+        images.append(PNMImage("games/{0}/res/textures/{1}high_mount.png".format(Config().game,
+                                        Config().tex_suffix)))
         d = images[0].getReadXSize()
         # 16 x 16 textures
         size = d * 16

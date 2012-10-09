@@ -16,6 +16,10 @@ from pandac.PandaModules import NodePath
 from pandac.PandaModules import TextureStage
 from pandac.PandaModules import TransparencyAttrib
 
+
+class Tree():
+    pass
+
 #you cant normalize in-place so this is a helper function
 def myNormalize(myVec):
     myVec.normalize()
@@ -189,7 +193,14 @@ class ChunkModel(NodePath):
 
                 sq_dy = sq_y + 1
 
-                tex_coord = textures.get_block_uv_height(z)
+                heights = []
+                heights.append(self.Z[x, y])
+                heights.append(self.Z[x+self.size_voxel, y])
+                heights.append(self.Z[x, y+self.size_voxel])
+                heights.append(self.Z[x+self.size_voxel, y+self.size_voxel])
+                maxh = max(heights)
+
+                tex_coord = textures.get_block_uv_height(maxh)
 
                 coord1 = sq_x, sq_y, z
                 coord2 = sq_dx, sq_y, self.Z[x+self.size_voxel, y]

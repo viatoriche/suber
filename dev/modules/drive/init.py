@@ -7,7 +7,7 @@
 from modules.drive.main import Game
 
 #game = Game(mode = 'console')
-game = Game(mode = 'GUI')
+game = Game()
 #game.start()
 
 # vi: ts=4 sw=4
