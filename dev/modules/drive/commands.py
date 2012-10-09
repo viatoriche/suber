@@ -56,34 +56,33 @@ class Command_Handler():
 
         #seed = 2789334
 
+        print 'Seed of world: ', seed
         self.game.world.seed = seed
         random.seed(seed)
 
         def doit():
             global_map_gen = Map_generator_2D()
             complete_i = 0
+            print 'Start generate of world'
             for e, (i, desc) in enumerate(global_map_gen.start()):
-                self.cmd_write(['{0} * step: {1} / {2}'.format(e, i,desc)])
-                if self.game.mode == 'GUI':
-                    self.game.write('Generate and show map')
+                print '{0} * step: {1} / {2}'.format(e, i,desc)
                 complete_i = i
-            if self.game.mode == 'console':
-                self.cmd_write([global_map_gen.maps.show_acii()])
-            elif self.game.mode == 'GUI':
-                self.cmd_write(['Start convertation 2d -> 3d'])
-                self.game.world.map_2d = global_map_gen.end_map
-                # TODO: calculate real size of world
-                map3d = Map3d(self.game.world.map_2d, seed, self.game.world.map_2d.size)
-                self.game.world.map_3d = map3d
-                self.game.world.new()
-            self.cmd_write(['Map generation process has been completed. Seed: {0}'.format(\
-                                                self.game.world.seed)])
+            print global_map_gen.maps.get_ascii(3)
+            print 'Start convertation 2d -> 3d'
+            self.game.world.map_2d = global_map_gen.end_map
+            # TODO: calculate real size of world
+            map3d = Map3d(self.game.world.map_2d, seed, self.game.world.map_2d.size)
+            self.game.world.map_3d = map3d
+            self.game.world.new()
+            endstr = 'Map generation process has been completed. Seed: {0}'.format(\
+                                                self.game.world.seed)
+            print endstr
+            self.cmd_write([endstr])
 
         #ThreadDo(doit).start()
         doit()
 
 
-        self.cmd_write(['Map generation process has been started'])
 
 
 
@@ -202,7 +201,8 @@ class Command_Handler():
             except:
                 z = 0
 
-        coords = x, y, z
+        coords = int(x), int(y), int(z)
+        print 'port to ', coords
         self.game.world.chunks_map.set_char_coord(coords)
 
     def cmd_show_tex(self, params = []):

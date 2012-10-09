@@ -80,37 +80,47 @@ class TextureCollection(dict):
 
 
     def make_blocks_texmap(self):
-        image_sand = PNMImage('res/textures/sand.png')
-        image_land = PNMImage('res/textures/land.png')
-        image_low = PNMImage("res/textures/low_mount.png")
-        image_mid = PNMImage("res/textures/mid_mount.png")
-        image_high = PNMImage("res/textures/high_mount.png")
-        d = image_sand.getReadXSize()
-        size = d * 4
+        images = []
+        # 0 - sand
+        images.append(PNMImage('res/textures/{0}sand.png'.format(Config().tex_suffix)))
+        # 1 - land
+        images.append(PNMImage('res/textures/{0}land.png'.format(Config().tex_suffix)))
+        # 2 - low_mount
+        images.append(PNMImage("res/textures/{0}low_mount.png".format(Config().tex_suffix)))
+        # 3 - mid_mount
+        images.append(PNMImage("res/textures/{0}mid_mount.png".format(Config().tex_suffix)))
+        # 4 - high_mount
+        images.append(PNMImage("res/textures/{0}high_mount.png".format(Config().tex_suffix)))
+        d = images[0].getReadXSize()
+        # 16 x 16 textures
+        size = d * 16
         image_all = PNMImage(size, size)
-        image_all.copySubImage(image_sand, 0, 0)
-        image_all.copySubImage(image_land, d, 0)
-        image_all.copySubImage(image_low, d * 2, 0)
-        image_all.copySubImage(image_mid, d * 3, 0)
-        image_all.copySubImage(image_high, 0, d)
+        n = 0
+        for i in xrange(0, size, d):
+            for j in xrange(0, size, d):
+                image_all.copySubImage(images[n], j, i)
+                n += 1
+                if n >= len(images):
+                    break
+            if n >= len(images):
+                break
+
         self['world_blocks'] = Texture()
         self['world_blocks'].load(image_all)
         self['world_blocks'].setMagfilter(Texture.FTLinearMipmapLinear)
         self['world_blocks'].setMinfilter(Texture.FTLinearMipmapLinear)
-        self['world_blocks'].setWrapU(Texture.WMRepeat)
-        self['world_blocks'].setWrapV(Texture.WMRepeat)
 
     def get_block_uv_height(self, z):
         # u1, v1, u2, v2
-        tex_coord = 0.0, 1.0, 0.25, 0.75
+        tex_coord = 0.0, 1.0, 0.0625, 0.9375
         if z >= self.config.land_mount_level[0] and z <= self.config.land_mount_level[1]:
-            tex_coord = 0.25, 1.0, 0.5, 0.75
+            tex_coord = 0.0625, 1.0, 0.125, 0.9375
         elif z >= self.config.low_mount_level[0] and z <= self.config.low_mount_level[1]:
-            tex_coord = 0.5, 1.0, 0.75, 0.75
+            tex_coord = 0.125, 1.0, 0.1875, 0.9375
         elif z >= self.config.mid_mount_level[0] and z <= self.config.mid_mount_level[1]:
-            tex_coord = 0.75, 1.0, 1.0, 0.75
+            tex_coord = 0.1875, 1.0, 0.25, 0.9375
         elif z >= self.config.high_mount_level[0]:
-            tex_coord = 0.0, 0.75, 0.25, 0.5
+            tex_coord = 0.25, 1.0, 0.3125, 0.9375
 
         return tex_coord
 

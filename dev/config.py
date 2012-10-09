@@ -13,9 +13,9 @@ class Config():
     root_level = 0
 
     # detalized /2
-    chunk_len = 2
+    chunk_len = 4
     # Z * far
-    factor_far = 25
+    factor_far = 15
 
     land_mount_level = 1, 200
     low_mount_level = 201, 1000
@@ -30,6 +30,9 @@ class Config():
     factor_low_mount = 60
     # 50%
     factor_land_mount = 100
+
+    # for tex pack '' - default
+    tex_suffix = '64/'
 
     name_game = 'Suber'
 

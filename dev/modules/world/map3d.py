@@ -14,13 +14,15 @@ from config import Config
 
 class TileMap(dict):
     config = Config()
-    def __init__(self, size, *args, **params):
-        dict.__init__(self, *args, **params)
-        self.size = size
+    def __init__(self, map2d, *args, **params):
+        #dict.__init__(self, *args, **params)
+        self.size = map2d.size
+        self.map2d = map2d
+        #self.rivers = {}
 
     def __getitem__(self, item):
         if self.has_key(item):
-            return self.get(item)
+            return dict.__getitem__(self, item)
         else:
             x, y = item
 
@@ -32,8 +34,9 @@ class TileMap(dict):
                 y = self.size + y
             if x < 0:
                 x = self.size + x
-
-            return self.get(x, y)
+            h = self.map2d[x, y]
+            self[x, y] = h
+            return h
 
     def generate_pre_heights(self):
         """Generate global template heights
@@ -41,23 +44,26 @@ class TileMap(dict):
 
         config = self.config
 
+        def get_lands_oceans():
+            oceans, lands = [], []
+            for x in xrange(self.size):
+                for y in xrange(self.size):
+                    coord = x, y
+                    if self[coord] <= 0:
+                        oceans.append(coord)
+                    else:
+                        lands.append(coord)
+            return lands, oceans
+
         def add_heights():
 
             fac_min = 50
             fac_max = 40
 
-            def get_lands_oceans():
-                oceans, lands = [], []
-                for coord in self:
-                    if self[coord] <= 0:
-                        oceans.append(coord)
-                    else:
-                        lands.append(coord)
-                return lands, oceans
-
-
+            print 'Get lands and oceans'
+            t = time.time()
             lands, oceans  = get_lands_oceans()
-
+            print 'lands and oceans getted: ', time.time() - t
 
             # TODO: create one def with params: mount_level and other for create heights
             # add default heights
@@ -65,7 +71,7 @@ class TileMap(dict):
                 self[coord] = random.randint(1, self.config.land_mount_level[1])
 
             for coord in oceans:
-                self[coord] = random.randint(-self.config.land_mount_level[1]*3, 0)
+                self[coord] = random.randint(-self.config.land_mount_level[1], -self.config.land_mount_level[0]*10)
 
             # add low heights for lands
             count_land = int(round(len(lands) * config.factor_low_mount / 100.))
@@ -192,7 +198,7 @@ class TileMap(dict):
                     try:
                         coord = land_coords[random.randint(0, len(land_coords) - 1)]
                     except ValueError:
-                        coord = ocean_coords[random.randint(0, len(ocean_coords) - 1)]
+                        coord = lands[random.randint(0, len(lands) - 1)]
                     coord = coord[0] + dx, coord[1] + dy
                     #if coord not in land_coords:
                     self[coord] = random.randint(self.config.high_mount_level[0],
@@ -413,13 +419,231 @@ class TileMap(dict):
 
                 self[coord] = height
 
+        print 'Add heights start'
         add_heights()
+        print 'Diamond-Square start'
         for x in xrange(1):
             square_diamond(
                         sx = 0,
                         sy = 0,
-                        size = self.size, strong=200)
+                        size = self.size, strong=20)
 
+
+class RMap(dict):
+    def __init__(self, rivermap):
+        self.rivermap = rivermap
+        self.size = self.rivermap.size
+
+    def __getitem__(self, item):
+        if item in self:
+            return dict.__getitem__(self, item)
+        else:
+            x, y = item
+            x = x * self.rivermap.mod
+            y = y * self.rivermap.mod
+            return self.rivermap[x, y]
+
+class RiverMap(dict):
+
+    def __init__(self, map3d, size):
+        """docstring for __init__
+
+        """
+        self.size = size
+        self.map3d = map3d
+        self.mod = Config().size_world / self.size
+        self.rmap = RMap(self)
+        #self.generate()
+
+    def __getitem__(self, item):
+        #x, y = item
+        #px = x / self.mod
+        #py = y / self.mod
+        #if (px, py) in self.rmap:
+            #return self.rmap[px, py]
+        #else:
+            #x, y = item
+        return self.map3d.template_height(item[0], item[1])
+
+    def generate(self):
+        """docstring for generate
+
+        """
+        #print 'create'
+        #for x in xrange(self.size):
+            #for y in xrange(self.size):
+                #self[x, y] = self[x, y]
+
+        def get_lands_oceans(self):
+            oceans, lands = [], []
+            for x in xrange(self.size):
+                for y in xrange(self.size):
+                    coord = x, y
+                    if self[coord] <= 0:
+                        oceans.append(coord)
+                    else:
+                        lands.append(coord)
+            return lands, oceans
+
+        def add_rivers(self):
+            lands, oceans  = get_lands_oceans(self)
+            if len(lands) < 1:
+                return
+            count_rivers = random.randint(Config().river_factor_min,
+                                          Config().river_factor_max)
+
+
+            def add_river(start):
+                river = []
+                river.append(start)
+
+                def check_mega_water(coord):
+                    for x in xrange(-2, 3):
+                        for y in xrange(-2, 3):
+                            if self[coord[0] + x, coord[1] + y] > 0:
+                                return False
+                    return True
+
+                def set_first_vec(start):
+                    x_vecs = [-1, 1]
+                    y_vecs = [-1, 1]
+                    xv_len = {}
+                    yv_len = {}
+                    for x_vec in x_vecs:
+                        x = start[0]
+                        y = start[1]
+                        i = 0
+                        while True:
+                            x += x_vec
+                            if check_mega_water( (x, y) ):
+                                break
+                            i += 1
+                            if i >= self.size:
+                                break
+                        xv_len[x_vec] = i
+
+                    if xv_len[-1] > xv_len[1]:
+                        xv = 1
+                    elif xv_len[-1] < xv_len[1]:
+                        xv = -1
+                    else:
+                        xv = 0
+
+                    for y_vec in y_vecs:
+                        x = start[0]
+                        y = start[1]
+                        i = 0
+                        while True:
+                            y += y_vec
+                            if check_mega_water( (x, y) ):
+                                break
+                            i += 1
+                            if i >= self.size:
+                                break
+                        yv_len[y_vec] = i
+
+                    if yv_len[-1] > yv_len[1]:
+                        yv = 1
+                    elif yv_len[-1] > yv_len[1]:
+                        yv = -1
+                    else:
+                        yv = 0
+
+                    if xv != 0 and yv != 0:
+                        if xv_len[xv] < yv_len[yv]:
+                            yv = 0
+                        else:
+                            xv = 0
+
+                    start = start[0]+xv , start[1]+yv
+                    river.append(start)
+                    return start
+                start = set_first_vec(start)
+                me_point = start
+                def ignore_coord(river, coord):
+                    res = False
+                    if len(river) > 1:
+                        for i in xrange(len(river)-1):
+                            vec_x = river[i][0] - river[i+1][0]
+                            vec_y = river[i][1] - river[i+1][1]
+                            ix = river[i+1][0] + vec_x
+                            iy = river[i+1][1] + vec_y
+                            if coord[0] == ix and vec_x != 0:
+                                res = True
+                            if coord[1] == iy and vec_y != 0:
+                                res = True
+
+                    return res
+
+                i = 0
+                while True:
+                    good = []
+                    i += 1
+                    if i > Config().river_len_max:
+                        break
+                    if i % 2 == 0:
+                        me_point = set_first_vec(me_point)
+                        continue
+                    water = False
+                    for x in xrange(-1, 2):
+                        for y in xrange(-1, 2):
+                            X, Y = x + me_point[0], y + me_point[1]
+                            if check_mega_water( (X, Y) ):
+                                water = True
+                                break
+                            if x == -1 and y == -1:
+                                continue
+                            if x == 1 and y == -1:
+                                continue
+                            if x == 1 and y == 1:
+                                continue
+                            if x == -1 and y == 1:
+                                continue
+                            if (X, Y) in river:
+                                continue
+                            if ignore_coord(river, (X, Y)):
+                                continue
+                            else:
+                                good.append( (X, Y) )
+                        if water:
+                            break
+                    if water:
+                        break
+                    if good == []:
+                        break
+                    if len(good)>1:
+                        coord = good[random.randint(0, len(good)-1)]
+                    else:
+                        coord = good[0]
+                    if not coord in river:
+                        river.append(coord)
+                        me_point = coord
+
+                return river
+
+            rivers = []
+            starts = []
+            for i in xrange(count_rivers):
+                starts.append(lands[random.randint(0, len(lands)-1)])
+            for start in starts:
+                rivers.append(add_river(start))
+            for river in rivers:
+
+                for x, y in river:
+                    if self[x, y] > 0:
+                        self[x, y] = self[x, y] - 60
+                        if self[x, y] > 0:
+                            self[x, y] = -20
+                        if self[x, y] >= -20:
+                            self[x, y] = -20
+                    else:
+                        self[x, y] = -50
+                        break
+
+        t = time.time()
+        print 'Start generate rivers'
+        add_rivers(self.rmap)
+        print 'Add rivers: ', time.time() - t
 
 class Map3d(dict):
     """Class for map with heights
@@ -431,23 +655,37 @@ class Map3d(dict):
     config = Config()
     perlin = {}
     def __init__(self, map2d, seed, size, *args, **params):
-        dict.__init__(self, *args, **params)
-        self.global_template = TileMap(map2d.size, map2d.copy())
+        print 'create tilemap'
+        t = time.time()
+        self.global_template = TileMap(map2d)
+        print 'tilemap was created: ', time.time() - t
         self.seed = seed
         self.world_size = self.config.size_world
         self.mod = self.world_size / map2d.size
         random.seed(seed)
         # generate 2 octaves for lands
+        print 'Generate octaves: '
+        t = time.time()
         for level in xrange(12):
             seed = random.randint(0, sys.maxint)
             self.perlin[level] = (PerlinNoise2(sx = self.world_size, sy = self.world_size,
                                        table_size = self.world_size, seed = seed))
             self.perlin[level].setScale((2 ** (self.config.size_mod-2)) / (2 ** level))
 
+        self.river_perlin = PerlinNoise2(sx = self.world_size, sy = self.world_size,
+                                       table_size = self.world_size, seed = seed)
+        self.river_perlin.setScale(2 ** (self.config.size_mod-4))
+        self.river_perlin_height = PerlinNoise2(sx = self.world_size, sy = self.world_size,
+                                       table_size = self.world_size, seed = seed)
+        self.river_perlin_height.setScale(2 ** (self.config.size_mod-20))
+        print 'Octaves generated: ', time.time() - t
+
         print 'generate_pre_heights: '
         t = time.time()
         self.global_template.generate_pre_heights()
         print 'generated pre heights! ', time.time() - t
+        #self.river_map = RiverMap(self, self.config.rivermap_size)
+        #self.river_mod = self.world_size / self.config.rivermap_size
 
     def cosine_interpolate(self, a, b, x):
         ft = x * 3.1415927
@@ -526,10 +764,17 @@ class Map3d(dict):
                 y = y - self.world_size
 
             height = self.template_height(x, y)
-
             for level in self.perlin:
+                if height == 0:
+                    height = -0.5
                 p = self.perlin[level](x, y)
                 height += p * height
+
+            if height > -4:
+                r = self.river_perlin(x, y)
+                if r >= 0.1 and r <= 0.101:
+                    height = -10 + (self.river_perlin_height(x, y) * 10)
+                    print x, y
 
             return int(height)
 

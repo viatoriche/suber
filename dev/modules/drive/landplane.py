@@ -263,7 +263,7 @@ class ChunkModel(NodePath):
         self.setTwoSided(True)
         ts = TextureStage('ts')
         self.setTexture(ts, textures['world_blocks'])
-        self.setTexScale(ts, 1, 1)
+        #self.setTexScale(ts, 0.1, 0.1)
         self.setScale(self.size_voxel, self.size_voxel, 1)
 
     def setX(self, DX):
@@ -285,8 +285,8 @@ class LandNode():
         self.landNP = NodePath(maker.generate())
         self.landNP.reparentTo(render)
         self.landNP.setHpr(0,-90,0)
-        self.landNP.setPos(0,0,z)
-        self.landNP.setScale(region**2, 0, region**2)
+        self.landNP.setPos(-region, -region, z)
+        self.landNP.setScale(region*3, 0, region*3)
         self.landNP.hide()
         self.landNP.setTransparency(TransparencyAttrib.MAlpha )
 

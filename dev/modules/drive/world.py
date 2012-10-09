@@ -271,7 +271,7 @@ class ChunksMap():
         self.camX = self.charX - self.DX
         self.camY = self.charY - self.DY
 
-        base.camera.setPos(self.world.root_node, self.camX, self.camY, self.camZ)
+        base.camera.setPos(self.world.root_node, (self.camX, self.camY, float(self.camZ)) )
         self.camPos = base.camera.getPos(self.world.root_node)
 
     def set_char_coord(self, coord):
@@ -330,7 +330,7 @@ class World():
         textures['black'].setMagfilter(Texture.FTLinearMipmapLinear)
         textures['black'].setMinfilter(Texture.FTLinearMipmapLinear)
 
-        #self.water = WaterNode(1)
+        #self.water = WaterNode(0.75)
         #self.water.show()
 
 
