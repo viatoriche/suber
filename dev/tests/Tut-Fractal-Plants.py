@@ -273,11 +273,11 @@ def drawLeaf(nodePath,vdata,pos=Vec3(0,0,0),vecList=[Vec3(0,0,1), Vec3(1,0,0),Ve
     #I also think there should be a better way to handle the leaf texture other than
     #hardcoding the filename
     leafModel=loader.loadModel('models/shrubbery')
-    leafTexture=loader.loadTexture('models/material-10-cl.png')
+    #leafTexture=loader.loadTexture('models/material-10-cl.png')
 
 
     leafModel.reparentTo(nodePath)
-    leafModel.setTexture(leafTexture,1)
+    #leafModel.setTexture(leafTexture,1)
     leafModel.setTransform(TransformState.makeMat(axisAdj))
 
 #recursive algorthim to make the tree
@@ -307,31 +307,31 @@ def makeFractalTree(bodydata, nodePath,length, pos=Vec3(0,0,0), numIterations=11
 
 
 
-alight = AmbientLight('alight')
-alight.setColor(Vec4(0.5, 0.5, 0.5, 1))
-alnp = render.attachNewNode(alight)
-render.setLight(alnp)
+#alight = AmbientLight('alight')
+#alight.setColor(Vec4(0.5, 0.5, 0.5, 1))
+#alnp = render.attachNewNode(alight)
+#render.setLight(alnp)
 
-slight = Spotlight('slight')
-slight.setColor(Vec4(1, 1, 1, 1))
-lens = PerspectiveLens()
-slight.setLens(lens)
-slnp = render.attachNewNode(slight)
-render.setLight(slnp)
+#slight = Spotlight('slight')
+#slight.setColor(Vec4(1, 1, 1, 1))
+#lens = PerspectiveLens()
+#slight.setLens(lens)
+#slnp = render.attachNewNode(slight)
+#render.setLight(slnp)
 
-slnp.setPos(0, 0,40)
+#slnp.setPos(0, 0,40)
 
 #rotating light to show that normals are calculated correctly
 def updateLight(task):
-    global slnp
-    currPos=slnp.getPos()
-    currPos.setX(100*math.cos(task.time)/2)
-    currPos.setY(100*math.sin(task.time)/2)
-    slnp.setPos(currPos)
+    #global slnp
+    #currPos=slnp.getPos()
+    #currPos.setX(100*math.cos(task.time)/2)
+    #currPos.setY(100*math.sin(task.time)/2)
+    #slnp.setPos(currPos)
 
 
 
-    slnp.lookAt(render)
+    #slnp.lookAt(render)
     return Task.cont
 
 taskMgr.add(updateLight, "rotating Light")
@@ -350,7 +350,7 @@ class MyTapper(DirectObject):
 
         self.barkTexture=loader.loadTexture("barkTexture.jpg")
         treeNodePath=NodePath("Tree Holder")
-        makeFractalTree(bodydata,treeNodePath,Vec3(4,4,7))
+        makeFractalTree(bodydata,treeNodePath,Vec3(1,1,3))
 
         treeNodePath.setTexture(self.barkTexture,1)
         treeNodePath.reparentTo(render)

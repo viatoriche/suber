@@ -94,7 +94,9 @@ class TextureCollection(dict):
         #self['water'].setMagfilter(Texture.FTLinearMipmapLinear)
         #self['water'].setMinfilter(Texture.FTLinearMipmapLinear)
 
-        self['black'] = loader.loadTexture("res/textures/black.png")
+        #self['black'] = loader.loadTexture("res/textures/black.png")
+        self['tree'] = loader.loadTexture("res/textures/tree.png")
+        self['leaf'] = loader.loadTexture("res/textures/leaf.png")
         #self['black'].setMagfilter(Texture.FTLinearMipmapLinear)
         #self['black'].setMinfilter(Texture.FTLinearMipmapLinear)
 

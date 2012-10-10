@@ -4,37 +4,33 @@
 land plane
 """
 
-from panda3d.core import Geom
-from panda3d.core import GeomNode
-from panda3d.core import GeomVertexFormat, GeomVertexData
+import random
+
+from panda3d.core import Geom, GeomNode
+from panda3d.core import GeomVertexData
 from panda3d.core import Vec3
 from pandac.PandaModules import CardMaker
 from pandac.PandaModules import NodePath
 from pandac.PandaModules import TextureStage
 from pandac.PandaModules import TransparencyAttrib
-from voxplanet.support import myNormalize, makeSquare_net, drawBody, drawLeaf
+from voxplanet.support import makeSquare_net, drawBody, drawLeaf, treeform
 
 
 class TreeModel(NodePath):
 
-    def __init__(self, length, tex, pos=Vec3(0, 0, 0), numIterations = 11, numCopies = 4, vecList=[Vec3(0,0,1),
+    def __init__(self, length, tex, leafModel, pos=Vec3(0, 0, 0), numIterations = 11, numCopies = 4, vecList=[Vec3(0,0,1),
                         Vec3(1,0,0), Vec3(0,-1,0)]):
 
-        self.NodePath.__init__(self, 'Tree')
+        NodePath.__init__(self, 'Tree')
 
-        formatArray=GeomVertexArrayFormat()
-        formatArray.addColumn(InternalName.make("drawFlag"), 1, Geom.NTUint8, Geom.COther)
-
-        format=GeomVertexFormat(GeomVertexFormat.getV3n3cpt2())
-        format.addArray(formatArray)
-
-        self.bodydata=GeomVertexData("body vertices", format, Geom.UHStatic)
+        self.bodydata=GeomVertexData("body vertices", treeform, Geom.UHStatic)
         self.length = length
         self.pos = pos
         self.numIterations = numIterations
         self.numCopies = numCopies
         self.vecList = vecList
         self.tex = tex
+        self.leafModel = leafModel
         self.make()
         self.setTexture(self.tex, 1)
 
@@ -65,7 +61,7 @@ class TreeModel(NodePath):
 
         else:
             drawBody(self, self.bodydata, self.pos, self.vecList, self.length.getX(), False)
-            drawLeaf(self, self.bodydata, self.pos, self.vecList)
+            drawLeaf(self, self.bodydata, self.leafModel, self.pos, self.vecList)
 
 class ChunkModel(NodePath):
     """Chunk for quick render and create cube-objects
@@ -73,7 +69,7 @@ class ChunkModel(NodePath):
     world - link to world object
     X, Y = start coordinates
     """
-    def __init__(self, heights, X, Y, size, chunk_len, tex_uv_height, tex):
+    def __init__(self, config, heights, X, Y, size, chunk_len, tex_uv_height, tex):
         """
         heights = dict of heights for coordinates
         X, Y - center of chunk
@@ -85,6 +81,7 @@ class ChunkModel(NodePath):
         NodePath.__init__(self, 'ChunkModel_{0}-{1}_{2}'.format(X, Y, size))
         self.X = X
         self.Y = Y
+        self.config = config
         self.heights = heights
         self.tex_uv_height = tex_uv_height
         self.tex = tex
@@ -122,6 +119,7 @@ class ChunkModel(NodePath):
                 z = self.Z[x, y]
                 dz = z - (self.size_voxel * 10)
 
+
                 cube = []
 
                 sq_dy = sq_y + 1
@@ -132,6 +130,14 @@ class ChunkModel(NodePath):
                 heights.append(self.Z[x, y+self.size_voxel])
                 heights.append(self.Z[x+self.size_voxel, y+self.size_voxel])
                 maxh = max(heights)
+
+                #if self.size_voxel <= 4:
+                    #if maxh <= self.config.land_mount_level[1]:
+                        #if random.randint(1,20) == 20:
+                            #tree = NodePath('ChunkTree')
+                            #self.trees[random.randint(0, self.config.tree_models - 1)].copyTo(tree)
+                            #tree.reparentTo(self)
+                            #tree.setPos(sq_x, sq_y, maxh)
 
                 tex_coord = self.tex_uv_height(maxh)
 

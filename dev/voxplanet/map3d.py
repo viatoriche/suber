@@ -209,7 +209,10 @@ class TileMap(dict):
                 if count_ocean > 0:
                     dx = random.randint(-1,1)
                     dy = random.randint(-1,1)
-                    coord = ocean_coords[random.randint(0, len(ocean_coords) - 1)]
+                    try:
+                        coord = ocean_coords[random.randint(0, len(ocean_coords) - 1)]
+                    except ValueError:
+                        coord = oceans[random.randint(0, len(oceans) - 1)]
                     coord = coord[0] + dx, coord[1] + dy
                     #if coord not in ocean_coords:
                     self[coord] = random.randint(-self.config.high_mount_level[1],

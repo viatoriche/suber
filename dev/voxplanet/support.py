@@ -4,10 +4,29 @@
 Support functions for generate models and other
 """
 
+import math, random
+
+from panda3d.core import InternalName
+from panda3d.core import Geom, GeomNode, GeomTrifans, GeomTristrips
+from panda3d.core import GeomTriangles, GeomVertexWriter
+from panda3d.core import GeomVertexArrayFormat, GeomVertexFormat
+from panda3d.core import GeomVertexFormat
+from panda3d.core import GeomVertexReader
+from panda3d.core import GeomVertexRewriter, GeomVertexData
+from panda3d.core import TransformState,CullFaceAttrib
+from panda3d.core import Vec3,Vec4,Mat4
+
 
 #this is a helper function you can use to make a circle in the x-y plane
 #i didnt end up needing it but this comes up fairly often so I thought
 #I should keep this in the code. Feel free to use.
+
+formatArray = GeomVertexArrayFormat()
+formatArray.addColumn(InternalName.make("drawFlag"), 1, Geom.NTUint8, Geom.COther)
+
+treeform = GeomVertexFormat(GeomVertexFormat.getV3n3cpt2())
+treeform.addArray(formatArray)
+treeform = GeomVertexFormat.registerFormat(treeform)
 
 def makeCircle(vdata, numVertices=40,offset=Vec3(0,0,0), direction=1):
     circleGeom=Geom(vdata)
@@ -212,13 +231,12 @@ def drawBody(nodePath, vdata, pos, vecList, radius=1, keepDrawing=True,numVertic
         #I accidentally made the front-face face inwards. Make reverse makes the tree render properly and
             #should cause any surprises to any poor programmer that tries to use this code
         circleGeomNode.setAttrib(CullFaceAttrib.makeReverse(),1)
-        global numPrimitives
-        numPrimitives+=numVertices*2
+        #nodePath.numPrimitives+=numVertices*2
 
         nodePath.attachNewNode(circleGeomNode)
 
 #this draws leafs when we reach an end
-def drawLeaf(nodePath,vdata,pos=Vec3(0,0,0),vecList=[Vec3(0,0,1), Vec3(1,0,0),Vec3(0,-1,0)], scale=0.125):
+def drawLeaf(nodePath,vdata, leafModel, pos=Vec3(0,0,0),vecList=[Vec3(0,0,1), Vec3(1,0,0),Vec3(0,-1,0)], scale=0.125):
 
     #use the vectors that describe the direction the branch grows to make the right
         #rotation matrix
@@ -234,12 +252,12 @@ def drawLeaf(nodePath,vdata,pos=Vec3(0,0,0),vecList=[Vec3(0,0,1), Vec3(1,0,0),Ve
     #orginlly made the leaf out of geometry but that didnt look good
     #I also think there should be a better way to handle the leaf texture other than
     #hardcoding the filename
-    leafModel=loader.loadModel('models/shrubbery')
-    leafTexture=loader.loadTexture('models/material-10-cl.png')
+    #leafModel=loader.loadModel('models/shrubbery')
+    #leafTexture=loader.loadTexture('models/material-10-cl.png')
 
 
     leafModel.reparentTo(nodePath)
-    leafModel.setTexture(leafTexture,1)
+    #leafModel.setTexture(leafTexture,1)
     leafModel.setTransform(TransformState.makeMat(axisAdj))
 
 #you cant normalize in-place so this is a helper function

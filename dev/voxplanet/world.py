@@ -157,6 +157,7 @@ class ChunksCollection():
 
         self.root = QuadroTreeNode(self, self.size_world, center = self.center)
         self.chunks_models = {}
+        self.tree_models = {}
 
         self.generate()
         self.show()
@@ -180,15 +181,27 @@ class ChunksCollection():
                 if length_cam > detach_dist:
                     if self.chunks_models[chunk_model].hasParent():
                         self.chunks_models[chunk_model].detachNode()
+                    if self.tree_models.has_key(chunk_model):
+                        for tree in self.tree_models[chunk_model]:
+                            tree.detachNode()
 
                 if not self.chunks_models[chunk_model].isHidden():
                     self.chunks_models[chunk_model].hide()
+                    if self.tree_models.has_key(chunk_model):
+                        for tree in self.tree_models[chunk_model]:
+                            tree.hide()
             else:
                 if not self.chunks_models[chunk_model].hasParent():
                     self.chunks_models[chunk_model].reparentTo(self.world.root_node)
+                    if self.tree_models.has_key(chunk_model):
+                        for tree in self.tree_models[chunk_model]:
+                            tree.reparentTo(self.world.root_node)
 
                 if self.chunks_models[chunk_model].isHidden():
                     self.chunks_models[chunk_model].show()
+                    if self.tree_models.has_key(chunk_model):
+                        for tree in self.tree_models[chunk_model]:
+                            tree.show()
 
                 self.chunks_models[chunk_model].setX(self.chunks_map.DX)
                 self.chunks_models[chunk_model].setY(self.chunks_map.DY)
@@ -196,12 +209,25 @@ class ChunksCollection():
         for chunk in self.chunks:
             if not self.chunks_models.has_key(chunk):
                 # size of chunk
-                self.chunks_models[chunk] = ChunkModel(self.world.map3d,
+                self.chunks_models[chunk] = ChunkModel(self.config, self.world.map3d,
                                                        chunk[0][0], chunk[0][1], chunk[1],
                                                        self.chunks_map.chunk_len,
                                                        self.world.params.tex_uv_height,
                                                        self.world.params.chunks_tex
                                                        )
+                if chunk[1] <= 256:
+                    count = chunk[1] / 8
+                    chunk_trees = []
+                    for i in xrange(count):
+                        tree = NodePath('tree')
+                        self.world.trees[random.randint(0, self.config.tree_models-1)].copyTo(tree)
+                        x = chunk[0][0] + random.randint(-chunk[1]/2, chunk[1]/2)
+                        y = chunk[0][1] + random.randint(-chunk[1]/2, chunk[1]/2)
+                        z = self.world.map3d[x, y]
+                        tree.setPos(self.world.root_node, (x - self.chunks_map.DX, y - self.chunks_map.DY, z))
+                        tree.reparentTo(self.world.root_node)
+                        chunk_trees.append(tree)
+                    self.tree_models[chunk] = chunk_trees
                 self.chunks_models[chunk].reparentTo(self.world.root_node)
                 self.chunks_models[chunk].setX(self.chunks_map.DX)
                 self.chunks_models[chunk].setY(self.chunks_map.DY)
@@ -211,6 +237,9 @@ class ChunksCollection():
 
                 if not self.chunks[chunk]:
                     self.chunks_models[chunk].hide()
+                    if self.tree_models.has_key(chunk):
+                        for tree in self.tree_models[chunk]:
+                            tree.hide()
 
 class ChunksMap():
     def __init__(self, world, size, level):
@@ -336,6 +365,12 @@ class World():
         """New world
         """
 
+        for tree in self.trees:
+            tree.removeNode()
+        self.trees = []
+        for i in xrange(self.config.tree_models):
+            self.trees.append(TreeModel(Vec3(4,4,7), self.params.tree_tex, self.params.leafModel))
+
         def create_world():
             global_map_gen = Map_generator_2D(self.config, self.seed)
             complete_i = 0
@@ -361,11 +396,6 @@ class World():
 
         create_world()
 
-        for tree in self.trees:
-            tree.removeNode()
-        self.trees = []
-        for i in xrange(self.config.tree_models):
-            self.trees.append(TreeModel(Vec3(4,4,7)))
 
         self.chunks_map = ChunksMap(self, 0, 1)
         self.chunks_map.set_char_coord((self.config.size_world/2, self.config.size_world/2, 10000))
