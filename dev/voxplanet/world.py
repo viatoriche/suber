@@ -14,7 +14,7 @@ from panda3d.core import VBase3
 from panda3d.core import Vec3
 from pandac.PandaModules import Texture, TextureStage
 from pandac.PandaModules import TransparencyAttrib, Texture, TextureStage
-from voxplanet.landplane import LandNode, ChunkModel
+from voxplanet.landplane import LandNode, ChunkModel, TreeModel
 from voxplanet.map2d import Map_generator_2D
 from voxplanet.map3d import Map3d
 
@@ -324,6 +324,8 @@ class World():
         taskMgr.setupTaskChain('world_chain_show', numThreads = 1, tickClock = False,
                        threadPriority = TPLow, frameBudget = 1)
 
+        self.trees = []
+
         #self.water = WaterNode(0.75)
         #self.water.show()
 
@@ -358,6 +360,12 @@ class World():
             self.status(endstr)
 
         create_world()
+
+        for tree in self.trees:
+            tree.removeNode()
+        self.trees = []
+        for i in xrange(self.config.tree_models):
+            self.trees.append(TreeModel(Vec3(4,4,7)))
 
         self.chunks_map = ChunksMap(self, 0, 1)
         self.chunks_map.set_char_coord((self.config.size_world/2, self.config.size_world/2, 10000))

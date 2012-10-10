@@ -1,46 +1,8 @@
-#Author: Kwasi Mensah (kmensah@andrew.cmu.edu)
-#Date: 8/05/2005
-#
-#This demo shows how to make quasi-fractal trees in Panda.
-#Its primarily meant to be a more complex example on how to use
-#Panda's Geom interface.
-#
-#
-
-
-from direct.directbase import DirectStart
-from panda3d.core import Filename,InternalName
-from panda3d.core import GeomVertexArrayFormat, GeomVertexFormat
-from panda3d.core import Geom, GeomNode, GeomTrifans, GeomTristrips
-from panda3d.core import GeomVertexReader, GeomVertexWriter
-from panda3d.core import GeomVertexRewriter, GeomVertexData
-from panda3d.core import PerspectiveLens, TextNode
-from panda3d.core import TransformState,CullFaceAttrib
-from panda3d.core import Light,AmbientLight,Spotlight
-from panda3d.core import NodePath
-from panda3d.core import Vec3,Vec4,Mat4
-from direct.task.Task import Task
-from direct.gui.OnscreenText import OnscreenText
-from direct.showbase.DirectObject import DirectObject
-import math, random, time, sys, os
-
-
-random.seed()
-base.disableMouse()
-base.camera.setPos(0,-180,30)
-numPrimitives=0
-
-title = OnscreenText(text="Panda3D: Tutorial - Procdurally Making a Tree",
-                       style=1, fg=(1,1,1,1),
-                       pos=(0.6,-0.95), scale = .07)
-qEvent = OnscreenText(
-             text="Q: Start Scene Over",
-                 style=1, fg=(1,1,1,1), pos=(-1.3, 0.95),
-             align=TextNode.ALeft, scale = .05)
-wEvent = OnscreenText(
-             text="W: Add Another Tree",
-                 style=1, fg=(1,1,1,1), pos=(-1.3, 0.90),
-             align=TextNode.ALeft, scale = .05)
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+Support functions for generate models and other
+"""
 
 
 #this is a helper function you can use to make a circle in the x-y plane
@@ -280,149 +242,129 @@ def drawLeaf(nodePath,vdata,pos=Vec3(0,0,0),vecList=[Vec3(0,0,1), Vec3(1,0,0),Ve
     leafModel.setTexture(leafTexture,1)
     leafModel.setTransform(TransformState.makeMat(axisAdj))
 
-#recursive algorthim to make the tree
-def makeFractalTree(bodydata, nodePath,length, pos=Vec3(0,0,0), numIterations=11, numCopies=4,vecList=[Vec3(0,0,1),Vec3(1,0,0), Vec3(0,-1,0)]):
-    if numIterations>0:
+#you cant normalize in-place so this is a helper function
+def myNormalize(myVec):
+    myVec.normalize()
+    return myVec
 
-        drawBody(nodePath, bodydata, pos, vecList, length.getX())
+#helper function to make a square given the Lower-Left-Hand and Upper-Right-Hand corners
+def makeSquare(x1,y1,z1, x2,y2,z2, tex_coord):
+    format=GeomVertexFormat.getV3n3t2()
+    vdata=GeomVertexData('square', format, Geom.UHStatic)
 
+    vertex=GeomVertexWriter(vdata, 'vertex')
+    normal=GeomVertexWriter(vdata, 'normal')
+    texcoord=GeomVertexWriter(vdata, 'texcoord')
 
-        #move foward along the right axis
-        newPos=pos+vecList[0]*length.length()
+    #make sure we draw the sqaure in the right plane
+    if x1!=x2:
+        vertex.addData3f(x1, y1, z1)
+        vertex.addData3f(x2, y1, z1)
+        vertex.addData3f(x2, y2, z2)
+        vertex.addData3f(x1, y2, z2)
 
-
-        #only branch every third level (sorta)
-        if numIterations%3==0:
-            #decrease dimensions when we branch
-            length=Vec3(length.getX()/2, length.getY()/2, length.getZ()/1.1)
-            for i in range(numCopies):
-                makeFractalTree(bodydata, nodePath,length,newPos, numIterations-1, numCopies,randomAxis(vecList))
-        else:
-            #just make another branch connected to this one with a small variation in direction
-            makeFractalTree(bodydata, nodePath,length,newPos, numIterations-1,numCopies,smallRandomAxis(vecList))
+        normal.addData3f(myNormalize(Vec3(2*x1-1, 2*y1-1, 2*z1-1)))
+        normal.addData3f(myNormalize(Vec3(2*x2-1, 2*y1-1, 2*z1-1)))
+        normal.addData3f(myNormalize(Vec3(2*x2-1, 2*y2-1, 2*z2-1)))
+        normal.addData3f(myNormalize(Vec3(2*x1-1, 2*y2-1, 2*z2-1)))
 
     else:
-        drawBody(nodePath,bodydata, pos, vecList, length.getX(),False)
-        drawLeaf(nodePath,bodydata, pos,vecList)
+        vertex.addData3f(x1, y1, z1)
+        vertex.addData3f(x2, y2, z1)
+        vertex.addData3f(x2, y2, z2)
+        vertex.addData3f(x1, y1, z2)
+
+        normal.addData3f(myNormalize(Vec3(2*x1-1, 2*y1-1, 2*z1-1)))
+        normal.addData3f(myNormalize(Vec3(2*x2-1, 2*y2-1, 2*z1-1)))
+        normal.addData3f(myNormalize(Vec3(2*x2-1, 2*y2-1, 2*z2-1)))
+        normal.addData3f(myNormalize(Vec3(2*x1-1, 2*y1-1, 2*z2-1)))
+
+    #adding different colors to the vertex for visibility
+
+    u1, v1, u2, v2 = tex_coord
+
+    texcoord.addData2f(u1, v2)
+    texcoord.addData2f(u1, v1)
+    texcoord.addData2f(u2, v1)
+    texcoord.addData2f(u2, v2)
+
+    #quads arent directly supported by the Geom interface
+    #you might be interested in the CardMaker class if you are
+    #interested in rectangle though
+    tri1=GeomTriangles(Geom.UHStatic)
+    tri2=GeomTriangles(Geom.UHStatic)
+
+    tri1.addVertex(0)
+    tri1.addVertex(1)
+    tri1.addVertex(3)
+
+    tri2.addConsecutiveVertices(1,3)
+
+    tri1.closePrimitive()
+    tri2.closePrimitive()
+
+    square=Geom(vdata)
+    square.addPrimitive(tri1)
+    square.addPrimitive(tri2)
+
+    return square
+
+def makeSquare_net(coord1, coord2, coord3, coord4, tex_coord):
+    format=GeomVertexFormat.getV3n3t2()
+    vdata=GeomVertexData('square', format, Geom.UHStatic)
+
+    x1, y1, z1 = coord1
+    x2, y2, z2 = coord2
+    x3, y3, z3 = coord3
+    x4, y4, z4 = coord4
+
+    vertex=GeomVertexWriter(vdata, 'vertex')
+    normal=GeomVertexWriter(vdata, 'normal')
+    texcoord=GeomVertexWriter(vdata, 'texcoord')
+
+    #make sure we draw the sqaure in the right plane
+    vertex.addData3f(x1, y1, z1)
+    vertex.addData3f(x2, y2, z2)
+    vertex.addData3f(x3, y3, z3)
+    vertex.addData3f(x4, y4, z4)
+
+    normal.addData3f(myNormalize(Vec3(2*x1-1, 2*y1-1, 2*z1-1)))
+    normal.addData3f(myNormalize(Vec3(2*x2-1, 2*y2-1, 2*z1-1)))
+    normal.addData3f(myNormalize(Vec3(2*x2-1, 2*y2-1, 2*z2-1)))
+    normal.addData3f(myNormalize(Vec3(2*x1-1, 2*y1-1, 2*z2-1)))
+
+    #adding different colors to the vertex for visibility
+
+    u1, v1, u2, v2 = tex_coord
+
+    texcoord.addData2f(u1, v2)
+    texcoord.addData2f(u1, v1)
+    texcoord.addData2f(u2, v1)
+    texcoord.addData2f(u2, v2)
+
+    #quads arent directly supported by the Geom interface
+    #you might be interested in the CardMaker class if you are
+    #interested in rectangle though
+    tri1=GeomTriangles(Geom.UHStatic)
+    tri2=GeomTriangles(Geom.UHStatic)
+
+    tri1.addVertex(0)
+    tri1.addVertex(1)
+    tri1.addVertex(3)
+
+    tri1.addVertex(1)
+    tri1.addVertex(2)
+    tri1.addVertex(3)
 
 
+    tri1.closePrimitive()
+    tri2.closePrimitive()
 
-alight = AmbientLight('alight')
-alight.setColor(Vec4(0.5, 0.5, 0.5, 1))
-alnp = render.attachNewNode(alight)
-render.setLight(alnp)
+    square=Geom(vdata)
+    square.addPrimitive(tri1)
+    square.addPrimitive(tri2)
 
-slight = Spotlight('slight')
-slight.setColor(Vec4(1, 1, 1, 1))
-lens = PerspectiveLens()
-slight.setLens(lens)
-slnp = render.attachNewNode(slight)
-render.setLight(slnp)
+    return square
 
-slnp.setPos(0, 0,40)
-
-#rotating light to show that normals are calculated correctly
-def updateLight(task):
-    global slnp
-    currPos=slnp.getPos()
-    currPos.setX(100*math.cos(task.time)/2)
-    currPos.setY(100*math.sin(task.time)/2)
-    slnp.setPos(currPos)
-
-
-
-    slnp.lookAt(render)
-    return Task.cont
-
-taskMgr.add(updateLight, "rotating Light")
-
-#add some interactivity to the program
-class MyTapper(DirectObject):
-    def __init__(self):
-        formatArray=GeomVertexArrayFormat()
-        formatArray.addColumn(InternalName.make("drawFlag"), 1, Geom.NTUint8, Geom.COther)
-
-        format=GeomVertexFormat(GeomVertexFormat.getV3n3cpt2())
-        format.addArray(formatArray)
-        self.format=GeomVertexFormat.registerFormat(format)
-
-        bodydata=GeomVertexData("body vertices", format, Geom.UHStatic)
-
-        self.barkTexture=loader.loadTexture("barkTexture.jpg")
-        treeNodePath=NodePath("Tree Holder")
-        makeFractalTree(bodydata,treeNodePath,Vec3(4,4,7))
-
-        treeNodePath.setTexture(self.barkTexture,1)
-        treeNodePath.reparentTo(render)
-
-        self.accept("q", self.regenTree)
-        self.accept("w", self.addTree)
-        self.accept("arrow_up", self.upIterations)
-        self.accept("arrow_down", self.downIterations)
-        self.accept("arrow_right", self.upCopies)
-        self.accept("arrow_left", self.downCopies)
-
-        self.numIterations=11
-        self.numCopies=4
-
-
-        self.upDownEvent = OnscreenText(
-             text="Up/Down: Increase/Decrease the number of iterations ("+str(self.numIterations)+")",
-                 style=1, fg=(1,1,1,1), pos=(-1.3, 0.85),
-             align=TextNode.ALeft, scale = .05, mayChange=True)
-
-        self.leftRightEvent = OnscreenText(
-             text="Left/Right: Increase/Decrease branching ("+str(self.numCopies)+")",
-                 style=1, fg=(1,1,1,1), pos=(-1.3, 0.80),
-             align=TextNode.ALeft, scale = .05, mayChange=True)
-
-
-    def upIterations(self):
-        self.numIterations+=1
-        self.upDownEvent.setText("Up/Down: Increase/Decrease the number of iterations ("+str(self.numIterations)+")")
-
-    def downIterations(self):
-        self.numIterations-=1
-        self.upDownEvent.setText("Up/Down: Increase/Decrease the number of Iteratations("+str(self.numIterations)+")")
-
-    def upCopies(self):
-        self.numCopies+=1
-        self.leftRightEvent.setText("Left/Right: Increase/Decrease branching("+str(self.numCopies)+")")
-
-    def downCopies(self):
-        self.numCopies-=1
-        self.leftRightEvent.setText("Left/Right: Increase/Decrease branching("+str(self.numCopies)+")")
-
-    def regenTree(self):
-        forest= render.findAllMatches("Tree Holder")
-        forest.detach()
-
-
-        bodydata=GeomVertexData("body vertices", self.format, Geom.UHStatic)
-
-        treeNodePath=NodePath("Tree Holder")
-        makeFractalTree(bodydata, treeNodePath,Vec3(4,4,7), Vec3(0,0,0),self.numIterations, self.numCopies)
-
-        treeNodePath.setTexture(self.barkTexture,1)
-        treeNodePath.reparentTo(render)
-
-    def addTree(self):
-
-        bodydata=GeomVertexData("body vertices", self.format, Geom.UHStatic)
-
-        randomPlace=Vec3(200*random.random()-100, 200*random.random()-100, 0)
-        #randomPlace.normalize()
-
-
-        treeNodePath=NodePath("Tree Holder")
-        makeFractalTree(bodydata, treeNodePath,Vec3(4,4,7), randomPlace, self.numIterations, self.numCopies)
-
-        treeNodePath.setTexture(self.barkTexture,1)
-        treeNodePath.reparentTo(render)
-
-t=MyTapper()
-print numPrimitives
-
-
-run()
+# vi: ft=python:tw=0:ts=4
 

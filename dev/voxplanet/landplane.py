@@ -4,8 +4,7 @@
 land plane
 """
 
-from panda3d.core import CardMaker
-from panda3d.core import Geom, GeomTriangles, GeomVertexWriter
+from panda3d.core import Geom
 from panda3d.core import GeomNode
 from panda3d.core import GeomVertexFormat, GeomVertexData
 from panda3d.core import Vec3
@@ -13,134 +12,60 @@ from pandac.PandaModules import CardMaker
 from pandac.PandaModules import NodePath
 from pandac.PandaModules import TextureStage
 from pandac.PandaModules import TransparencyAttrib
+from voxplanet.support import myNormalize, makeSquare_net, drawBody, drawLeaf
 
 
-class Tree():
-    pass
+class TreeModel(NodePath):
 
-#you cant normalize in-place so this is a helper function
-def myNormalize(myVec):
-    myVec.normalize()
-    return myVec
+    def __init__(self, length, tex, pos=Vec3(0, 0, 0), numIterations = 11, numCopies = 4, vecList=[Vec3(0,0,1),
+                        Vec3(1,0,0), Vec3(0,-1,0)]):
 
-#helper function to make a square given the Lower-Left-Hand and Upper-Right-Hand corners
-def makeSquare(x1,y1,z1, x2,y2,z2, tex_coord):
-    format=GeomVertexFormat.getV3n3t2()
-    vdata=GeomVertexData('square', format, Geom.UHStatic)
+        self.NodePath.__init__(self, 'Tree')
 
-    vertex=GeomVertexWriter(vdata, 'vertex')
-    normal=GeomVertexWriter(vdata, 'normal')
-    texcoord=GeomVertexWriter(vdata, 'texcoord')
+        formatArray=GeomVertexArrayFormat()
+        formatArray.addColumn(InternalName.make("drawFlag"), 1, Geom.NTUint8, Geom.COther)
 
-    #make sure we draw the sqaure in the right plane
-    if x1!=x2:
-        vertex.addData3f(x1, y1, z1)
-        vertex.addData3f(x2, y1, z1)
-        vertex.addData3f(x2, y2, z2)
-        vertex.addData3f(x1, y2, z2)
+        format=GeomVertexFormat(GeomVertexFormat.getV3n3cpt2())
+        format.addArray(formatArray)
 
-        normal.addData3f(myNormalize(Vec3(2*x1-1, 2*y1-1, 2*z1-1)))
-        normal.addData3f(myNormalize(Vec3(2*x2-1, 2*y1-1, 2*z1-1)))
-        normal.addData3f(myNormalize(Vec3(2*x2-1, 2*y2-1, 2*z2-1)))
-        normal.addData3f(myNormalize(Vec3(2*x1-1, 2*y2-1, 2*z2-1)))
+        self.bodydata=GeomVertexData("body vertices", format, Geom.UHStatic)
+        self.length = length
+        self.pos = pos
+        self.numIterations = numIterations
+        self.numCopies = numCopies
+        self.vecList = vecList
+        self.tex = tex
+        self.make()
+        self.setTexture(self.tex, 1)
 
-    else:
-        vertex.addData3f(x1, y1, z1)
-        vertex.addData3f(x2, y2, z1)
-        vertex.addData3f(x2, y2, z2)
-        vertex.addData3f(x1, y1, z2)
+    def make(self):
 
-        normal.addData3f(myNormalize(Vec3(2*x1-1, 2*y1-1, 2*z1-1)))
-        normal.addData3f(myNormalize(Vec3(2*x2-1, 2*y2-1, 2*z1-1)))
-        normal.addData3f(myNormalize(Vec3(2*x2-1, 2*y2-1, 2*z2-1)))
-        normal.addData3f(myNormalize(Vec3(2*x1-1, 2*y1-1, 2*z2-1)))
+        if self.numIterations > 0:
 
-    #adding different colors to the vertex for visibility
-
-    u1, v1, u2, v2 = tex_coord
-
-    texcoord.addData2f(u1, v2)
-    texcoord.addData2f(u1, v1)
-    texcoord.addData2f(u2, v1)
-    texcoord.addData2f(u2, v2)
-
-    #quads arent directly supported by the Geom interface
-    #you might be interested in the CardMaker class if you are
-    #interested in rectangle though
-    tri1=GeomTriangles(Geom.UHStatic)
-    tri2=GeomTriangles(Geom.UHStatic)
-
-    tri1.addVertex(0)
-    tri1.addVertex(1)
-    tri1.addVertex(3)
-
-    tri2.addConsecutiveVertices(1,3)
-
-    tri1.closePrimitive()
-    tri2.closePrimitive()
-
-    square=Geom(vdata)
-    square.addPrimitive(tri1)
-    square.addPrimitive(tri2)
-
-    return square
-
-def makeSquare_net(coord1, coord2, coord3, coord4, tex_coord):
-    format=GeomVertexFormat.getV3n3t2()
-    vdata=GeomVertexData('square', format, Geom.UHStatic)
-
-    x1, y1, z1 = coord1
-    x2, y2, z2 = coord2
-    x3, y3, z3 = coord3
-    x4, y4, z4 = coord4
-
-    vertex=GeomVertexWriter(vdata, 'vertex')
-    normal=GeomVertexWriter(vdata, 'normal')
-    texcoord=GeomVertexWriter(vdata, 'texcoord')
-
-    #make sure we draw the sqaure in the right plane
-    vertex.addData3f(x1, y1, z1)
-    vertex.addData3f(x2, y2, z2)
-    vertex.addData3f(x3, y3, z3)
-    vertex.addData3f(x4, y4, z4)
-
-    normal.addData3f(myNormalize(Vec3(2*x1-1, 2*y1-1, 2*z1-1)))
-    normal.addData3f(myNormalize(Vec3(2*x2-1, 2*y2-1, 2*z1-1)))
-    normal.addData3f(myNormalize(Vec3(2*x2-1, 2*y2-1, 2*z2-1)))
-    normal.addData3f(myNormalize(Vec3(2*x1-1, 2*y1-1, 2*z2-1)))
-
-    #adding different colors to the vertex for visibility
-
-    u1, v1, u2, v2 = tex_coord
-
-    texcoord.addData2f(u1, v2)
-    texcoord.addData2f(u1, v1)
-    texcoord.addData2f(u2, v1)
-    texcoord.addData2f(u2, v2)
-
-    #quads arent directly supported by the Geom interface
-    #you might be interested in the CardMaker class if you are
-    #interested in rectangle though
-    tri1=GeomTriangles(Geom.UHStatic)
-    tri2=GeomTriangles(Geom.UHStatic)
-
-    tri1.addVertex(0)
-    tri1.addVertex(1)
-    tri1.addVertex(3)
-
-    tri1.addVertex(1)
-    tri1.addVertex(2)
-    tri1.addVertex(3)
+            drawBody(self, self.bodydata, self.pos,
+                     self.vecList, self.length.getX())
 
 
-    tri1.closePrimitive()
-    tri2.closePrimitive()
+            #move foward along the right axis
+            newPos=self.pos + self.vecList[0] * self.length.length()
 
-    square=Geom(vdata)
-    square.addPrimitive(tri1)
-    square.addPrimitive(tri2)
 
-    return square
+            #only branch every third level (sorta)
+            if self.numIterations % 3 == 0:
+                #decrease dimensions when we branch
+                self.length = Vec3(self.length.getX() / 2, self.length.getY() / 2,
+                              self.length.getZ() / 1.1)
+                for i in range(self.numCopies):
+                    self.numIterations =- 1
+                    self.make()
+            else:
+                #just make another branch connected to this one with a small variation in direction
+                self.numIterations =- 1
+                self.make()
+
+        else:
+            drawBody(self, self.bodydata, self.pos, self.vecList, self.length.getX(), False)
+            drawLeaf(self, self.bodydata, self.pos, self.vecList)
 
 class ChunkModel(NodePath):
     """Chunk for quick render and create cube-objects

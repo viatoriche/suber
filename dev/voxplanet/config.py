@@ -39,5 +39,7 @@ class Config():
     # start points of continents
     min_continents = 4
     max_continents = 6
+
+    tree_models = 10
 # vi: ft=python:tw=0:ts=4
 
