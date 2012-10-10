@@ -8,17 +8,15 @@ import random
 import sys
 import time
 
-from config import Config
-from modules.drive.landplane import LandNode, ChunkModel
-from modules.drive.textures import textures
-from modules.world.map2d import Map_generator_2D
 from panda3d.core import NodePath
 from panda3d.core import TPLow
 from panda3d.core import VBase3
 from panda3d.core import Vec3
 from pandac.PandaModules import Texture, TextureStage
 from pandac.PandaModules import TransparencyAttrib, Texture, TextureStage
-from modules.world.map3d import Map3d
+from voxplanet.landplane import LandNode, ChunkModel
+from voxplanet.map2d import Map_generator_2D
+from voxplanet.map3d import Map3d
 
 #sys.setrecursionlimit(65535)
 
@@ -30,8 +28,8 @@ class WaterNode():
     """Water plane for nya
 
     """
-    config = Config()
-    def __init__(self, water_z):
+    def __init__(self, config, water_z):
+        self.config = config
         self.water_z = water_z
         self.create(0, 0, (self.config.size_region/2, self.config.size_region/2))
 
@@ -83,7 +81,7 @@ class QuadroTreeNode:
         self.childs = {}
         x = center[0]
         y = center[1]
-        z = self.world.map_3d[x, y]
+        z = self.world.map3d[x, y]
         self.center = x, y, z
         self.hide()
 
@@ -144,13 +142,13 @@ class ChunksCollection():
          #Vec3(0., 0., 0.), Vec3(0.5, 0.5, 0.),
          #]
 
-    config = Config()
     chunks = {}
     thread_done = True
 
     def __init__(self, chunks_map, world, center, size_world):
 
         self.center = center
+        self.config = world.config
 
         self.size_world = size_world
         self.chunks_map = chunks_map
@@ -198,9 +196,11 @@ class ChunksCollection():
         for chunk in self.chunks:
             if not self.chunks_models.has_key(chunk):
                 # size of chunk
-                self.chunks_models[chunk] = ChunkModel(self.world,
+                self.chunks_models[chunk] = ChunkModel(self.world.map3d,
                                                        chunk[0][0], chunk[0][1], chunk[1],
-                                                       self.chunks_map.chunk_len
+                                                       self.chunks_map.chunk_len,
+                                                       self.world.params.tex_uv_height,
+                                                       self.world.params.chunks_tex
                                                        )
                 self.chunks_models[chunk].reparentTo(self.world.root_node)
                 self.chunks_models[chunk].setX(self.chunks_map.DX)
@@ -213,9 +213,9 @@ class ChunksCollection():
                     self.chunks_models[chunk].hide()
 
 class ChunksMap():
-    config = Config()
     def __init__(self, world, size, level):
         self.world = world
+        self.config = world.config
         self.level = level
         self.size = size
         self.size_region = self.config.size_region
@@ -246,7 +246,7 @@ class ChunksMap():
         self.charX += d_charX
         self.charY += d_charY
 
-        self.land_z = int(self.world.map_3d[int(self.charX), int(self.charY)])
+        self.land_z = int(self.world.map3d[int(self.charX), int(self.charY)])
 
         if self.far < 1000:
             self.far = 1000
@@ -289,7 +289,7 @@ class ChunksMap():
 
     def repaint(self):
         self.get_coords()
-        self.world.game.write('CamPos: X: {0}, Y: {1}, Z: {2}, '\
+        self.world.status('CamPos: X: {0}, Y: {1}, Z: {2}, '\
                           'land height: {3} | Char: X: {4}, Y: {5}'.format(int(self.camX), int(self.camY), int(self.camZ),
                            self.land_z, int(self.charX), int(self.charY)))
 
@@ -309,71 +309,66 @@ class ChunksMap():
 
 
 class World():
-    config = Config()
-    def __init__(self, gui, game):
+    def __init__(self, config, params):
+        self.config = config
+        self.params = params
         self.level = self.config.root_level
         self.seed = random.randint(0, sys.maxint)
-        self.game = game
-        self.gui = gui
-        self.loader = self.gui.app.loader
-        loader = self.loader
-        self.root_node = NodePath('ROOT')
-        self.root_node.reparentTo(render)
+        self.root_node = NodePath('Root_World')
+        self.root_node.reparentTo(self.params.root_node)
+        self.status = self.params.status
 
-        textures['water'] = loader.loadTexture("games/{0}/res/textures/water.png".format(self.config.game))
-        textures['water'].setMagfilter(Texture.FTLinearMipmapLinear)
-        textures['water'].setMinfilter(Texture.FTLinearMipmapLinear)
+        #taskMgr.setupTaskChain('world_chain_create', numThreads = 1, tickClock = False,
+                       #threadPriority = TPLow, frameBudget = 1)
 
-        textures['black'] = loader.loadTexture("games/{0}/res/textures/black.png".format(self.config.game))
-        textures['black'].setMagfilter(Texture.FTLinearMipmapLinear)
-        textures['black'].setMinfilter(Texture.FTLinearMipmapLinear)
-        taskMgr.setupTaskChain('move_char', numThreads = 1, tickClock = False,
+        taskMgr.setupTaskChain('world_chain_show', numThreads = 1, tickClock = False,
                        threadPriority = TPLow, frameBudget = 1)
 
         #self.water = WaterNode(0.75)
         #self.water.show()
 
+    def get_map3d_tex(self, size = 512, filename = None):
+        return self.map3d.get_map_3d_tex(size, filename)
 
     def new(self):
         """New world
         """
-        random.seed(self.seed)
 
         def create_world():
-            global_map_gen = Map_generator_2D()
+            global_map_gen = Map_generator_2D(self.config, self.seed)
             complete_i = 0
-            print 'Start generate of world'
+            st = 'Start generate of world'
+            print st
+            self.status(st)
             for e, (i, desc) in enumerate(global_map_gen.start()):
-                print '{0} * step: {1} / {2}'.format(e, i,desc)
+                st = '{0} * step: {1} / {2}'.format(e, i,desc)
+                print st
+                self.status(st)
                 complete_i = i
             print global_map_gen.maps.get_ascii(3)
-            print 'Start convertation 2d -> 3d'
-            self.game.world.map_2d = global_map_gen.end_map
+            st = 'Start convertation 2d -> 3d'
+            print st
+            self.status(st)
+            self.map2d = global_map_gen.end_map
             # TODO: calculate real size of world
-            map3d = Map3d(self.game.world.map_2d, self.seed, self.game.world.map_2d.size)
-            self.game.world.map_3d = map3d
+            self.map3d = Map3d(self.config, self.map2d, self.seed)
             endstr = 'Map generation process has been completed. Seed: {0}'.format(\
-                                                self.game.world.seed)
+                                                self.seed)
             print endstr
-            #self.cmd_write([endstr])
+            self.status(endstr)
 
-        #ThreadDo(doit).start()
         create_world()
 
-        textures['world_map'] = textures.get_map_3d_tex(self, 512)
-        textures['world_map'].setWrapU(Texture.WMMirrorOnce)
-        textures['world_map'].setWrapV(Texture.WMMirrorOnce)
-        ts = TextureStage('world_map_ts')
         self.chunks_map = ChunksMap(self, 0, 1)
         self.chunks_map.set_char_coord((self.config.size_world/2, self.config.size_world/2, 10000))
         self.sky = Sky()
-        taskMgr.add(self.show, 'WorldShow', taskChain = 'move_char')
+        taskMgr.add(self.show, 'WorldShow', taskChain = 'world_chain_show')
 
     def show(self, task):
         """Task for showing of world
         """
         self.chunks_map.show()
-        time.sleep(1)
+        time.sleep(0.2)
         return task.cont
 
 # vi: ft=python:tw=0:ts=4

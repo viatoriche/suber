@@ -4,8 +4,6 @@
 land plane
 """
 
-from config import Config
-from modules.drive.textures import textures
 from panda3d.core import CardMaker
 from panda3d.core import Geom, GeomTriangles, GeomVertexWriter
 from panda3d.core import GeomNode
@@ -143,18 +141,28 @@ def makeSquare_net(coord1, coord2, coord3, coord4, tex_coord):
     square.addPrimitive(tri2)
 
     return square
+
 class ChunkModel(NodePath):
     """Chunk for quick render and create cube-objects
 
     world - link to world object
     X, Y = start coordinates
     """
-    config = Config()
-    def __init__(self, world, X, Y, size, chunk_len):
+    def __init__(self, heights, X, Y, size, chunk_len, tex_uv_height, tex):
+        """
+        heights = dict of heights for coordinates
+        X, Y - center of chunk
+        size - size of chunk (in scene coords)
+        chunk_len - count of voxels
+        tex_uv_height - function return of uv coordinates for height voxel
+        tex - texture map
+        """
         NodePath.__init__(self, 'ChunkModel_{0}-{1}_{2}'.format(X, Y, size))
-        self.world = world
         self.X = X
         self.Y = Y
+        self.heights = heights
+        self.tex_uv_height = tex_uv_height
+        self.tex = tex
         self.size = size
         self.chunk_len = chunk_len
         self.size_voxel = self.size / self.chunk_len
@@ -171,7 +179,7 @@ class ChunkModel(NodePath):
                             self.size_voxel, self.size_voxel):
             for y in xrange(self.start_y-self.size_voxel, self.size_y\
                             +self.size_voxel, self.size_voxel):
-                self.Z[x, y] = self.world.map_3d[x, y]
+                self.Z[x, y] = self.heights[x, y]
 
         self.create()
 
@@ -200,7 +208,7 @@ class ChunkModel(NodePath):
                 heights.append(self.Z[x+self.size_voxel, y+self.size_voxel])
                 maxh = max(heights)
 
-                tex_coord = textures.get_block_uv_height(maxh)
+                tex_coord = self.tex_uv_height(maxh)
 
                 coord1 = sq_x, sq_y, z
                 coord2 = sq_dx, sq_y, self.Z[x+self.size_voxel, y]
@@ -273,22 +281,31 @@ class ChunkModel(NodePath):
         self.attachNewNode(chunk_geom)
         self.setTwoSided(True)
         ts = TextureStage('ts')
-        self.setTexture(ts, textures['world_blocks'])
+        self.setTexture(ts, self.tex)
         #self.setTexScale(ts, 0.1, 0.1)
         self.setScale(self.size_voxel, self.size_voxel, 1)
 
     def setX(self, DX):
+        """Set to new X
+
+        center X - self.size/2 - DX
+        """
         x = self.X - self.size2 - DX
         NodePath.setX(self, x)
 
     def setY(self, DY):
+        """Set to new Y
+
+        center Y - self.size/2 - DY
+        """
         y = self.Y - self.size2 - DY
         NodePath.setY(self, y)
 
 class LandNode():
     """Water / Land
+
+    just square
     """
-    config = Config()
     def __init__(self, z, region):
         maker = CardMaker( 'land' )
 

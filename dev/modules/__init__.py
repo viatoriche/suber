@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Author:       Viator (viator@via-net.org)
-# License:      GPL (see http://www.gnu.org/licenses/gpl.txt)
-"""Package module collection"""
+"""
+init
+"""
 
-# vi: ts=4 sw=4
+# vi: ft=python:tw=0:ts=4
 

@@ -6,7 +6,6 @@
 import random, pickle, sys
 
 from config import Config
-from modules.drive.textures import textures
 
 class Command_Handler():
     """Handler for all commands
@@ -71,16 +70,16 @@ class Command_Handler():
         """
         if self.minimap:
             #textures['world_map'] = generate_map_texture(self.game.world.map_tree, 1)
-            self.game.process.screen_images.add_image('world_map', 
-                                            textures['world_map'], 
+            self.game.gui.screen_images.add_image('world_map', 
+                                            self.game.world.get_map3d_tex(256), 
                                             scale = 0.8, pos = (0, 0, 0.1))
-            #self.game.process.screen_images['world_map'].show()
+            #self.game.gui.screen_images['world_map'].show()
 
     def cmd_hide_map(self, params = []):
         """
         docstring for cmd_hide_map
         """
-        self.game.process.screen_images.del_image('world_map')
+        self.game.gui.screen_images.del_image('world_map')
 
     def cmd_save(self, params = []):
         """
@@ -159,7 +158,11 @@ class Command_Handler():
         if len(params) == 0:
             x = random.randint(0, self.game.world.chunks_map.size_world)
             y = random.randint(0, self.game.world.chunks_map.size_world)
-            z = random.randint(-self.game.world.chunks_map.size_region, self.game.world.chunks_map.size_region)
+            z = self.game.world.chunks_map.camZ
+        elif len(params) == 1:
+            z = params[0]
+            x = self.game.world.chunks_map.charX
+            y = self.game.world.chunks_map.charY
         else:
             try:
                 x = params[0]
@@ -176,8 +179,8 @@ class Command_Handler():
         self.game.world.chunks_map.set_char_coord(coords)
 
     def cmd_show_tex(self, params = []):
-        self.game.process.screen_images.add_image('world_blocks',
-                                            textures['world_blocks'],
+        self.game.gui.screen_images.add_image('world_blocks',
+                                            self.game.textures['world_blocks'],
                                             scale = 0.8, pos = (0, 0, 0.1))
 
     run_cmd = { 

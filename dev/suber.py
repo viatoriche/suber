@@ -6,7 +6,9 @@ License: GPL (see http://www.gnu.org/licenses/gpl.txt)
 
 """
 
-from modules.drive.init import game
+from modules.main import Main
 
-game.start()
+main = Main()
+main.start()
+
 # vi: ts=4 sw=4

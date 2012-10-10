@@ -174,23 +174,24 @@ class Map_generator_2D():
         Step iters     | alias coasts
     """
     params = {}
-    def __init__(self, iters = 5, min_land = 35, max_land = 55,
-                                    min_continents = 4, max_continents = 6):
+    def __init__(self, config, seed):
         """
         Initialization of generator
         """
+        self.config = config
         # --> 64
         self.size = 8
+        self.seed = seed
         # create dict of MapDict2D
         self.maps = Maps2D()
         # add zero map dict to maps
         self.maps[0] = MapDict2D(self.size, 0)
         self.mode = 2
-        self.iters = iters
-        self.min_land = min_land
-        self.max_land = max_land
-        self.min_continents = min_continents
-        self.max_continents = max_continents
+        self.iters = config.iters
+        self.min_land = config.min_land
+        self.max_land = config.max_land
+        self.min_continents = config.min_continents
+        self.max_continents = config.max_continents
 
     def smooth_coasts(self, source_coord, new_coord, iteration, type_land):
         """
@@ -275,6 +276,7 @@ class Map_generator_2D():
             (iter, descripton)
         """
         # generate zero level map
+        random.seed(self.seed)
         self.generate_zero()
         # start the iterations of increase and smoothing map
         yield 0, 'zero map created'
@@ -407,10 +409,12 @@ class Map_generator_2D():
 
 # Testing ^--^
 if __name__ == '__main__':
+    from config import Config
+
+    conf = Config()
     iters = 5
-    seed = random.randint(1,65535)
-    random.seed(seed)
-    global_map_gen = Map_generator_2D(iters = iters)
+    seed = 23456
+    global_map_gen = Map_generator_2D(conf, seed)
     for i, desc in global_map_gen.start():
         print i, desc
     for i in xrange(global_map_gen.iters+1):

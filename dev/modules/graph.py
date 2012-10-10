@@ -11,13 +11,11 @@ from direct.gui.DirectGui import DirectButton, DirectEntry
 from direct.gui.OnscreenImage import OnscreenImage
 from direct.gui.OnscreenText import OnscreenText
 from direct.showbase.ShowBase import ShowBase
-from modules.drive.camera import CamFree
-from modules.drive.support import generate_hash
-from modules.drive.textures import textures
+from modules.camera import CamFree
+from modules.support import generate_hash
 from panda3d.core import TextNode, LODNode, NodePath
 from pandac.PandaModules import TransparencyAttrib
 from pandac.PandaModules import loadPrcFileData
-from modules.drive.world import World
 
 loadPrcFileData("", "window-title {0}".format(Config().name_game))
 loadPrcFileData("editor-startup", "show-frame-rate-meter #t")
@@ -92,11 +90,8 @@ class DirectEntries(dict):
 
         return self[name]
 
-class PandaApp(ShowBase):
-    def __init__(self):
-        ShowBase.__init__(self)
 
-class GUI():
+class GUI(ShowBase):
     """
     GUI --- panda3d
     """
@@ -113,18 +108,15 @@ class GUI():
             screem_buttons - all buttons
             entries = text edits
         """
+        ShowBase.__init__(self)
 
         self.game = game
-        self.app = PandaApp()
 
         self.screen_images = OnscreenImages()
         self.screen_texts = OnscreenTexts()
         self.buttons = DirectButtons()
         self.entries = DirectEntries()
 
-        textures['sight'] = loader.loadTexture('games/{0}/res/textures/sight.png'.format(self.config.game))
-        #self.game.world = World(self, self.game)
-        #self.app.camera.setPos(0, 0, 200)
 
 
     def write(self, text):
@@ -139,10 +131,8 @@ class GUI():
         """
         # start plugin game
         self.camFree = CamFree(self.game)
-        self.app.camera.setHpr(0, -90, 0)
-
-        self.game.child_game.start()
-        self.app.run()
+        self.camera.setHpr(0, -90, 0)
+        self.run()
 
 # vi: ft=python:tw=0:ts=4
 

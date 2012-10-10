@@ -1,17 +1,22 @@
 # -*- coding: utf-8 -*-
 import math
+import time
 
 from config import Config
 from direct.showbase import DirectObject
+from panda3d.core import TPLow
 from pandac.PandaModules import Vec3, WindowProperties
 
 class CamFree(DirectObject.DirectObject):
     config = Config()
-    def __init__(self, game):
+    def __init__(self, game, root_node = None):
         base.disableMouse()
 
         self.game = game
-        self.root_node = self.game.world.root_node
+        if root_node == None:
+            self.root_node = render
+        else:
+            self.root_node = root_node
 
         self.keyMap = {"FORWARD":0, "BACK":0, "RIGHT":0,
                        "LEFT":0, "Mouse3":0, "LSHIFT":0,
@@ -42,7 +47,10 @@ class CamFree(DirectObject.DirectObject):
 
         self.props = WindowProperties()
 
-        taskMgr.add(self.CamControl, 'CamControl', priority = 255)
+        taskMgr.setupTaskChain('camera_chain', numThreads = 1, tickClock = False,
+                       threadPriority = TPLow, frameBudget = 1)
+
+        taskMgr.add(self.CamControl, 'CamControl', taskChain = 'camera_chain')
 
     def setKey(self, key, value):
         self.keyMap[key] = value
@@ -57,9 +65,9 @@ class CamFree(DirectObject.DirectObject):
                 base.win.requestProperties(self.props)
                 self.CursorOffOn = 'Off'
 
-            dirFB = base.camera.getMat().getRow3(1)
-            dirTT = base.camera.getMat().getRow3(2)
-            dirRL = base.camera.getMat().getRow3(0)
+            dirFB = base.camera.getMat(self.root_node).getRow3(1)
+            dirTT = base.camera.getMat(self.root_node).getRow3(2)
+            dirRL = base.camera.getMat(self.root_node).getRow3(0)
 
             self.SpeedCam = abs(camera.getZ(self.root_node)*0.01)
             if self.SpeedCam < 1:
@@ -68,42 +76,42 @@ class CamFree(DirectObject.DirectObject):
             md = base.win.getPointer(0)
             x = md.getX()
             y = md.getY()
-            z = camera.getZ()
+            z = camera.getZ(self.root_node)
 
             Speed = self.SpeedCam
 
             if (self.keyMap["LSHIFT"]!=0):
                 Speed = self.SpeedCam*self.SpeedMult
             if (self.keyMap["FORWARD"]!=0):
-                camera.setPos(camera.getPos()+dirFB*Speed)
+                camera.setPos(self.root_node, camera.getPos(self.root_node)+dirFB*Speed)
                 #self.root_node.setPos(self.root_node.getPos()-dirFB*Speed)
                 #camera.setZ(z)
             if (self.keyMap["BACK"]!=0):
-                camera.setPos(camera.getPos()-dirFB*Speed)
+                camera.setPos(self.root_node, camera.getPos(self.root_node)-dirFB*Speed)
                 #self.root_node.setPos(self.root_node.getPos()+dirFB*Speed)
                 #camera.setZ(z)
             if (self.keyMap["RIGHT"]!=0):
-                camera.setPos(camera.getPos()+dirRL*Speed)
+                camera.setPos(self.root_node, camera.getPos(self.root_node)+dirRL*Speed)
                 #self.root_node.setPos(self.root_node.getPos()-dirRL*Speed)
                 #camera.setZ(z)
             if (self.keyMap["LEFT"]!=0):
-                camera.setPos(camera.getPos()-dirRL*Speed)
+                camera.setPos(self.root_node, camera.getPos(self.root_node)-dirRL*Speed)
                 #self.root_node.setPos(self.root_node.getPos()+dirRL*Speed)
                 #camera.setZ(z)
             if (self.keyMap["UPWARDS"]!=0):
-                camera.setZ(camera.getZ()+Speed)
+                camera.setZ(self.root_node, camera.getZ(self.root_node)+Speed)
                 #self.root_node.setZ(self.root_node.getZ()-Speed)
             if (self.keyMap["DOWNWARDS"]!=0):
-                camera.setZ(camera.getZ()-Speed)
+                camera.setZ(self.root_node, camera.getZ(self.root_node)-Speed)
                 #self.root_node.setZ(self.root_node.getZ()+Speed)
 
             if base.win.movePointer(0, base.win.getXSize()/2, base.win.getYSize()/2):
-                camera.setH(camera.getH() -  (x - base.win.getXSize()/2)*self.SpeedRot)
-                camera.setP(camera.getP() - (y - base.win.getYSize()/2)*self.SpeedRot)
-                if (camera.getP()<=-90.1):
-                    camera.setP(-90)
-                if (camera.getP()>=90.1):
-                    camera.setP(90)
+                camera.setH(self.root_node, camera.getH(self.root_node) -  (x - base.win.getXSize()/2)*self.SpeedRot)
+                camera.setP(self.root_node, camera.getP(self.root_node) - (y - base.win.getYSize()/2)*self.SpeedRot)
+                if (camera.getP(self.root_node)<=-90.1):
+                    camera.setP(self.root_node, -90)
+                if (camera.getP(self.root_node)>=90.1):
+                    camera.setP(self.root_node, 90)
 
             #print self.level
             #self.showterrain()
@@ -113,4 +121,5 @@ class CamFree(DirectObject.DirectObject):
             self.props.setCursorHidden(False)
             base.win.requestProperties(self.props)
 
+        time.sleep(0.1)
         return task.cont
