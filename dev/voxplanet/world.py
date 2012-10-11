@@ -216,7 +216,7 @@ class ChunksCollection():
                     self.chunks_models[chunk_model].show()
 
 
-        self.world.root_node.flattenLight()
+        #self.world.root_node.flattenLight()
 
 class ChunksMap():
     def __init__(self, world, size, level):

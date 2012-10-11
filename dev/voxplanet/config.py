@@ -13,8 +13,8 @@ class Config():
     root_level = 0
 
     # detalized /2
-    chunk_len = 16
-    factor_far = 25
+    chunk_len = 4
+    factor_far = 15
     min_far = 1000
 
     land_mount_level = 1, 200
