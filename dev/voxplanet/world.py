@@ -240,6 +240,8 @@ class ChunksCollection():
                     if self.tree_models.has_key(chunk):
                         for tree in self.tree_models[chunk]:
                             tree.hide()
+    
+        #self.world.root_node.flattenLight()
 
 class ChunksMap():
     def __init__(self, world, size, level):
