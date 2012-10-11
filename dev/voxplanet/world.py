@@ -88,14 +88,14 @@ class QuadroTreeNode:
     def repaint(self):
         if self.len_chunk > self.chunks_map.chunk_len:
             divide_dist = self.len_chunk
-            show_dist = self.chunks_map.far
+            #show_dist = self.chunks_map.far
             #print 'Center and char: ', self.center, self.chunks_map.charX, self.chunks_map.charY, self.chunks_map.camZ
             length_cam = VBase3.length(Vec3(self.center) - Vec3(self.chunks_map.charX,
                                                                 self.chunks_map.charY,
                                                                 self.chunks_map.camZ))
             if length_cam < divide_dist:
                 self.divide()
-            elif length_cam < show_dist:
+            else:
                 self.show()
         else:
             self.show()
@@ -171,76 +171,34 @@ class ChunksCollection():
     def show(self):
         # TODO: add delete cube event
 
-        for chunk_model in self.chunks_models:
-            length_cam = VBase3.length(Vec3(chunk_model[0]) - Vec3(self.chunks_map.charX,
-                                                                       self.chunks_map.charY,
-                                                                       self.chunks_map.camZ))
-            detach_dist = attach_dist = self.chunks_map.far
-            if not self.chunks[chunk_model]:
+        for chunk in self.chunks:
 
+            if self.chunks[chunk]:
+                length_cam = VBase3.length(Vec3(chunk[0]) - Vec3(self.chunks_map.charX,
+                                                                 self.chunks_map.charY,
+                                                                 self.chunks_map.camZ))
+                detach_dist = self.chunks_map.far
                 if length_cam > detach_dist:
-                    if self.chunks_models[chunk_model].hasParent():
-                        self.chunks_models[chunk_model].detachNode()
-                    if self.tree_models.has_key(chunk_model):
-                        for tree in self.tree_models[chunk_model]:
-                            tree.detachNode()
+                    self.chunks[chunk] = False
 
-                if not self.chunks_models[chunk_model].isHidden():
-                    self.chunks_models[chunk_model].hide()
-                    if self.tree_models.has_key(chunk_model):
-                        for tree in self.tree_models[chunk_model]:
-                            tree.hide()
-            else:
-                if not self.chunks_models[chunk_model].hasParent():
-                    self.chunks_models[chunk_model].reparentTo(self.world.root_node)
-                    if self.tree_models.has_key(chunk_model):
-                        for tree in self.tree_models[chunk_model]:
-                            tree.reparentTo(self.world.root_node)
+            if self.chunks[chunk]:
+                if not self.chunks_models.has_key(chunk):
+                    self.chunks_models[chunk] = ChunkModel(self.config, self.world.map3d,
+                                                           chunk[0][0], chunk[0][1], chunk[1],
+                                                           self.chunks_map.chunk_len,
+                                                           self.world.params.tex_uv_height,
+                                                           self.world.params.chunks_tex
+                                                           )
 
-                if self.chunks_models[chunk_model].isHidden():
-                    self.chunks_models[chunk_model].show()
-                    if self.tree_models.has_key(chunk_model):
-                        for tree in self.tree_models[chunk_model]:
-                            tree.show()
-
+        for chunk_model in self.chunks_models:
+            if self.chunks[chunk_model]:
                 self.chunks_models[chunk_model].setX(self.chunks_map.DX)
                 self.chunks_models[chunk_model].setY(self.chunks_map.DY)
+                self.chunks_models[chunk_model].reparentTo(self.world.root_node)
+            else:
+                self.chunks_models[chunk_model].detachNode()
 
-        for chunk in self.chunks:
-            if not self.chunks_models.has_key(chunk):
-                # size of chunk
-                self.chunks_models[chunk] = ChunkModel(self.config, self.world.map3d,
-                                                       chunk[0][0], chunk[0][1], chunk[1],
-                                                       self.chunks_map.chunk_len,
-                                                       self.world.params.tex_uv_height,
-                                                       self.world.params.chunks_tex
-                                                       )
-                if chunk[1] <= 256:
-                    count = chunk[1] / 8
-                    chunk_trees = []
-                    for i in xrange(count):
-                        tree = NodePath('tree')
-                        self.world.trees[random.randint(0, self.config.tree_models-1)].copyTo(tree)
-                        x = chunk[0][0] + random.randint(-chunk[1]/2, chunk[1]/2)
-                        y = chunk[0][1] + random.randint(-chunk[1]/2, chunk[1]/2)
-                        z = self.world.map3d[x, y]
-                        tree.setPos(self.world.root_node, (x - self.chunks_map.DX, y - self.chunks_map.DY, z))
-                        tree.reparentTo(self.world.root_node)
-                        chunk_trees.append(tree)
-                    self.tree_models[chunk] = chunk_trees
-                self.chunks_models[chunk].reparentTo(self.world.root_node)
-                self.chunks_models[chunk].setX(self.chunks_map.DX)
-                self.chunks_models[chunk].setY(self.chunks_map.DY)
 
-                #print 'New coords: X: ', chunk[0][0], ' -> ', self.chunks_models[chunk].getX(),\
-                                  #'Y: ', chunk[0][1], ' -> ', self.chunks_models[chunk].getY(), ' len: ', chunk[1]
-
-                if not self.chunks[chunk]:
-                    self.chunks_models[chunk].hide()
-                    if self.tree_models.has_key(chunk):
-                        for tree in self.tree_models[chunk]:
-                            tree.hide()
-    
         #self.world.root_node.flattenLight()
 
 class ChunksMap():

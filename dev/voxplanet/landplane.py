@@ -123,6 +123,10 @@ class ChunkModel(NodePath):
                 cube = []
 
                 sq_dy = sq_y + 1
+                #sq_x = x
+                #sq_y = y
+                #sq_dx = dx
+                #sq_dy = dy
 
                 heights = []
                 heights.append(self.Z[x, y])
@@ -214,13 +218,16 @@ class ChunkModel(NodePath):
         ts = TextureStage('ts')
         self.setTexture(ts, self.tex)
         self.setScale(self.size_voxel, self.size_voxel, 1)
+        self.flattenStrong()
+        #self.setX(self.DX)
+        #self.setY(self.DY)
 
     def setX(self, DX):
         """Set to new X
 
         center X - self.size/2 - DX
         """
-        x = self.X - self.size2 - DX
+        x = self.start_x - DX
         NodePath.setX(self, x)
 
     def setY(self, DY):
@@ -228,7 +235,7 @@ class ChunkModel(NodePath):
 
         center Y - self.size/2 - DY
         """
-        y = self.Y - self.size2 - DY
+        y = self.start_y - DY
         NodePath.setY(self, y)
 
 class LandNode():

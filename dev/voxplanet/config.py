@@ -6,7 +6,7 @@ Global config
 
 class Config():
     #size_world = 16777216
-    size_mod = 24
+    size_mod = 20
     size_world = 2**size_mod
 
     size_region = size_world / 256
