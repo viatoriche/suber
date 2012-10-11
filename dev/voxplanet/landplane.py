@@ -213,7 +213,6 @@ class ChunkModel(NodePath):
         self.setTwoSided(True)
         ts = TextureStage('ts')
         self.setTexture(ts, self.tex)
-        #self.setTexScale(ts, 0.1, 0.1)
         self.setScale(self.size_voxel, self.size_voxel, 1)
 
     def setX(self, DX):

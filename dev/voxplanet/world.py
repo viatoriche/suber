@@ -10,8 +10,8 @@ import time
 
 from panda3d.core import NodePath
 from panda3d.core import TPLow
-from panda3d.core import VBase3
-from panda3d.core import Vec3
+from panda3d.core import VBase2, VBase3
+from panda3d.core import Vec2, Vec3
 from pandac.PandaModules import Texture, TextureStage
 from pandac.PandaModules import TransparencyAttrib, Texture, TextureStage
 from voxplanet.landplane import LandNode, ChunkModel, TreeModel
@@ -88,14 +88,12 @@ class QuadroTreeNode:
     def repaint(self):
         if self.len_chunk > self.chunks_map.chunk_len:
             divide_dist = self.len_chunk
-            show_dist = self.chunks_map.far
-            #print 'Center and char: ', self.center, self.chunks_map.charX, self.chunks_map.charY, self.chunks_map.camZ
             length_cam = VBase3.length(Vec3(self.center) - Vec3(self.chunks_map.charX,
                                                                 self.chunks_map.charY,
                                                                 self.chunks_map.camZ))
             if length_cam < divide_dist:
                 self.divide()
-            elif length_cam < show_dist:
+            else:
                 self.show()
         else:
             self.show()
@@ -158,6 +156,8 @@ class ChunksCollection():
         self.root = QuadroTreeNode(self, self.size_world, center = self.center)
         self.chunks_models = {}
         self.tree_models = {}
+        self.far = 0
+        base.camLens.setFar(size_world)
 
         self.generate()
         self.show()
@@ -171,75 +171,49 @@ class ChunksCollection():
     def show(self):
         # TODO: add delete cube event
 
+        #sizes = []
+        #for chunk in self.chunks:
+            #if self.chunks[chunk]:
+                #sizes.append(chunk[1])
+
+        self.far = self.chunks_map.camZ * self.config.factor_far
+
+        if self.far < self.config.min_far:
+            self.far = self.config.min_far
+
+        for chunk in self.chunks:
+            if self.chunks[chunk]:
+                length_cam = VBase2.length(Vec2(chunk[0][0], chunk[0][1]) - Vec2(self.chunks_map.charX,
+                                                                       self.chunks_map.charY))
+                if length_cam > self.far:
+                    self.chunks[chunk] = False
+
+        for chunk in self.chunks:
+            if self.chunks[chunk]:
+                if not self.chunks_models.has_key(chunk):
+                    self.chunks_models[chunk] = ChunkModel(self.config, self.world.map3d,
+                                                           chunk[0][0], chunk[0][1], chunk[1],
+                                                           self.chunks_map.chunk_len,
+                                                           self.world.params.tex_uv_height,
+                                                           self.world.params.chunks_tex
+                                                           )
+                    self.chunks_models[chunk].setX(self.chunks_map.DX)
+                    self.chunks_models[chunk].setY(self.chunks_map.DY)
+
         for chunk_model in self.chunks_models:
-            length_cam = VBase3.length(Vec3(chunk_model[0]) - Vec3(self.chunks_map.charX,
-                                                                       self.chunks_map.charY,
-                                                                       self.chunks_map.camZ))
-            detach_dist = attach_dist = self.chunks_map.far
             if not self.chunks[chunk_model]:
 
-                if length_cam > detach_dist:
-                    if self.chunks_models[chunk_model].hasParent():
-                        self.chunks_models[chunk_model].detachNode()
-                    if self.tree_models.has_key(chunk_model):
-                        for tree in self.tree_models[chunk_model]:
-                            tree.detachNode()
+                if self.chunks_models[chunk_model].hasParent():
+                    self.chunks_models[chunk_model].detachNode()
 
-                if not self.chunks_models[chunk_model].isHidden():
-                    self.chunks_models[chunk_model].hide()
-                    if self.tree_models.has_key(chunk_model):
-                        for tree in self.tree_models[chunk_model]:
-                            tree.hide()
             else:
                 if not self.chunks_models[chunk_model].hasParent():
                     self.chunks_models[chunk_model].reparentTo(self.world.root_node)
-                    if self.tree_models.has_key(chunk_model):
-                        for tree in self.tree_models[chunk_model]:
-                            tree.reparentTo(self.world.root_node)
 
-                if self.chunks_models[chunk_model].isHidden():
-                    self.chunks_models[chunk_model].show()
-                    if self.tree_models.has_key(chunk_model):
-                        for tree in self.tree_models[chunk_model]:
-                            tree.show()
+                    self.chunks_models[chunk_model].setX(self.chunks_map.DX)
+                    self.chunks_models[chunk_model].setY(self.chunks_map.DY)
 
-                self.chunks_models[chunk_model].setX(self.chunks_map.DX)
-                self.chunks_models[chunk_model].setY(self.chunks_map.DY)
-
-        for chunk in self.chunks:
-            if not self.chunks_models.has_key(chunk):
-                # size of chunk
-                self.chunks_models[chunk] = ChunkModel(self.config, self.world.map3d,
-                                                       chunk[0][0], chunk[0][1], chunk[1],
-                                                       self.chunks_map.chunk_len,
-                                                       self.world.params.tex_uv_height,
-                                                       self.world.params.chunks_tex
-                                                       )
-                if chunk[1] <= 256:
-                    count = chunk[1] / 8
-                    chunk_trees = []
-                    for i in xrange(count):
-                        tree = NodePath('tree')
-                        self.world.trees[random.randint(0, self.config.tree_models-1)].copyTo(tree)
-                        x = chunk[0][0] + random.randint(-chunk[1]/2, chunk[1]/2)
-                        y = chunk[0][1] + random.randint(-chunk[1]/2, chunk[1]/2)
-                        z = self.world.map3d[x, y]
-                        tree.setPos(self.world.root_node, (x - self.chunks_map.DX, y - self.chunks_map.DY, z))
-                        tree.reparentTo(self.world.root_node)
-                        chunk_trees.append(tree)
-                    self.tree_models[chunk] = chunk_trees
-                self.chunks_models[chunk].reparentTo(self.world.root_node)
-                self.chunks_models[chunk].setX(self.chunks_map.DX)
-                self.chunks_models[chunk].setY(self.chunks_map.DY)
-
-                #print 'New coords: X: ', chunk[0][0], ' -> ', self.chunks_models[chunk].getX(),\
-                                  #'Y: ', chunk[0][1], ' -> ', self.chunks_models[chunk].getY(), ' len: ', chunk[1]
-
-                if not self.chunks[chunk]:
-                    self.chunks_models[chunk].hide()
-                    if self.tree_models.has_key(chunk):
-                        for tree in self.tree_models[chunk]:
-                            tree.hide()
+        self.world.root_node.flattenLight()
 
 class ChunksMap():
     def __init__(self, world, size, level):
@@ -270,16 +244,11 @@ class ChunksMap():
         d_charY = base.camera.getY(self.world.root_node) - self.camY
         self.camX, self.camY, self.camZ = base.camera.getPos(self.world.root_node)
 
-        self.far = self.camZ*self.config.factor_far
-
         self.charX += d_charX
         self.charY += d_charY
 
         self.land_z = int(self.world.map3d[int(self.charX), int(self.charY)])
 
-        if self.far < 1000:
-            self.far = 1000
-        base.camLens.setFar(self.far*2)
 
         self.test_coord()
 
@@ -318,8 +287,8 @@ class ChunksMap():
 
     def repaint(self):
         self.get_coords()
-        self.world.status('CamPos: X: {0}, Y: {1}, Z: {2}, '\
-                          'land height: {3} | Char: X: {4}, Y: {5}'.format(int(self.camX), int(self.camY), int(self.camZ),
+        self.world.status('Z: {0}, '\
+                          'land height: {1} | Char: X: {2}, Y: {3}'.format(int(self.camZ),
                            self.land_z, int(self.charX), int(self.charY)))
 
         for chunks_clt in self.chunks_clts.values():
