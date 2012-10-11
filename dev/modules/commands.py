@@ -139,7 +139,7 @@ class Command_Handler():
                     chf += 1
 
             print 'Chunks models:', len(chct.chunks_models),\
-                   hm, ' * attached:',am, ' / detached:', dm
+                   ' * attached:',am, ' / detached:', dm
             print 'Chunks (state dict):', len(chct.chunks), ' * active:', cht, ' / passive:', chf
             print 'DX, DY: ', self.game.world.chunks_map.DX, self.game.world.chunks_map.DY
             print 'CharX, CharY: ', self.game.world.chunks_map.charX, self.game.world.chunks_map.charY

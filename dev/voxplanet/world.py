@@ -176,15 +176,16 @@ class ChunksCollection():
             #if self.chunks[chunk]:
                 #sizes.append(chunk[1])
 
-        self.far = self.chunks_map.camZ * self.config.factor_far
+        self.far = abs(self.chunks_map.camZ) * self.config.factor_far
 
         if self.far < self.config.min_far:
             self.far = self.config.min_far
 
         for chunk in self.chunks:
             if self.chunks[chunk]:
-                length_cam = VBase2.length(Vec2(chunk[0][0], chunk[0][1]) - Vec2(self.chunks_map.charX,
-                                                                       self.chunks_map.charY))
+                length_cam = VBase3.length(Vec3(chunk[0]) - Vec3(self.chunks_map.charX,
+                                                                 self.chunks_map.charY,
+                                                                 self.chunks_map.camZ))
                 if length_cam > self.far:
                     self.chunks[chunk] = False
 
@@ -205,13 +206,15 @@ class ChunksCollection():
 
                 if self.chunks_models[chunk_model].hasParent():
                     self.chunks_models[chunk_model].detachNode()
+                if not self.chunks_models[chunk_model].isHidden():
+                    self.chunks_models[chunk_model].hide()
 
             else:
                 if not self.chunks_models[chunk_model].hasParent():
                     self.chunks_models[chunk_model].reparentTo(self.world.root_node)
+                if self.chunks_models[chunk_model].isHidden():
+                    self.chunks_models[chunk_model].show()
 
-                    self.chunks_models[chunk_model].setX(self.chunks_map.DX)
-                    self.chunks_models[chunk_model].setY(self.chunks_map.DY)
 
         self.world.root_node.flattenLight()
 
