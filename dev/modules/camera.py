@@ -8,6 +8,11 @@ from panda3d.core import TPLow
 from pandac.PandaModules import Vec3, WindowProperties
 
 class CamFree(DirectObject.DirectObject):
+    """Free fly camera
+
+    game - modules.main.Main()
+    root_node - root render for game
+    """
     config = Config()
     def __init__(self, game, root_node = None):
         base.disableMouse()
@@ -61,6 +66,8 @@ class CamFree(DirectObject.DirectObject):
         self.SpeedCam *= sd
 
     def CamControl(self, task):
+        """Task for controlling of camera
+        """
         if (self.keyMap["Mouse3"] != 0):
             if (self.CursorOffOn == 'On'):
                 self.props.setCursorHidden(True)

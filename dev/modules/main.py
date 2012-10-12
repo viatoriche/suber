@@ -1,8 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+"""Main module - run the game
+
+Author:  Viator <viator@via-net.org>
+License: GPL (see http://www.gnu.org/licenses/gpl.txt)
 """
-Main module - run the game
-"""
+
 import os
 import signal
 from pandac.PandaModules import TransparencyAttrib, PointLight, Fog
@@ -24,6 +27,8 @@ loadPrcFileData("pstats-tasks", "1")
 PStatClient.connect()
 
 class Main():
+    """Main class for game
+    """
     def __init__(self):
         self.gui = GUI(self)
         self.cmd_handler = Command_Handler(self)
@@ -42,8 +47,7 @@ class Main():
         os._exit(0)
 
     def write(self, text):
-        """
-            write Text on screen
+        """Write Text on screen
         """
         self.gui.screen_texts['status'].setText(text)
 
