@@ -15,10 +15,6 @@ from modules.camera import CamFree
 from modules.support import generate_hash
 from panda3d.core import TextNode, LODNode, NodePath
 from pandac.PandaModules import TransparencyAttrib
-from pandac.PandaModules import loadPrcFileData
-
-loadPrcFileData("", "window-title {0}".format(Config().name_game))
-loadPrcFileData("editor-startup", "show-frame-rate-meter #t")
 
 class OnscreenImages(dict):
     """

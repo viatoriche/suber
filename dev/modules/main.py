@@ -12,6 +12,16 @@ from modules.graph import GUI
 from voxplanet.world import World
 from voxplanet.config import Config as VoxConfig
 from voxplanet.params import Params as VoxParams
+from pandac.PandaModules import loadPrcFileData, PStatClient
+from config import Config
+
+loadPrcFileData("", "window-title {0}".format(Config().name_game))
+loadPrcFileData("editor-startup", "show-frame-rate-meter #t")
+loadPrcFileData("want-pstats", "1")
+loadPrcFileData("task-timer-verbose", "1")
+loadPrcFileData("pstats-tasks", "1")
+
+PStatClient.connect()
 
 class Main():
     def __init__(self):

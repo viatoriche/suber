@@ -47,10 +47,12 @@ class CamFree(DirectObject.DirectObject):
 
         self.props = WindowProperties()
 
-        taskMgr.setupTaskChain('camera_chain', numThreads = 1, tickClock = False,
-                       threadPriority = TPLow, frameBudget = 1)
+        #taskMgr.setupTaskChain('camera_chain', numThreads = 1, tickClock = False,
+                       #threadPriority = TPLow, frameBudget = 1)
 
-        taskMgr.add(self.CamControl, 'CamControl', taskChain = 'camera_chain')
+        #taskMgr.add(self.CamControl, 'CamControl', taskChain = 'camera_chain')
+        #taskMgr.add(self.CamControl, 'CamControl')
+        taskMgr.doMethodLater(0.1, self.CamControl, 'CamControl')
 
     def setKey(self, key, value):
         self.keyMap[key] = value
@@ -69,7 +71,7 @@ class CamFree(DirectObject.DirectObject):
             dirTT = base.camera.getMat(self.root_node).getRow3(2)
             dirRL = base.camera.getMat(self.root_node).getRow3(0)
 
-            self.SpeedCam = abs(camera.getZ(self.root_node)*0.01)
+            self.SpeedCam = abs(camera.getZ(self.root_node)*0.1)
             if self.SpeedCam < 1:
                 self.SpeedCam = 1
 
@@ -121,5 +123,5 @@ class CamFree(DirectObject.DirectObject):
             self.props.setCursorHidden(False)
             base.win.requestProperties(self.props)
 
-        time.sleep(0.1)
-        return task.cont
+        #time.sleep(0.1)
+        return task.again

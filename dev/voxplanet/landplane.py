@@ -14,7 +14,7 @@ from pandac.PandaModules import NodePath
 from pandac.PandaModules import TextureStage
 from pandac.PandaModules import TransparencyAttrib
 from voxplanet.support import makeSquare_net, drawBody, drawLeaf, treeform
-
+from voxplanet.support import pstat
 
 class TreeModel(NodePath):
 
@@ -78,6 +78,7 @@ class ChunkModel(NodePath):
         tex_uv_height - function return of uv coordinates for height voxel
         tex - texture map
         """
+
         NodePath.__init__(self, 'ChunkModel_{0}-{1}_{2}'.format(X, Y, size))
         self.X = X
         self.Y = Y
@@ -218,7 +219,9 @@ class ChunkModel(NodePath):
         ts = TextureStage('ts')
         self.setTexture(ts, self.tex)
         self.setScale(self.size_voxel, self.size_voxel, 1)
+        #self.flattenMedium()
         self.flattenStrong()
+        #self.flattenLight()
         #self.setX(self.DX)
         #self.setY(self.DY)
 

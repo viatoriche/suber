@@ -6,7 +6,7 @@ Global config
 
 class Config():
     #size_world = 16777216
-    size_mod = 20
+    size_mod = 24
     size_world = 2**size_mod
 
     size_region = size_world / 256
@@ -14,8 +14,9 @@ class Config():
 
     # detalized /2
     chunk_len = 4
-    factor_far = 15
-    min_far = 1000
+    count_chunks = 2
+    factor_far = 16
+    min_far = 2000
 
     land_mount_level = 1, 200
     low_mount_level = 201, 1000

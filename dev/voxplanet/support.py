@@ -10,16 +10,63 @@ from panda3d.core import InternalName
 from panda3d.core import Geom, GeomNode, GeomTrifans, GeomTristrips
 from panda3d.core import GeomTriangles, GeomVertexWriter
 from panda3d.core import GeomVertexArrayFormat, GeomVertexFormat
-from panda3d.core import GeomVertexFormat
 from panda3d.core import GeomVertexReader
 from panda3d.core import GeomVertexRewriter, GeomVertexData
 from panda3d.core import TransformState,CullFaceAttrib
 from panda3d.core import Vec3,Vec4,Mat4
 
-
 #this is a helper function you can use to make a circle in the x-y plane
 #i didnt end up needing it but this comes up fairly often so I thought
 #I should keep this in the code. Feel free to use.
+
+from panda3d.core import PStatCollector
+import cProfile
+
+class BCol():
+    custom_collectors = {}
+
+b_collector = BCol()
+
+def profile_decorator(func):
+    cprofile = cProfile.Profile()
+    def do_profile(*args, **kargs):
+        cprofile.create_stats()
+        returned = cprofile.runcall(func, *args, **kargs)
+        cprofile.print_stats(sort = 1)
+        return returned
+    do_profile.__name__ = func.__name__
+    do_profile.__dict__ = func.__dict__
+    do_profile.__doc__ = func.__doc__
+    return do_profile
+
+def pstat(func):
+    collectorName = "Debug:%s" % func.__name__
+    if hasattr(b_collector, 'custom_collectors'):
+        if collectorName in b_collector.custom_collectors.keys():
+            pstat = b_collector.custom_collectors[collectorName]
+        else:
+            b_collector.custom_collectors[collectorName] = PStatCollector(collectorName)
+            pstat = b_collector.custom_collectors[collectorName]
+    else:
+        b_collector.custom_collectors = {}
+        b_collector.custom_collectors[collectorName] = PStatCollector(collectorName)
+        pstat = b_collector.custom_collectors[collectorName]
+    b_collector.custom_collectors = {}
+    b_collector.custom_collectors[collectorName] = PStatCollector(collectorName)
+    pstat = b_collector.custom_collectors[collectorName]
+
+    def doPstat(*args, **kargs):
+        pstat.start()
+        #cprofile.create_stats()
+        returned = func(*args, **kargs)
+        #cprofile.print_stats()
+        #returned = func(*args, **kargs)
+        pstat.stop()
+        return returned
+    doPstat.__name__ = func.__name__
+    doPstat.__dict__ = func.__dict__
+    doPstat.__doc__ = func.__doc__
+    return doPstat
 
 formatArray = GeomVertexArrayFormat()
 formatArray.addColumn(InternalName.make("drawFlag"), 1, Geom.NTUint8, Geom.COther)

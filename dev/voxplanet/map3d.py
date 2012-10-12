@@ -422,7 +422,7 @@ class TileMap(dict):
                 self[coord] = height
 
         print 'Add heights start'
-        #add_heights()
+        add_heights()
         print 'Diamond-Square start'
         for x in xrange(1):
             square_diamond(

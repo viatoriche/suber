@@ -10,12 +10,13 @@ import time
 
 from panda3d.core import NodePath
 from panda3d.core import TPLow
-from panda3d.core import VBase3
-from panda3d.core import Vec3
+from panda3d.core import VBase3, VBase2
+from panda3d.core import Vec3, Vec2
 from pandac.PandaModules import Texture, TextureStage
 from pandac.PandaModules import TransparencyAttrib, Texture, TextureStage
 from voxplanet.landplane import LandNode, ChunkModel, TreeModel
 from voxplanet.map2d import Map_generator_2D
+from voxplanet.support import profile_decorator
 from voxplanet.map3d import Map3d
 
 #sys.setrecursionlimit(65535)
@@ -76,6 +77,7 @@ class QuadroTreeNode:
         self.level = level
         self.chunks_clt = chunks_clt
         self.world = chunks_clt.world
+        self.config = chunks_clt.config
         self.chunks_map = chunks_clt.chunks_map
         self.len_chunk = len_chunk
         self.childs = {}
@@ -87,7 +89,7 @@ class QuadroTreeNode:
 
     def repaint(self):
         if self.len_chunk > self.chunks_map.chunk_len:
-            divide_dist = self.len_chunk
+            divide_dist = self.len_chunk * self.config.count_chunks
             #show_dist = self.chunks_map.far
             #print 'Center and char: ', self.center, self.chunks_map.charX, self.chunks_map.charY, self.chunks_map.camZ
             length_cam = VBase3.length(Vec3(self.center) - Vec3(self.chunks_map.charX,
@@ -171,25 +173,34 @@ class ChunksCollection():
     def show(self):
         # TODO: add delete cube event
 
+        sizes = []
+        for chunk in self.chunks:
+            if self.chunks[chunk]:
+                sizes.append(chunk[1])
+
+        self.far = min(sizes) * self.config.factor_far
+
+        t = time.time()
         for chunk in self.chunks:
 
             if self.chunks[chunk]:
-                length_cam = VBase3.length(Vec3(chunk[0]) - Vec3(self.chunks_map.charX,
-                                                                 self.chunks_map.charY,
-                                                                 self.chunks_map.camZ))
-                detach_dist = self.chunks_map.far
+                length_cam = VBase2.length(Vec2(chunk[0][0], chunk[0][1]) - Vec2(self.chunks_map.charX,
+                                                                 self.chunks_map.charY
+                                                                 ))
+                detach_dist = self.far
                 if length_cam > detach_dist:
                     self.chunks[chunk] = False
-
-            if self.chunks[chunk]:
-                if not self.chunks_models.has_key(chunk):
-                    self.chunks_models[chunk] = ChunkModel(self.config, self.world.map3d,
+                else:
+                    if not self.chunks_models.has_key(chunk):
+                        self.chunks_models[chunk] = ChunkModel(self.config, self.world.map3d,
                                                            chunk[0][0], chunk[0][1], chunk[1],
                                                            self.chunks_map.chunk_len,
                                                            self.world.params.tex_uv_height,
                                                            self.world.params.chunks_tex
                                                            )
 
+        print 'Create chunks: ', time.time() - t
+        t = time.time()
         for chunk_model in self.chunks_models:
             if self.chunks[chunk_model]:
                 self.chunks_models[chunk_model].setX(self.chunks_map.DX)
@@ -197,6 +208,7 @@ class ChunksCollection():
                 self.chunks_models[chunk_model].reparentTo(self.world.root_node)
             else:
                 self.chunks_models[chunk_model].detachNode()
+        print 'Attach/Detach time: ', time.time() - t
 
 
         #self.world.root_node.flattenLight()
@@ -215,7 +227,7 @@ class ChunksMap():
         base.camera.setPos(0, 0, 10000)
         #base.camera.setPos(0, 0, 25000000)
         self.camPos = base.camera.getPos(self.world.root_node)
-        base.camLens.setFar(100000)
+        base.camLens.setFar(1000000000)
         self.charX = 0
         self.charY = 0
         self.camX = 0
@@ -230,16 +242,16 @@ class ChunksMap():
         d_charY = base.camera.getY(self.world.root_node) - self.camY
         self.camX, self.camY, self.camZ = base.camera.getPos(self.world.root_node)
 
-        self.far = self.camZ*self.config.factor_far
+        #self.far = self.camZ*self.config.factor_far
 
         self.charX += d_charX
         self.charY += d_charY
 
         self.land_z = int(self.world.map3d[int(self.charX), int(self.charY)])
 
-        if self.far < 1000:
-            self.far = 1000
-        base.camLens.setFar(self.far*2)
+        #if self.far < 1000:
+            #self.far = 1000
+        #base.camLens.setFar(self.far*2)
 
         self.test_coord()
 
@@ -275,7 +287,7 @@ class ChunksMap():
 
         self.repaint()
 
-
+    @profile_decorator
     def repaint(self):
         self.get_coords()
         self.world.status('CamPos: X: {0}, Y: {1}, Z: {2}, '\
@@ -283,8 +295,12 @@ class ChunksMap():
                            self.land_z, int(self.charX), int(self.charY)))
 
         for chunks_clt in self.chunks_clts.values():
+            t = time.time()
             chunks_clt.generate()
+            print 'Generate chunks in quadro tree:', time.time() - t
+            t = time.time()
             chunks_clt.show()
+            print 'Show chunks:', time.time() - t
 
     def show(self):
         if self.camPos != base.camera.getPos(self.world.root_node):
@@ -307,11 +323,8 @@ class World():
         self.root_node.reparentTo(self.params.root_node)
         self.status = self.params.status
 
-        #taskMgr.setupTaskChain('world_chain_create', numThreads = 1, tickClock = False,
-                       #threadPriority = TPLow, frameBudget = 1)
-
         taskMgr.setupTaskChain('world_chain_show', numThreads = 1, tickClock = False,
-                       threadPriority = TPLow, frameBudget = 1)
+                       threadPriority = TPLow, frameBudget = -1)
 
         self.trees = []
 
@@ -324,6 +337,7 @@ class World():
     def new(self):
         """New world
         """
+
 
         for tree in self.trees:
             tree.removeNode()
@@ -360,14 +374,15 @@ class World():
         self.chunks_map = ChunksMap(self, 0, 1)
         self.chunks_map.set_char_coord((self.config.size_world/2, self.config.size_world/2, 10000))
         self.sky = Sky()
-        taskMgr.add(self.show, 'WorldShow', taskChain = 'world_chain_show')
+        taskMgr.doMethodLater(0.5, self.show, 'WorldShow', taskChain = 'world_chain_show')
+        #taskMgr.add(self.show, 'WorldShow', taskChain = 'world_chain_show')
 
     def show(self, task):
         """Task for showing of world
         """
         self.chunks_map.show()
-        time.sleep(0.2)
-        return task.cont
+        #time.sleep(1)
+        return task.again
 
 # vi: ft=python:tw=0:ts=4
 
