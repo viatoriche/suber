@@ -6,6 +6,7 @@
 import random, pickle, sys
 
 from config import Config
+from voxplanet.support import profile_decorator
 
 class Command_Handler():
     """Handler for all commands
@@ -35,6 +36,7 @@ class Command_Handler():
         """
         self.cmd_create_global_map([833650645])
 
+    @profile_decorator
     def cmd_create_global_map(self, params = []):
         """
         Generate global map template and show it

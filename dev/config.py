@@ -5,6 +5,7 @@ Global config
 """
 
 class Config():
+    #tex_suffix = ''
     tex_suffix = '64/'
     name_game = 'Suber'
 

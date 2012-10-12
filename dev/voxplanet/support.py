@@ -30,8 +30,9 @@ b_collector = BCol()
 def profile_decorator(func):
     cprofile = cProfile.Profile()
     def do_profile(*args, **kargs):
-        cprofile.create_stats()
+        cprofile.clear()
         returned = cprofile.runcall(func, *args, **kargs)
+        cprofile.create_stats()
         cprofile.print_stats(sort = 1)
         return returned
     do_profile.__name__ = func.__name__

@@ -118,7 +118,7 @@ class ChunkModel(NodePath):
                 dx = x + self.size_voxel
                 dy = y + self.size_voxel
                 z = self.Z[x, y]
-                dz = z - (self.size_voxel * 10)
+                dz = z - (self.size_voxel)
 
 
                 cube = []

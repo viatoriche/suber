@@ -69,7 +69,7 @@ class Main():
 
         plight = PointLight('plight')
         sun = self.gui.render.attachNewNode(plight)
-        sun.setPos(32768, 32768, 10000)
+        sun.setPos(32768, 32768, 100000)
         self.gui.render.setLight(sun)
 
         colour = (0.5, 0.8, 0.8)

@@ -189,8 +189,8 @@ class ChunksCollection():
                 length_cam = VBase2.length(Vec2(chunk[0][0], chunk[0][1]) - Vec2(self.chunks_map.charX,
                                                                  self.chunks_map.charY
                                                                  ))
-                detach_dist = self.far
-                if length_cam > detach_dist:
+                hide_dist = self.far
+                if length_cam > hide_dist:
                     self.chunks[chunk] = False
                 else:
                     if not self.chunks_models.has_key(chunk):
@@ -203,13 +203,15 @@ class ChunksCollection():
 
         print 'Create chunks: ', time.time() - t
         t = time.time()
-        for chunk_model in self.chunks_models:
-            if self.chunks[chunk_model]:
-                self.chunks_models[chunk_model].setX(self.chunks_map.DX)
-                self.chunks_models[chunk_model].setY(self.chunks_map.DY)
-                self.chunks_models[chunk_model].reparentTo(self.world.root_node)
+        for chunk in self.chunks_models:
+            if self.chunks[chunk]:
+                self.chunks_models[chunk].setX(self.chunks_map.DX)
+                self.chunks_models[chunk].setY(self.chunks_map.DY)
+                if self.chunks_models[chunk].getParent() != self.world.root_node:
+                    self.chunks_models[chunk].reparentTo(self.world.root_node)
             else:
-                self.chunks_models[chunk_model].detachNode()
+                if self.chunks_models[chunk].getParent() == self.world.root_node:
+                    self.chunks_models[chunk].detachNode()
         print 'Attach/Detach time: ', time.time() - t
 
 
@@ -225,9 +227,7 @@ class ChunksMap():
         self.size_world = self.config.size_world
         self.chunk_len = self.config.chunk_len
         self.chunks_clts = {}
-        #self.world.root_node.setPos(0, 0, -10000)
         base.camera.setPos(0, 0, 10000)
-        #base.camera.setPos(0, 0, 25000000)
         self.camPos = base.camera.getPos(self.world.root_node)
         self.charX = 0
         self.charY = 0
@@ -288,7 +288,7 @@ class ChunksMap():
 
         self.repaint()
 
-    @profile_decorator
+    #@profile_decorator
     def repaint(self):
         self.get_coords()
         self.world.status('CamPos: X: {0}, Y: {1}, Z: {2}, '\
@@ -381,8 +381,11 @@ class World():
     def show(self, task):
         """Task for showing of world
         """
+        t = time.time()
         self.chunks_map.show()
-        #time.sleep(1)
+        t = time.time() - t
+        if t > 1:
+            return task.cont
         return task.again
 
 # vi: ft=python:tw=0:ts=4

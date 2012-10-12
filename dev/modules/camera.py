@@ -18,8 +18,6 @@ class CamFree(DirectObject.DirectObject):
         else:
             self.root_node = root_node
 
-        #base.camLens.setNear(5)
-
         self.keyMap = {"FORWARD":0, "BACK":0, "RIGHT":0,
                        "LEFT":0, "Mouse3":0, "LSHIFT":0,
                        "UPWARDS":0, "DOWNWARDS":0}
@@ -43,7 +41,7 @@ class CamFree(DirectObject.DirectObject):
         self.accept("wheel_down", self.CamSpeed, [0.9])
 
         self.SpeedRot = 0.05
-        self.SpeedMult = 5
+        self.SpeedMult = 10
 
         self.CursorOffOn = 'On'
 
@@ -73,9 +71,9 @@ class CamFree(DirectObject.DirectObject):
             dirTT = base.camera.getMat(self.root_node).getRow3(2)
             dirRL = base.camera.getMat(self.root_node).getRow3(0)
 
-            self.SpeedCam = abs(camera.getZ(self.root_node)*0.1)
-            if self.SpeedCam < 1:
-                self.SpeedCam = 1
+            self.SpeedCam = camera.getZ(self.root_node)*0.01
+            if self.SpeedCam < 0.1:
+                self.SpeedCam = 0.1
 
             md = base.win.getPointer(0)
             x = md.getX()
