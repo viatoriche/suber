@@ -16,8 +16,8 @@ from pandac.PandaModules import Texture, TextureStage
 from pandac.PandaModules import TransparencyAttrib, Texture, TextureStage
 from voxplanet.landplane import LandNode, ChunkModel, TreeModel
 from voxplanet.map2d import Map_generator_2D
-from voxplanet.support import profile_decorator
 from voxplanet.map3d import Map3d
+from voxplanet.support import profile_decorator
 
 #sys.setrecursionlimit(65535)
 
@@ -28,6 +28,8 @@ class Sky():
 class WaterNode():
     """Water plane for nya
 
+    config - voxplanet.config
+    water_z - Z coord for water
     """
     def __init__(self, config, water_z):
         self.config = config
@@ -35,6 +37,11 @@ class WaterNode():
         self.create(0, 0, (self.config.size_region/2, self.config.size_region/2))
 
     def create(self, x, y, scale):
+        """create node
+
+        x, y - start coords
+        scale - size
+        """
         self.water = LandNode(self.water_z, self.config.size_region)
         #textures['water'].setWrapU(Texture.WMRepeat)
         #textures['water'].setWrapV(Texture.WMRepeat)
@@ -46,12 +53,18 @@ class WaterNode():
         self.water.landNP.setTexScale(ts, scale_x, scale_y)
 
     def show(self):
+        """Show method
+        """
         self.water.landNP.show()
 
     def hide(self):
+        """Hide method
+        """
         self.water.landNP.hide()
 
     def reset(self, x, y):
+        """Show on new x, y coords
+        """
         #self.Destroy()
         #self.create(x, y)
         self.water.landNP.show()
@@ -61,16 +74,16 @@ class WaterNode():
             pass
 
 class QuadroTreeNode:
-    """Node - one cube, which may divide on 4 cubes, when camera is near
+    """Node - one cube, which may divide on 4 chunks, when camera is near
 
-    Node = X, Y, where Z - height from perlin noize generator -> perlin(x, y, level)
-
-    X,Y this is one of 64 x 64 global map height
-
-    level - depend of height camera
+    chunks_clt - ChunksCollection()
+    size - size of chunk
+    parent - parent QuadroNode
+    level - deep level to world
+    center - coordinates of center chunk
     """
     # exist = True #make voxel deletable by player
-    def __init__(self, chunks_clt, len_chunk, parent=None,\
+    def __init__(self, chunks_clt, size, parent=None,\
                        level = 1, center = (0,0,0)):
 
         self.parent = parent
@@ -79,7 +92,7 @@ class QuadroTreeNode:
         self.world = chunks_clt.world
         self.config = chunks_clt.config
         self.chunks_map = chunks_clt.chunks_map
-        self.len_chunk = len_chunk
+        self.size = size
         self.childs = {}
         x = center[0]
         y = center[1]
@@ -88,8 +101,10 @@ class QuadroTreeNode:
         self.hide()
 
     def repaint(self):
-        if self.len_chunk > self.chunks_map.chunk_len:
-            divide_dist = self.len_chunk * self.config.count_chunks
+        """divide or mark to show this chunk node, depend - distance to char coords
+        """
+        if self.size > self.chunks_map.chunk_len:
+            divide_dist = self.size * self.config.count_chunks
             #show_dist = self.chunks_map.far
             #print 'Center and char: ', self.center, self.chunks_map.charX, self.chunks_map.charY, self.chunks_map.camZ
             length_cam = VBase3.length(Vec3(self.center) - Vec3(self.chunks_map.charX,
@@ -103,29 +118,29 @@ class QuadroTreeNode:
             self.show()
 
     def divide(self):
-        #print '\t\t\t xxx START DIVIDE: ', self.center
+        """divide this chunk on 4 chunks
+        """
         if self.childs == {}:
-            new_len = self.len_chunk/2
-            new_center = self.len_chunk/4
-            #name = self.center + dC * self.len_chunk
+            new_size = self.size/2
+            new_center = self.size/4
             # <- up
             name = self.center[0] - new_center, self.center[1] - new_center, 0
-            self.childs[name] = QuadroTreeNode(self.chunks_clt, new_len, self, \
+            self.childs[name] = QuadroTreeNode(self.chunks_clt, new_size, self, \
                     self.level+1, name)
             self.childs[name].repaint()
             # -> up
             name = self.center[0] + new_center, self.center[1] - new_center, 0
-            self.childs[name] = QuadroTreeNode(self.chunks_clt, new_len, self, \
+            self.childs[name] = QuadroTreeNode(self.chunks_clt, new_size, self, \
                     self.level+1, name)
             self.childs[name].repaint()
             # <- down
             name = self.center[0] - new_center, self.center[1] + new_center, 0
-            self.childs[name] = QuadroTreeNode(self.chunks_clt, new_len, self, \
+            self.childs[name] = QuadroTreeNode(self.chunks_clt, new_size, self, \
                     self.level+1, name)
             self.childs[name].repaint()
             # -> down
             name = self.center[0] + new_center, self.center[1] + new_center, 0
-            self.childs[name] = QuadroTreeNode(self.chunks_clt, new_len, self, \
+            self.childs[name] = QuadroTreeNode(self.chunks_clt, new_size, self, \
                     self.level+1, name)
             self.childs[name].repaint()
         else:
@@ -133,19 +148,24 @@ class QuadroTreeNode:
                 self.childs[child].repaint()
 
     def show(self):
-        self.chunks_clt.chunks[self.center, self.len_chunk, self.level] = True
+        """mark chunk True for show
+        """
+        self.chunks_clt.chunks[self.center, self.size, self.level] = True
 
     def hide(self):
-        self.chunks_clt.chunks[self.center, self.len_chunk, self.level] = False
+        """mark chunk False for hide
+        """
+        self.chunks_clt.chunks[self.center, self.size, self.level] = False
 
 class ChunksCollection():
-    #v = [
-         #Vec3(0., 0.5, 0.), Vec3(0.5, 0., 0.),
-         #Vec3(0., 0., 0.), Vec3(0.5, 0.5, 0.),
-         #]
+    """Collection of chunks quadro tree nodes
 
+    chunks_map - ChunksMap()
+    world - World()
+    center - center for start QuadroTree node
+    size_world - size of world - first size of chunk
+    """
     chunks = {}
-    thread_done = True
 
     def __init__(self, chunks_map, world, center, size_world):
 
@@ -165,34 +185,42 @@ class ChunksCollection():
         self.show()
 
     def generate(self):
+        """generate of all childs
+        """
         for chunk in self.chunks:
             self.chunks[chunk] = False
         #self.chunks = {}
         self.root.repaint()
 
     def show(self):
+        """Create and show chunk models
+        """
         # TODO: add delete cube event
 
+        # For get minimum size of visible chunks
         sizes = []
         for chunk in self.chunks:
             if self.chunks[chunk]:
                 sizes.append(chunk[1])
 
+        # calculate distance for show or hide chunks - LOD
         self.far = min(sizes) * self.config.factor_far
         self.world.params.fog.setLinearRange(0, self.far)
         base.camLens.setFar(self.far * 2)
 
         t = time.time()
         for chunk in self.chunks:
-
+            # if chunk was marked for show
             if self.chunks[chunk]:
                 length_cam = VBase2.length(Vec2(chunk[0][0], chunk[0][1]) - Vec2(self.chunks_map.charX,
                                                                  self.chunks_map.charY
                                                                  ))
                 hide_dist = self.far
+                # hide mark, if distance for chunk too long
                 if length_cam > hide_dist:
                     self.chunks[chunk] = False
                 else:
+                    # create if not a model
                     if not self.chunks_models.has_key(chunk):
                         self.chunks_models[chunk] = ChunkModel(self.config, self.world.map3d,
                                                            chunk[0][0], chunk[0][1], chunk[1],
@@ -203,6 +231,7 @@ class ChunksCollection():
 
         print 'Create chunks: ', time.time() - t
         t = time.time()
+        # attach/detach hide/show models
         for chunk in self.chunks_models:
             if self.chunks[chunk]:
                 self.chunks_models[chunk].setX(self.chunks_map.DX)
@@ -218,6 +247,12 @@ class ChunksCollection():
         #self.world.root_node.flattenLight()
 
 class ChunksMap():
+    """All chunks collections here
+
+    world - World()
+    size - count of chunks_collection
+    level - start level // deprecated
+    """
     def __init__(self, world, size, level):
         self.world = world
         self.config = world.config
@@ -239,6 +274,8 @@ class ChunksMap():
         self.create()
 
     def get_coords(self):
+        """Get charX, charY coords from camera
+        """
         d_charX = base.camera.getX(self.world.root_node) - self.camX
         d_charY = base.camera.getY(self.world.root_node) - self.camY
         self.camX, self.camY, self.camZ = base.camera.getPos(self.world.root_node)
@@ -257,6 +294,8 @@ class ChunksMap():
         self.test_coord()
 
     def test_coord(self):
+        """Test and fix char coords, DX, DY, change new cam coords, if need
+        """
         if self.charX < 0:
             self.charX = 0
         if self.charY < 0:
@@ -271,11 +310,13 @@ class ChunksMap():
         self.camX = self.charX - self.DX
         self.camY = self.charY - self.DY
 
-        base.camera.setPos(self.world.root_node, (self.camX, self.camY, float(self.camZ)) )
+        base.camera.setPos(self.world.root_node, (self.camX,
+                                     self.camY,
+                                     float(self.camZ)) )
         self.camPos = base.camera.getPos(self.world.root_node)
 
     def set_char_coord(self, coord):
-        """Set char/cam coords
+        """Set char/cam coords -> teleportation
 
         coord - X, Y, Z
         """
@@ -290,9 +331,12 @@ class ChunksMap():
 
     #@profile_decorator
     def repaint(self):
+        """repaint all chunks
+        """
         self.get_coords()
         self.world.status('CamPos: X: {0}, Y: {1}, Z: {2}, '\
-                          'land height: {3} | Char: X: {4}, Y: {5}'.format(int(self.camX), int(self.camY), int(self.camZ),
+                          'land height: {3} | Char: X: {4}, Y: {5}'.format(
+                           int(self.camX), int(self.camY), int(self.camZ),
                            self.land_z, int(self.charX), int(self.charY)))
 
         for chunks_clt in self.chunks_clts.values():
@@ -304,17 +348,28 @@ class ChunksMap():
             print 'Show chunks:', time.time() - t
 
     def show(self):
+        """If camPos dont change - repaint
+        """
         if self.camPos != base.camera.getPos(self.world.root_node):
             self.repaint()
 
     def create(self):
+        """Create of all chunks collections
+        """
         for x in xrange(-self.size, self.size+1):
             for y in xrange(-self.size, self.size+1):
-                name = (x*self.size_world)+(self.size_world / 2), (y*self.size_world) + (self.size_world / 2), 0
-                self.chunks_clts[name] = ChunksCollection(self, self.world, name, self.size_world)
+                name = (x*self.size_world)+(self.size_world / 2),\
+                       (y*self.size_world) + (self.size_world / 2), 0
+                self.chunks_clts[name] = ChunksCollection(self,
+                                          self.world, name, self.size_world)
 
 
 class World():
+    """World
+
+    config - voxplanet.config.Config()
+    params - voxplanet.params.Params()
+    """
     def __init__(self, config, params):
         self.config = config
         self.params = params
@@ -333,6 +388,8 @@ class World():
         #self.water.show()
 
     def get_map3d_tex(self, size = 512, filename = None):
+        """Generate texture of map world
+        """
         return self.map3d.get_map_3d_tex(size, filename)
 
     def new(self):

@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""
-All parameters for world
+"""All parameters for world
+
+Author:  Viator <viator@via-net.org>
+License: GPL (see http://www.gnu.org/licenses/gpl.txt)
 """
 
 class Params(dict):
-    """All parameters here
+    """All dynamic parameters here
 
     ['name'] = value
 

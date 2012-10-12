@@ -1,25 +1,33 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""
-3D map with perlin, diamond-square and other algorithms
+"""3D map with perlin, diamond-square and other algorithms
+
+Author:  Viator <viator@via-net.org>
+License: GPL (see http://www.gnu.org/licenses/gpl.txt)
 """
 
-import sys
-import random
-import time
 import math
-from pandac.PandaModules import Texture, PNMImage
+import random
+import sys
+import time
+
 from pandac.PandaModules import PerlinNoise2
+from pandac.PandaModules import Texture, PNMImage
 
 class TileMap(dict):
-    def __init__(self, config, map2d, *args, **params):
-        #dict.__init__(self, *args, **params)
+    """Mini map for generate of heights and square-diamond
+
+    config - voxplanet.config
+    map2d - voxplanet.map2d.MapDict2D()
+    """
+    def __init__(self, config, map2d):
         self.size = map2d.size
         self.map2d = map2d
         self.config = config
-        #self.rivers = {}
 
     def __getitem__(self, item):
+        """Overload getitem for toroid
+        """
         if self.has_key(item):
             return dict.__getitem__(self, item)
         else:
@@ -55,7 +63,8 @@ class TileMap(dict):
             return lands, oceans
 
         def add_heights():
-
+            """Add pre heights for diamond-square
+            """
             fac_min = 50
             fac_max = 40
 
@@ -388,6 +397,8 @@ class TileMap(dict):
 
         # align
         def align_it(start, strong):
+            """Deprecated
+            """
             water = 0
             #map3d = self.copy()
             size = (abs(start)*2) + self.size - strong
@@ -435,8 +446,13 @@ class TileMap(dict):
 class Map3d(dict):
     """Class for map with heights
 
-       Keys: (X, Y)
-       Values = Heights
+    config - voxplanet.config.Config()
+    map2d - voxplanet.map2d.MapDict2D
+    seed - seed for map
+
+    Dict:
+    Keys: (X, Y)
+    Values = Heights
     """
     # World size 2 ** 24, in meters
     perlin = {}
@@ -475,11 +491,15 @@ class Map3d(dict):
         #self.river_mod = self.world_size / self.config.rivermap_size
 
     def cosine_interpolate(self, a, b, x):
+        """Cosine interpolate for scale minimap
+        """
         ft = x * 3.1415927
         f = (1 - math.cos(ft)) * 0.5
         return a * (1 - f) + (b * f)
 
     def template_height(self, x, y):
+        """Interpolate minimap scale for perlin (first octave)
+        """
 
         tx = float(x) / self.world_size
         tx = tx * self.global_template.size
@@ -549,6 +569,7 @@ class Map3d(dict):
                 p = self.perlin[level](x, y)
                 height += p * height
 
+            # rivers
             if height > -4:
                 r = self.river_perlin(x, y)
                 if r >= 0.1 and r <= 0.101:

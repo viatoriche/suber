@@ -1,33 +1,34 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""
-Support functions for generate models and other
+"""Support functions for generate models and other
+
+Author:  Viator <viator@via-net.org>
+License: GPL (see http://www.gnu.org/licenses/gpl.txt)
 """
 
+import cProfile
 import math, random
 
-from panda3d.core import InternalName
 from panda3d.core import Geom, GeomNode, GeomTrifans, GeomTristrips
 from panda3d.core import GeomTriangles, GeomVertexWriter
 from panda3d.core import GeomVertexArrayFormat, GeomVertexFormat
 from panda3d.core import GeomVertexReader
 from panda3d.core import GeomVertexRewriter, GeomVertexData
+from panda3d.core import InternalName
+from panda3d.core import PStatCollector
 from panda3d.core import TransformState,CullFaceAttrib
 from panda3d.core import Vec3,Vec4,Mat4
 
-#this is a helper function you can use to make a circle in the x-y plane
-#i didnt end up needing it but this comes up fairly often so I thought
-#I should keep this in the code. Feel free to use.
-
-from panda3d.core import PStatCollector
-import cProfile
-
 class BCol():
+    """Class collector for pstat
+    """
     custom_collectors = {}
 
 b_collector = BCol()
 
 def profile_decorator(func):
+    """Decorator for cProfile
+    """
     cprofile = cProfile.Profile()
     def do_profile(*args, **kargs):
         cprofile.clear()
@@ -41,6 +42,8 @@ def profile_decorator(func):
     return do_profile
 
 def pstat(func):
+    """Decorator for pstats
+    """
     collectorName = "Debug:%s" % func.__name__
     if hasattr(b_collector, 'custom_collectors'):
         if collectorName in b_collector.custom_collectors.keys():
@@ -58,16 +61,15 @@ def pstat(func):
 
     def doPstat(*args, **kargs):
         pstat.start()
-        #cprofile.create_stats()
         returned = func(*args, **kargs)
-        #cprofile.print_stats()
-        #returned = func(*args, **kargs)
         pstat.stop()
         return returned
     doPstat.__name__ = func.__name__
     doPstat.__dict__ = func.__dict__
     doPstat.__doc__ = func.__doc__
     return doPstat
+
+# Shit for fucking trees
 
 formatArray = GeomVertexArrayFormat()
 formatArray.addColumn(InternalName.make("drawFlag"), 1, Geom.NTUint8, Geom.COther)
@@ -370,6 +372,8 @@ def makeSquare(x1,y1,z1, x2,y2,z2, tex_coord):
 
     return square
 
+
+# make square with 4 verticles
 def makeSquare_net(coord1, coord2, coord3, coord4, tex_coord):
     format=GeomVertexFormat.getV3n3t2()
     vdata=GeomVertexData('square', format, Geom.UHStatic)

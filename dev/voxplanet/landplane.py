@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""
-land plane
+"""Land classes - chunks, LandPlane, trees
 """
 
 import random
@@ -14,7 +13,6 @@ from pandac.PandaModules import NodePath
 from pandac.PandaModules import TextureStage
 from pandac.PandaModules import TransparencyAttrib
 from voxplanet.support import makeSquare_net, drawBody, drawLeaf, treeform
-from voxplanet.support import pstat
 
 class TreeModel(NodePath):
 
@@ -64,20 +62,17 @@ class TreeModel(NodePath):
             drawLeaf(self, self.bodydata, self.leafModel, self.pos, self.vecList)
 
 class ChunkModel(NodePath):
-    """Chunk for quick render and create cube-objects
+    """Chunk for quick render and create voxel-objects
 
-    world - link to world object
-    X, Y = start coordinates
+    config - config of voxplanet
+    heights - {(X, Y): height, (X2, Y2: height, ... (XN, YN): height}
+    X, Y - center coordinates
+    size - size of chunk (in scene coords)
+    chunk_len - count of voxels
+    tex_uv_height - function return of uv coordinates for height voxel
+    tex - texture map
     """
     def __init__(self, config, heights, X, Y, size, chunk_len, tex_uv_height, tex):
-        """
-        heights = dict of heights for coordinates
-        X, Y - center of chunk
-        size - size of chunk (in scene coords)
-        chunk_len - count of voxels
-        tex_uv_height - function return of uv coordinates for height voxel
-        tex - texture map
-        """
 
         NodePath.__init__(self, 'ChunkModel_{0}-{1}_{2}'.format(X, Y, size))
         self.X = X

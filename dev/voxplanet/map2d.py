@@ -3,7 +3,7 @@
 """
 Author:  Viator <viator@via-net.org>
 License: GPL (see http://www.gnu.org/licenses/gpl.txt)
-2D/3D map generation and classes of maps world
+2D map generation and classes for world
 """
 
 import random
@@ -11,17 +11,16 @@ import os
 from PIL import Image
 
 class MapDict2D(dict):
-    """
-    Base class for Map
-        Dictionary
+    """Base class for Map
 
-        example:
-            >>>map = MapDict2D(size = 25, fill = 0)
-            >>>map(2,3)
-            0
-            >>>map.size
-            25
+    Dictionary
 
+    example:
+        >>>map = MapDict2D(size = 25, fill = 0)
+        >>>map(2,3)
+        0
+        >>>map.size
+        25
     """
     def __init__(self, size, fill = 0):
         """
@@ -41,15 +40,15 @@ class MapDict2D(dict):
 
 
 class Maps2D(dict):
-    """
-        Collection dictionary of MapDict2D
-            Get map → Maps2D[level],
-                where level → detalization of template for map 0,1..N
+    """Collection dictionary of MapDict2D
+
+    Get map → Maps2D[level],
+        where level → detalization of template for map 0,1..N
     """
     def get_ascii(self, level):
-        """
-        Get pseudo graphic map
-            return str
+        """Get pseudo graphic map
+
+        return str
         """
         s = ''
         cmap = self[level]
@@ -68,8 +67,7 @@ class Maps2D(dict):
         return s
 
     def align(self, level):
-        """
-        docstring for align
+        """Align all coasts
         """
         coasts = self.get_all_coasts(level, 0)
         cmap = self[level]
@@ -91,10 +89,10 @@ class Maps2D(dict):
 
 
     def get_all_coasts(self, level, type_land):
-        """
-        Get coordinates of all coast-point of map
-            return list of coordinates:
-               [(x1,y1),(x2,y2)...(xN,yN)]
+        """Get coordinates of all coast-point of map
+
+        return list of coordinates:
+           [(x1,y1),(x2,y2)...(xN,yN)]
         """
         coasts = []
         cmap = self[level]
@@ -163,21 +161,20 @@ class Maps2D(dict):
         return coords
 
 class Map_generator_2D():
-    """
-    Generator of map, without relief, 2D
+    """Generator of map, without relief, 2D
+
+        config - voxplanet.config
+        seed - for generate, int
 
         Step 1.        | create mini square, random continents etc
         ---------------------------------------------------------
         Step 2...iters | smooth and increase square, by mode
                        | new_size = old_size * mode
         ---------------------------------------------------------
-        Step iters     | alias coasts
+        Step iters     | align coasts
     """
     params = {}
     def __init__(self, config, seed):
-        """
-        Initialization of generator
-        """
         self.config = config
         # --> 64
         self.size = 8
@@ -194,12 +191,12 @@ class Map_generator_2D():
         self.max_continents = config.max_continents
 
     def smooth_coasts(self, source_coord, new_coord, iteration, type_land):
-        """
-        Add water/land for smoothing to coast points for maps[iteration]
-            source_coord - source coordinates / pre-iteration map
-            new_coord - new coordinates / iteration map
+        """Add water/land for smoothing to coast points for maps[iteration]
 
-            it is a very impotant function ^__^
+        source_coord - source coordinates / pre-iteration map
+        new_coord - new coordinates / iteration map
+
+        it is a very important function ^__^
         """
         # source_map - pre-iteration map, for get self.mode and send it to
         # get_round_xy_land. For get vectors to water fill.
@@ -267,8 +264,7 @@ class Map_generator_2D():
 
 
     def start(self):
-        """
-        Start generation of world! :3
+        """Start generation of world! :3
 
         Main function
 
@@ -336,8 +332,7 @@ class Map_generator_2D():
 
 
     def generate_zero(self):
-        """
-        Generator of zero map, begin options
+        """Generator of zero map, begin options
         """
         # generate map 0 - ocean, 1 - land
         # number of continents / count of start points
