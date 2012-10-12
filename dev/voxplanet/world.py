@@ -179,6 +179,8 @@ class ChunksCollection():
                 sizes.append(chunk[1])
 
         self.far = min(sizes) * self.config.factor_far
+        self.world.params.fog.setLinearRange(0, self.far)
+        base.camLens.setFar(self.far * 2)
 
         t = time.time()
         for chunk in self.chunks:
@@ -227,7 +229,6 @@ class ChunksMap():
         base.camera.setPos(0, 0, 10000)
         #base.camera.setPos(0, 0, 25000000)
         self.camPos = base.camera.getPos(self.world.root_node)
-        base.camLens.setFar(1000000000)
         self.charX = 0
         self.charY = 0
         self.camX = 0
@@ -374,7 +375,7 @@ class World():
         self.chunks_map = ChunksMap(self, 0, 1)
         self.chunks_map.set_char_coord((self.config.size_world/2, self.config.size_world/2, 10000))
         self.sky = Sky()
-        taskMgr.doMethodLater(0.5, self.show, 'WorldShow', taskChain = 'world_chain_show')
+        taskMgr.doMethodLater(1, self.show, 'WorldShow', taskChain = 'world_chain_show')
         #taskMgr.add(self.show, 'WorldShow', taskChain = 'world_chain_show')
 
     def show(self, task):

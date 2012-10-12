@@ -13,6 +13,8 @@ class Params(dict):
     root_node - NodePath
     chunks_tex - texmap for chunks
     function tex_uv_height - input(height), return - uv coords
+    sun - plight
+    fog - fog
     """
     def __setattr__(self, name, value):
         self[name] = value

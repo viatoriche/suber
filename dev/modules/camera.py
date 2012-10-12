@@ -18,6 +18,8 @@ class CamFree(DirectObject.DirectObject):
         else:
             self.root_node = root_node
 
+        #base.camLens.setNear(5)
+
         self.keyMap = {"FORWARD":0, "BACK":0, "RIGHT":0,
                        "LEFT":0, "Mouse3":0, "LSHIFT":0,
                        "UPWARDS":0, "DOWNWARDS":0}

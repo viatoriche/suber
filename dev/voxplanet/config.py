@@ -6,7 +6,7 @@ Global config
 
 class Config():
     #size_world = 16777216
-    size_mod = 24
+    size_mod = 16
     size_world = 2**size_mod
 
     size_region = size_world / 256
@@ -42,5 +42,6 @@ class Config():
     max_continents = 6
 
     tree_models = 10
+    add_pre_heights = False
 # vi: ft=python:tw=0:ts=4
 
