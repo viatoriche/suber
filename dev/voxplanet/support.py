@@ -393,10 +393,15 @@ def makeSquare_net(coord1, coord2, coord3, coord4, tex_coord):
     vertex.addData3f(x3, y3, z3)
     vertex.addData3f(x4, y4, z4)
 
-    normal.addData3f(myNormalize(Vec3(2*x1-1, 2*y1-1, 2*z1-1)))
-    normal.addData3f(myNormalize(Vec3(2*x2-1, 2*y2-1, 2*z1-1)))
-    normal.addData3f(myNormalize(Vec3(2*x2-1, 2*y2-1, 2*z2-1)))
-    normal.addData3f(myNormalize(Vec3(2*x1-1, 2*y1-1, 2*z2-1)))
+    normal.addData3f(myNormalize(Vec3(x1, y1, z1)))
+    normal.addData3f(myNormalize(Vec3(x2, y2, z2)))
+    normal.addData3f(myNormalize(Vec3(x3, y3, z3)))
+    normal.addData3f(myNormalize(Vec3(x4, y4, z4)))
+
+    #normal.addData3f(Vec3(Vec3(coord2)-Vec3(coord1)).cross(Vec3(Vec3(coord4)-Vec3(coord1))))
+    #normal.addData3f(Vec3(Vec3(coord2)-Vec3(coord1)).cross(Vec3(Vec3(coord4)-Vec3(coord1))))
+    #normal.addData3f(Vec3(Vec3(coord2)-Vec3(coord1)).cross(Vec3(Vec3(coord4)-Vec3(coord1))))
+    #normal.addData3f(Vec3(Vec3(coord2)-Vec3(coord1)).cross(Vec3(Vec3(coord4)-Vec3(coord1))))
 
     #adding different colors to the vertex for visibility
 

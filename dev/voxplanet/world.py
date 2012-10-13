@@ -18,6 +18,7 @@ from voxplanet.landplane import LandNode, ChunkModel, TreeModel
 from voxplanet.map2d import Map_generator_2D
 from voxplanet.map3d import Map3d
 from voxplanet.support import profile_decorator
+from direct.stdpy import threading2 as panda_threading
 
 #sys.setrecursionlimit(65535)
 
@@ -205,7 +206,7 @@ class ChunksCollection():
 
         # calculate distance for show or hide chunks - LOD
         self.far = min(sizes) * self.config.factor_far
-        self.world.params.fog.setLinearRange(0, self.far)
+        self.world.params.fog.setLinearRange(0, self.far * 1.5)
         base.camLens.setFar(self.far * 2)
 
         t = time.time()
@@ -271,6 +272,7 @@ class ChunksMap():
         self.DX = 0
         self.DY = 0
         self.get_coords()
+        self.lock = panda_threading.Lock()
         self.create()
 
     def get_coords(self):
@@ -333,6 +335,7 @@ class ChunksMap():
     def repaint(self):
         """repaint all chunks
         """
+        self.lock.acquire()
         self.get_coords()
         self.world.status('CamPos: X: {0}, Y: {1}, Z: {2}, '\
                           'land height: {3} | Char: X: {4}, Y: {5}'.format(
@@ -346,6 +349,8 @@ class ChunksMap():
             t = time.time()
             chunks_clt.show()
             print 'Show chunks:', time.time() - t
+
+        self.lock.release()
 
     def show(self):
         """If camPos dont change - repaint
@@ -432,7 +437,7 @@ class World():
         self.chunks_map = ChunksMap(self, 0, 1)
         self.chunks_map.set_char_coord((self.config.size_world/2, self.config.size_world/2, 10000))
         self.sky = Sky()
-        taskMgr.doMethodLater(1, self.show, 'WorldShow', taskChain = 'world_chain_show')
+        taskMgr.doMethodLater(0.2, self.show, 'WorldShow', taskChain = 'world_chain_show')
         #taskMgr.add(self.show, 'WorldShow', taskChain = 'world_chain_show')
 
     def show(self, task):
@@ -441,7 +446,7 @@ class World():
         t = time.time()
         self.chunks_map.show()
         t = time.time() - t
-        if t > 1:
+        if t > 0.2:
             return task.cont
         return task.again
 

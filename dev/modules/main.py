@@ -15,7 +15,8 @@ from modules.graph import GUI
 from voxplanet.world import World
 from voxplanet.config import Config as VoxConfig
 from voxplanet.params import Params as VoxParams
-from pandac.PandaModules import loadPrcFileData, PStatClient
+from panda3d.core import VBase4
+from pandac.PandaModules import loadPrcFileData, PStatClient, AmbientLight
 from config import Config
 
 loadPrcFileData("", "window-title {0}".format(Config().name_game))
@@ -73,8 +74,13 @@ class Main():
 
         plight = PointLight('plight')
         sun = self.gui.render.attachNewNode(plight)
-        sun.setPos(32768, 32768, 100000)
+        sun.setPos(-32768, 32768, 100000)
         self.gui.render.setLight(sun)
+
+        alight = AmbientLight('alight')
+        alight.setColor(VBase4(0.2, 0.2, 0.2, 1))
+        alnp = render.attachNewNode(alight)
+        self.gui.render.setLight(alnp)
 
         colour = (0.5, 0.8, 0.8)
         fog = Fog("A linear-mode Fog node")

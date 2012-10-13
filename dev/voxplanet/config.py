@@ -37,7 +37,8 @@ class Config():
     size_mod = 16
     size_world = 2**size_mod
 
-    size_region = size_world / 256
+    #size_region = size_world / 256
+    size_region = size_world
     root_level = 0
 
     # detalized /2
