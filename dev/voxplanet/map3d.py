@@ -408,7 +408,7 @@ class Map3d(dict):
         mod = self.config.size_mod / 2
         mod += mod / 2
         count_octaves = mod / 2
-        count_octaves += count_octaves / 2
+        count_octaves += count_octaves / 4
         for level in xrange(count_octaves):
             seed = random.randint(0, sys.maxint)
             self.perlin[level] = (PerlinNoise2(sx = self.world_size, sy = self.world_size,

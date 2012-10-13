@@ -45,7 +45,6 @@ class Config():
     chunk_len = 4
     count_chunks = 2
     factor_far = 100
-    min_far = 2000
 
     land_mount_level = 1, 200
     low_mount_level = 201, 1000

@@ -207,8 +207,6 @@ class ChunksCollection():
 
         # calculate distance for show or hide chunks - LOD
         self.far = min(sizes) * self.config.factor_far
-        if self.far < self.config.min_far:
-            self.far = self.config.min_far
         self.world.params.fog.setLinearRange(0, self.far)
         base.camLens.setFar(self.far * 2)
 
@@ -335,7 +333,7 @@ class ChunksMap():
 
         self.repaint()
 
-    @profile_decorator
+    #@profile_decorator
     def repaint(self):
         """repaint all chunks
         """
