@@ -393,15 +393,33 @@ def makeSquare_net(coord1, coord2, coord3, coord4, tex_coord):
     vertex.addData3f(x3, y3, z3)
     vertex.addData3f(x4, y4, z4)
 
-    normal.addData3f(Vec3(x1, y1, z1+10))
-    normal.addData3f(Vec3(x2, y2, z2+10))
-    normal.addData3f(Vec3(x3, y3, z3+10))
-    normal.addData3f(Vec3(x4, y4, z4+10))
+    #normal.addData3f(Vec3(x1, y1, z1+10))
+    #normal.addData3f(Vec3(x2, y2, z2+10))
+    #normal.addData3f(Vec3(x3, y3, z3+10))
+    #normal.addData3f(Vec3(x4, y4, z4+10))
 
-    #normal.addData3f(myNormalize(Vec3(Vec3(coord2)-Vec3(coord1)).cross(Vec3(Vec3(coord4)-Vec3(coord1)))))
-    #normal.addData3f(myNormalize(Vec3(Vec3(coord2)-Vec3(coord1)).cross(Vec3(Vec3(coord4)-Vec3(coord1)))))
-    #normal.addData3f(myNormalize(Vec3(Vec3(coord2)-Vec3(coord1)).cross(Vec3(Vec3(coord4)-Vec3(coord1)))))
-    #normal.addData3f(myNormalize(Vec3(Vec3(coord2)-Vec3(coord1)).cross(Vec3(Vec3(coord4)-Vec3(coord1)))))
+    #normal.addData3f(Vec3(Vec3(coord2)-Vec3(coord1)).cross(Vec3(Vec3(coord3)-Vec3(coord1))))
+    #normal.addData3f(Vec3(Vec3(coord2)-Vec3(coord1)).cross(Vec3(Vec3(coord3)-Vec3(coord1))))
+    #normal.addData3f(Vec3(Vec3(coord2)-Vec3(coord1)).cross(Vec3(Vec3(coord3)-Vec3(coord1))))
+    #normal.addData3f(Vec3(Vec3(coord4)-Vec3(coord1)).cross(Vec3(Vec3(coord3)-Vec3(coord1))))
+
+    coord1 = Vec3(coord1)
+    coord2 = Vec3(coord2)
+    coord3 = Vec3(coord3)
+    coord4 = Vec3(coord4)
+
+
+    side1 = coord1 - coord2
+    side2 = coord1 - coord4
+    norm1 = side1.cross(side2)
+    side1 = coord2 - coord3
+    side2 = coord2 - coord4
+    norm2 = side1.cross(side2)
+
+    normal.addData3f(norm1)
+    normal.addData3f(norm1)
+    normal.addData3f(norm1)
+    normal.addData3f(norm2)
 
     #adding different colors to the vertex for visibility
 

@@ -72,13 +72,13 @@ class Main():
         self.gui.screen_images['sight'].setTransparency(TransparencyAttrib.MAlpha)
 
 
-        #plight = PointLight('plight')
-        #sun = self.gui.render.attachNewNode(plight)
-        #sun.setPos(-32768, 32768, 20000)
-        #self.gui.render.setLight(sun)
+        plight = PointLight('plight')
+        sun = self.gui.render.attachNewNode(plight)
+        sun.setPos(-32768, 32768, 20000)
+        self.gui.render.setLight(sun)
 
         alight = AmbientLight('alight')
-        alight.setColor(VBase4(1, 1, 1, 1))
+        alight.setColor(VBase4(0.5, 0.5, 0.5, 1))
         alnp = self.gui.render.attachNewNode(alight)
         self.gui.render.setLight(alnp)
 
