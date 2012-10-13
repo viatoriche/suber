@@ -72,20 +72,19 @@ class Main():
         self.gui.screen_images['sight'].setTransparency(TransparencyAttrib.MAlpha)
 
 
-        plight = PointLight('plight')
-        sun = self.gui.render.attachNewNode(plight)
-        sun.setPos(-32768, 32768, 100000)
-        self.gui.render.setLight(sun)
+        #plight = PointLight('plight')
+        #sun = self.gui.render.attachNewNode(plight)
+        #sun.setPos(-32768, 32768, 20000)
+        #self.gui.render.setLight(sun)
 
         alight = AmbientLight('alight')
-        alight.setColor(VBase4(0.2, 0.2, 0.2, 1))
-        alnp = render.attachNewNode(alight)
+        alight.setColor(VBase4(1, 1, 1, 1))
+        alnp = self.gui.render.attachNewNode(alight)
         self.gui.render.setLight(alnp)
 
         colour = (0.5, 0.8, 0.8)
         fog = Fog("A linear-mode Fog node")
         fog.setColor(*colour)
-        fog.setLinearRange(0,320)
         fog.setLinearFallback(0,500,550)
         self.gui.camera.attachNewNode(fog)
 
@@ -101,7 +100,7 @@ class Main():
         self.vox_params.leafModel = self.gui.loader.loadModel("res/models/shrubbery")
         self.vox_params.leafModel.setTexture(self.textures['leaf'])
         self.vox_params.fog = fog
-        self.vox_params.sun = sun
+        #self.vox_params.sun = sun
         self.world = World(self.vox_config, self.vox_params)
 
         self.gui.start()

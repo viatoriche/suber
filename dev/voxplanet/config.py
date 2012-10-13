@@ -34,17 +34,17 @@ class Config():
     max_continents - max counts of start points for continents generate
     """
     #size_world = 16777216
-    size_mod = 16
+    size_mod = 24
     size_world = 2**size_mod
 
-    #size_region = size_world / 256
-    size_region = size_world
+    size_region = size_world / 256
+    #size_region = size_world
     root_level = 0
 
     # detalized /2
     chunk_len = 4
     count_chunks = 2
-    factor_far = 16
+    factor_far = 100
     min_far = 2000
 
     land_mount_level = 1, 200
@@ -67,6 +67,6 @@ class Config():
     max_continents = 6
 
     tree_models = 10
-    add_pre_heights = False
+    add_pre_heights = True
 # vi: ft=python:tw=0:ts=4
 

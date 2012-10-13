@@ -48,7 +48,7 @@ class Command_Handler():
         else:
             seed = random.randint(0, sys.maxint)
 
-        #seed = 34568
+        seed = 34568
 
         #seed = 2789334
 
@@ -78,6 +78,13 @@ class Command_Handler():
                                             self.game.world.get_map3d_tex(256), 
                                             scale = 0.8, pos = (0, 0, 0.1))
             #self.game.gui.screen_images['world_map'].show()
+
+    def cmd_save_map(self, params = []):
+        if len(params) > 0:
+            size = int(params[0])
+        else:
+            size = 1024
+        self.game.world.get_map3d_tex(size, 'map.png')
 
     def cmd_hide_map(self, params = []):
         """
@@ -203,6 +210,7 @@ class Command_Handler():
                 'showtex': cmd_show_tex,
                 'teleport': cmd_teleport,
                 'port': cmd_teleport,
+                'savemap': cmd_save_map,
               }
 # vi: ts=4 sw=4
 

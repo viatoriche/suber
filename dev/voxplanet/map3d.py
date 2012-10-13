@@ -76,16 +76,14 @@ class TileMap(dict):
             # TODO: create one def with params: mount_level and other for create heights
             # add default heights
             for coord in lands:
-                self[coord] = random.randint(1, self.config.land_mount_level[1])
+                self[coord] = self.config.land_mount_level[1]
 
             for coord in oceans:
-                self[coord] = random.randint(-self.config.land_mount_level[1], -self.config.land_mount_level[0]*10)
+                self[coord] = -self.config.mid_mount_level[1]
 
             # add low heights for lands
             count_land = int(round(len(lands) * config.factor_low_mount / 100.))
-            count_ocean = int(round(len(oceans) * config.factor_low_mount / 100.))
             land_coords = []
-            ocean_coords = []
 
             starts = random.randint(count_land / fac_min, count_land / fac_max)
             for start in xrange(starts):
@@ -93,13 +91,7 @@ class TileMap(dict):
                 land_coords.append(start_coord)
                 self[start_coord] = random.randint(self.config.low_mount_level[0], self.config.low_mount_level[1])
 
-            starts = random.randint(count_ocean / fac_min, count_ocean / fac_max)
-            for start in xrange(starts):
-                start_coord = oceans[random.randint(0, len(oceans)-1)]
-                ocean_coords.append(start_coord)
-                self[start_coord] = random.randint(-self.config.low_mount_level[1], -self.config.low_mount_level[0])
-
-            while count_land > 0 and count_ocean > 0:
+            while count_land > 0:
                 # for lands
                 if count_land > 0:
                     dx = random.randint(-1,1)
@@ -111,27 +103,13 @@ class TileMap(dict):
                         land_coords.append(coord)
                         count_land -= 1
 
-                # for oceans
-                if count_ocean > 0:
-                    dx = random.randint(-1,1)
-                    dy = random.randint(-1,1)
-                    coord = ocean_coords[random.randint(0, len(ocean_coords) - 1)]
-                    coord = coord[0] + dx, coord[1] + dy
-                    if coord not in ocean_coords:
-                        self[coord] = random.randint(-self.config.low_mount_level[1], -self.config.low_mount_level[0])
-                        ocean_coords.append(coord)
-                        count_ocean -= 1
-
 
             target_lands = land_coords
-            target_oceans = ocean_coords
 
             # -------------------------------------------------------------------------------
             # add mid heights for lands
             count_land = int(round(len(target_lands) * (config.factor_mid_mount / 100.)))
-            count_ocean = int(round(len(target_oceans) * (config.factor_mid_mount / 100.)))
             land_coords = []
-            ocean_coords = []
 
             starts = random.randint(count_land / (fac_min * 3), count_land / (fac_max*3))
             for start in xrange(starts):
@@ -140,14 +118,7 @@ class TileMap(dict):
                 self[start_coord] = random.randint(self.config.mid_mount_level[0],
                                                    self.config.mid_mount_level[1])
 
-            starts = random.randint(count_ocean / (fac_min * 3), count_ocean / (fac_max * 3))
-            for start in xrange(starts):
-                start_coord = target_oceans[random.randint(0, len(target_oceans)-1)]
-                ocean_coords.append(start_coord)
-                self[start_coord] = random.randint(-self.config.mid_mount_level[1],
-                                                   -self.config.mid_mount_level[0])
-
-            while count_land > 0 and count_ocean > 0:
+            while count_land > 0:
                 # for lands
                 if count_land > 0:
                     dx = random.randint(-1,1)
@@ -160,29 +131,14 @@ class TileMap(dict):
                     land_coords.append(coord)
                     count_land -= 1
 
-                # for oceans
-                if count_ocean > 0:
-                    dx = random.randint(-1,1)
-                    dy = random.randint(-1,1)
-                    coord = ocean_coords[random.randint(0, len(ocean_coords) - 1)]
-                    coord = coord[0] + dx, coord[1] + dy
-                    #if coord not in ocean_coords:
-                    self[coord] = random.randint(-self.config.mid_mount_level[1],
-                                                 -self.config.mid_mount_level[0])
-                    ocean_coords.append(coord)
-                    count_ocean -= 1
-
 
             target_lands = land_coords
-            target_oceans = ocean_coords
 
 
             # -------------------------------------------------------------------------------
             # add high heights for lands
             count_land = int(round(len(target_lands) * (config.factor_high_mount / 100.)))
-            count_ocean = int(round(len(target_oceans) * (config.factor_high_mount / 100.)))
             land_coords = []
-            ocean_coords = []
 
             starts = random.randint(count_land / (fac_min * 4), count_land / (fac_max * 3))
             for start in xrange(starts):
@@ -191,14 +147,7 @@ class TileMap(dict):
                 self[start_coord] = random.randint(self.config.high_mount_level[0],
                                                    self.config.high_mount_level[1])
 
-            starts = random.randint(count_ocean / (fac_min * 4), count_ocean / (fac_max * 4))
-            for start in xrange(starts):
-                start_coord = target_oceans[random.randint(0, len(target_oceans)-1)]
-                ocean_coords.append(start_coord)
-                self[start_coord] = random.randint(-self.config.high_mount_level[1],
-                                                   -self.config.high_mount_level[0])
-
-            while count_land > 0 and count_ocean > 0:
+            while count_land > 0:
                 # for lands
                 if count_land > 0:
                     dx = random.randint(-1,1)
@@ -214,20 +163,7 @@ class TileMap(dict):
                     land_coords.append(coord)
                     count_land -= 1
 
-                # for oceans
-                if count_ocean > 0:
-                    dx = random.randint(-1,1)
-                    dy = random.randint(-1,1)
-                    try:
-                        coord = ocean_coords[random.randint(0, len(ocean_coords) - 1)]
-                    except ValueError:
-                        coord = oceans[random.randint(0, len(oceans) - 1)]
-                    coord = coord[0] + dx, coord[1] + dy
-                    #if coord not in ocean_coords:
-                    self[coord] = random.randint(-self.config.high_mount_level[1],
-                                                 -self.config.high_mount_level[0])
-                    ocean_coords.append(coord)
-                    count_ocean -= 1
+
 
 
         def square_diamond(sx, sy, size, strong):
@@ -264,10 +200,10 @@ class TileMap(dict):
             def normalize(add_z, X):
                 if self[X] <= 0:
                     if add_z > 0:
-                        add_z = 0
+                        add_z = -5
                 else:
                     if add_z <= 0:
-                        add_z = 1
+                        add_z = 5
                 return add_z
 
                 # Generate heights
@@ -440,7 +376,7 @@ class TileMap(dict):
             square_diamond(
                         sx = 0,
                         sy = 0,
-                        size = self.size, strong=20)
+                        size = self.size, strong=100)
 
 
 class Map3d(dict):
@@ -469,22 +405,29 @@ class Map3d(dict):
         # generate 2 octaves for lands
         print 'Generate octaves: '
         t = time.time()
-        for level in xrange(12):
+        mod = self.config.size_mod / 2
+        mod += mod / 2
+        count_octaves = mod / 2
+        count_octaves += count_octaves / 2
+        for level in xrange(count_octaves):
             seed = random.randint(0, sys.maxint)
             self.perlin[level] = (PerlinNoise2(sx = self.world_size, sy = self.world_size,
-                                       table_size = self.world_size, seed = seed))
-            self.perlin[level].setScale((2 ** (self.config.size_mod-2)) / (2 ** level))
+                                       table_size = 256, seed = seed))
+            mod -= 1
+            ds = 2 ** mod
+            self.perlin[level].setScale(ds)
 
         self.river_perlin = PerlinNoise2(sx = self.world_size, sy = self.world_size,
-                                       table_size = self.world_size, seed = seed)
+                                       table_size = 256, seed = seed)
         self.river_perlin.setScale(2 ** (self.config.size_mod-4))
         self.river_perlin_height = PerlinNoise2(sx = self.world_size, sy = self.world_size,
-                                       table_size = self.world_size, seed = seed)
+                                       table_size = 256, seed = seed)
         self.river_perlin_height.setScale(2 ** (self.config.size_mod-20))
         print 'Octaves generated: ', time.time() - t
 
         print 'generate_pre_heights: '
         t = time.time()
+        random.seed(seed)
         self.global_template.generate_pre_heights()
         print 'generated pre heights! ', time.time() - t
         #self.river_map = RiverMap(self, self.config.rivermap_size)
@@ -563,11 +506,15 @@ class Map3d(dict):
                 y = y - self.world_size
 
             height = self.template_height(x, y)
+
             for level in self.perlin:
-                if height == 0:
-                    height = -0.5
                 p = self.perlin[level](x, y)
-                height += p * height
+                if height > 0 or height < -level-1:
+                    dh = (p * height) / (level+1)
+                else:
+                    height = -5
+                    dh = p * height
+                height += dh
 
             # rivers
             if height > -4:
@@ -587,18 +534,20 @@ class Map3d(dict):
                 px = x * mod
                 py = y * mod
                 height = self[px, py]
-                color = (abs(height) / 50) + 50
-                if color > 255:
-                    color = 255
                 if height <= 0:
+                    color = (abs(height) / 50) + 50
+                    if color > 255:
+                        color = 255
                     image.setPixel(x, y, (0, 0, 255-color))
                 else:
                     if height <= self.config.low_mount_level[1]:
+                        color = height / 20
                         r = 0
-                        g = 100+color
+                        g = 50+color
                         b = 0
                         image.setPixel(x, y, (r, g, b))
                     elif height > self.config.low_mount_level[1]:
+                        color = height / 50
                         r = color
                         g = color
                         b = color
@@ -609,6 +558,40 @@ class Map3d(dict):
                         if b > 255:
                             b = 255
                         image.setPixel(x, y, (r, g, b))
+
+        if filename != None:
+            image.write(filename)
+
+        #for x in xrange(-1, 2):
+            #for y in xrange(-1, 2):
+               #image.setPixel(int(world.chunks_map.charX)+x, int(world.chunks_map.charY)+y, (255, 0, 0))
+
+        texture = Texture()
+        texture.load(image)
+        return texture
+
+    def get_heightmap_tex(self, size, filename = None):
+        """Generate texture of map
+        """
+        mod = self.world_size / size
+        image = PNMImage(size, size)
+        for x in xrange(size):
+            for y in xrange(size):
+                px = x * mod
+                py = y * mod
+                height = self[px, py]
+                color = height / 50
+                r = 0
+                g = 0
+                b = 0
+                if color > 255:
+                    color = 255
+                if color < 0:
+                    color = abs(color)
+                    b = color
+                else:
+                    g = color
+                image.setPixel(x, y, (r, g, b))
 
         if filename != None:
             image.write(filename)
@@ -632,7 +615,12 @@ if __name__ == "__main__":
     map2d = gen.end_map
 
     map3d = Map3d(conf, map2d, 38745)
-    map3d.get_map_3d_tex(512, '/tmp/world.png')
+    map3d.get_map_3d_tex(512, 'map512.png')
+    print '512 ok'
+    map3d.get_map_3d_tex(1024, 'map1024.png')
+    print '1024 ok'
+    map3d.get_map_3d_tex(2048, 'map2048.png')
+    print '2048 ok'
 
 # vi: ft=python:tw=0:ts=4
 

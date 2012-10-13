@@ -7,6 +7,7 @@ World
 import random
 import sys
 import time
+import threading
 
 from panda3d.core import NodePath
 from panda3d.core import TPLow
@@ -105,7 +106,7 @@ class QuadroTreeNode:
         """divide or mark to show this chunk node, depend - distance to char coords
         """
         if self.size > self.chunks_map.chunk_len:
-            divide_dist = self.size * self.config.count_chunks
+            divide_dist = (self.size * self.config.count_chunks)
             #show_dist = self.chunks_map.far
             #print 'Center and char: ', self.center, self.chunks_map.charX, self.chunks_map.charY, self.chunks_map.camZ
             length_cam = VBase3.length(Vec3(self.center) - Vec3(self.chunks_map.charX,
@@ -206,7 +207,9 @@ class ChunksCollection():
 
         # calculate distance for show or hide chunks - LOD
         self.far = min(sizes) * self.config.factor_far
-        self.world.params.fog.setLinearRange(0, self.far * 1.5)
+        if self.far < self.config.min_far:
+            self.far = self.config.min_far
+        self.world.params.fog.setLinearRange(0, self.far)
         base.camLens.setFar(self.far * 2)
 
         t = time.time()
@@ -272,7 +275,8 @@ class ChunksMap():
         self.DX = 0
         self.DY = 0
         self.get_coords()
-        self.lock = panda_threading.Lock()
+        self.panda_lock = panda_threading.Lock()
+        self.lock = threading.Lock()
         self.create()
 
     def get_coords(self):
@@ -331,11 +335,12 @@ class ChunksMap():
 
         self.repaint()
 
-    #@profile_decorator
+    @profile_decorator
     def repaint(self):
         """repaint all chunks
         """
         self.lock.acquire()
+        self.panda_lock.acquire()
         self.get_coords()
         self.world.status('CamPos: X: {0}, Y: {1}, Z: {2}, '\
                           'land height: {3} | Char: X: {4}, Y: {5}'.format(
@@ -350,6 +355,7 @@ class ChunksMap():
             chunks_clt.show()
             print 'Show chunks:', time.time() - t
 
+        self.panda_lock.release()
         self.lock.release()
 
     def show(self):
