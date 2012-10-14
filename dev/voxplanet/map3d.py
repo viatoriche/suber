@@ -509,10 +509,13 @@ class Map3d(dict):
 
             for level in self.perlin:
                 p = self.perlin[level](x, y)
-                if height > 0 or height < -level-1:
+                if height > level+1 or height < -level-1:
                     dh = (p * height) / (level+1)
                 else:
-                    height = -5
+                    if 1 > height > 0:
+                        height = 1
+                    elif 0 >= height > -1:
+                        height = -1
                     dh = p * height
                 height += dh
 

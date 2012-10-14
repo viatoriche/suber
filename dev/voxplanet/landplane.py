@@ -155,7 +155,7 @@ class ChunkModel(NodePath):
                     cube.append( makeSquare_net((sq_x, sq_y, z),
                                     (sq_x, sq_dy, self.Z[x, y + self.size_voxel]),
                                     (sq_x, sq_dy, self.Z[x, y + self.size_voxel]\
-                                    - (self.size_voxel*10)),
+                                    - (self.size_voxel)),
                                     (sq_x, sq_y, dz),
                                     tex_coord) )
                 if dx == self.size_x:
@@ -164,16 +164,16 @@ class ChunkModel(NodePath):
                                     (sq_dx, sq_dy,
                                     self.Z[x + self.size_voxel, y + self.size_voxel]),
                                     (sq_dx, sq_dy, self.Z[x + self.size_voxel,\
-                                    y + self.size_voxel] - (self.size_voxel*10)),
+                                    y + self.size_voxel] - (self.size_voxel)),
                                     (sq_dx, sq_y, self.Z[x + self.size_voxel, y]\
-                                    - (self.size_voxel*10)),
+                                    - (self.size_voxel)),
                                     tex_coord) )
 
                 if y == self.start_y:
                     cube.append( makeSquare_net((sq_x, sq_y, z),
                                     (sq_dx, sq_y, self.Z[x + self.size_voxel, y]),
                                     (sq_dx, sq_y,  self.Z[x + self.size_voxel, y]\
-                                     - (self.size_voxel*10)),
+                                     - (self.size_voxel)),
                                     (sq_x, sq_y, dz),
                                     tex_coord) )
                 if dy == self.size_y:
@@ -182,9 +182,9 @@ class ChunkModel(NodePath):
                                     (sq_dx, sq_dy, self.Z[x + self.size_voxel,
                                      y + self.size_voxel]),
                                     (sq_dx, sq_dy, self.Z[x + self.size_voxel,\
-                                     y + self.size_voxel] - (self.size_voxel*10)),
+                                     y + self.size_voxel] - (self.size_voxel)),
                                     (sq_x, sq_dy, self.Z[x, y + self.size_voxel]\
-                                    - (self.size_voxel*10)),
+                                    - (self.size_voxel)),
                                     tex_coord) )
 
                 #if z > self.Z[x - self.size_voxel, y]:
