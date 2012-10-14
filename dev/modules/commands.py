@@ -9,6 +9,8 @@ import random, pickle, sys
 
 from config import Config
 from voxplanet.support import profile_decorator
+from voxplanet.landplane import TreeModel
+from panda3d.core import Vec3
 
 class Command_Handler():
     """Handler for all commands
@@ -156,6 +158,11 @@ class Command_Handler():
             print 'CharX, CharY: ', self.game.world.chunks_map.charX, self.game.world.chunks_map.charY
             print 'CamX, CamY: ', self.game.world.chunks_map.camX, self.game.world.chunks_map.camY
 
+    def cmd_tree(self, params = []):
+        self.game.gui.screen_images.add_image('treeland', 
+                                            self.game.world.treeland.gen_test_texture(),
+                                            scale = 0.8, pos = (0, 0, 0.1))
+
     def cmd_teleport(self, params = []):
         """Teleportation camera of X, Y, Z
 
@@ -211,6 +218,7 @@ class Command_Handler():
                 'teleport': cmd_teleport,
                 'port': cmd_teleport,
                 'savemap': cmd_save_map,
+                'tree': cmd_tree,
               }
 # vi: ts=4 sw=4
 

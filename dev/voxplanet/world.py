@@ -15,10 +15,11 @@ from panda3d.core import VBase3, VBase2
 from panda3d.core import Vec3, Vec2
 from pandac.PandaModules import Texture, TextureStage
 from pandac.PandaModules import TransparencyAttrib, Texture, TextureStage
-from voxplanet.landplane import LandNode, ChunkModel, TreeModel
+from voxplanet.landplane import LandNode, ChunkModel, TreeModel, ForestNode
 from voxplanet.map2d import Map_generator_2D
 from voxplanet.map3d import Map3d
 from voxplanet.support import profile_decorator
+from voxplanet.treegen import TreeLand
 from direct.stdpy import threading2 as panda_threading
 
 #sys.setrecursionlimit(65535)
@@ -181,7 +182,7 @@ class ChunksCollection():
 
         self.root = QuadroTreeNode(self, self.size_world, center = self.center)
         self.chunks_models = {}
-        self.tree_models = {}
+        self.forest_nodes = {}
 
         self.generate()
         self.show()
@@ -230,6 +231,9 @@ class ChunksCollection():
                                                            self.world.params.tex_uv_height,
                                                            self.world.params.chunks_tex
                                                            )
+                        self.forest_nodes[chunk] = ForestNode(self.config, self.world,
+                                             chunk[2], self.chunks_models[chunk])
+
 
         print 'Create chunks: ', time.time() - t
         t = time.time()
@@ -238,15 +242,17 @@ class ChunksCollection():
             if self.chunks[chunk]:
                 self.chunks_models[chunk].setX(self.chunks_map.DX)
                 self.chunks_models[chunk].setY(self.chunks_map.DY)
+                self.forest_nodes[chunk].setNewCoord(self.chunks_map.DX, self.chunks_map.DY)
+                #print self.forest_nodes[chunk].getPos(), ' <> ', self.chunks_models[chunk].getPos()
                 if self.chunks_models[chunk].getParent() != self.world.root_node:
                     self.chunks_models[chunk].reparentTo(self.world.root_node)
+                    self.forest_nodes[chunk].reparentTo(self.world.root_node)
             else:
                 if self.chunks_models[chunk].getParent() == self.world.root_node:
                     self.chunks_models[chunk].detachNode()
+                    self.forest_nodes[chunk].detachNode()
+
         print 'Attach/Detach time: ', time.time() - t
-
-
-        #self.world.root_node.flattenLight()
 
 class ChunksMap():
     """All chunks collections here
@@ -392,6 +398,7 @@ class World():
                        threadPriority = TPLow, frameBudget = -1)
 
         self.trees = []
+        self.treeland = TreeLand(self.config, self)
 
         #self.water = WaterNode(0.75)
         #self.water.show()
@@ -410,7 +417,12 @@ class World():
             tree.removeNode()
         self.trees = []
         for i in xrange(self.config.tree_models):
-            self.trees.append(TreeModel(Vec3(4,4,7), self.params.tree_tex, self.params.leafModel))
+            self.trees.append(TreeModel(Vec3(0.3,0.3,random.randint(2,5)),
+                                        self.params.tree_tex,
+                                        self.params.leafModel,
+                                        self.params.leafTex,
+                                        numIterations = random.randint(9, 12),
+                                        numCopies = random.randint(4,8)))
 
         def create_world():
             global_map_gen = Map_generator_2D(self.config, self.seed)

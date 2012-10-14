@@ -98,7 +98,7 @@ class Main():
         self.vox_params.tex_uv_height = self.textures.get_block_uv_height
         self.vox_params.tree_tex = self.textures['tree']
         self.vox_params.leafModel = self.gui.loader.loadModel("res/models/shrubbery")
-        self.vox_params.leafModel.setTexture(self.textures['leaf'])
+        self.vox_params.leafTex = self.textures['leaf']
         self.vox_params.fog = fog
         #self.vox_params.sun = sun
         self.world = World(self.vox_config, self.vox_params)

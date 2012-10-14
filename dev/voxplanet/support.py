@@ -9,15 +9,12 @@ License: GPL (see http://www.gnu.org/licenses/gpl.txt)
 import cProfile
 import math, random
 
-from panda3d.core import Geom, GeomNode, GeomTrifans, GeomTristrips
+from panda3d.core import Geom, GeomTrifans, GeomTristrips
 from panda3d.core import GeomTriangles, GeomVertexWriter
-from panda3d.core import GeomVertexArrayFormat, GeomVertexFormat
-from panda3d.core import GeomVertexReader
-from panda3d.core import GeomVertexRewriter, GeomVertexData
-from panda3d.core import InternalName
+from panda3d.core import GeomVertexData
+from panda3d.core import GeomVertexFormat
 from panda3d.core import PStatCollector
-from panda3d.core import TransformState,CullFaceAttrib
-from panda3d.core import Vec3,Vec4,Mat4
+from panda3d.core import Vec3
 
 class BCol():
     """Class collector for pstat
@@ -68,15 +65,6 @@ def pstat(func):
     doPstat.__dict__ = func.__dict__
     doPstat.__doc__ = func.__doc__
     return doPstat
-
-# Shit for fucking trees
-
-formatArray = GeomVertexArrayFormat()
-formatArray.addColumn(InternalName.make("drawFlag"), 1, Geom.NTUint8, Geom.COther)
-
-treeform = GeomVertexFormat(GeomVertexFormat.getV3n3cpt2())
-treeform.addArray(formatArray)
-treeform = GeomVertexFormat.registerFormat(treeform)
 
 def makeCircle(vdata, numVertices=40,offset=Vec3(0,0,0), direction=1):
     circleGeom=Geom(vdata)
@@ -201,122 +189,14 @@ def smallRandomAxis(vecList):
 
 
 
-#this draws the body of the tree. This draws a ring of vertices and connects the rings with
-#triangles to form the body.
-#this keepDrawing paramter tells the function wheter or not we're at an end
-#if the vertices before you were an end, dont draw branches to it
-def drawBody(nodePath, vdata, pos, vecList, radius=1, keepDrawing=True,numVertices=8):
-
-    circleGeom=Geom(vdata)
-
-    vertWriter=GeomVertexWriter(vdata, "vertex")
-    colorWriter=GeomVertexWriter(vdata, "color")
-    normalWriter=GeomVertexWriter(vdata, "normal")
-    drawReWriter=GeomVertexRewriter(vdata, "drawFlag")
-    texReWriter=GeomVertexRewriter(vdata, "texcoord")
-
-
-    startRow=vdata.getNumRows()
-    vertWriter.setRow(startRow)
-    colorWriter.setRow(startRow)
-    normalWriter.setRow(startRow)
-
-    sCoord=0
-
-    if (startRow!=0):
-        texReWriter.setRow(startRow-numVertices)
-        sCoord=texReWriter.getData2f().getX()+1
-
-        drawReWriter.setRow(startRow-numVertices)
-        if(drawReWriter.getData1f()==False):
-            sCoord-=1
-
-    drawReWriter.setRow(startRow)
-    texReWriter.setRow(startRow)
-
-    angleSlice=2*math.pi/numVertices
-    currAngle=0
-
-    #axisAdj=Mat4.rotateMat(45, axis)*Mat4.scaleMat(radius)*Mat4.translateMat(pos)
-
-    perp1=vecList[1]
-    perp2=vecList[2]
-
-    #vertex information is written here
-    for i in range(numVertices):
-        adjCircle=pos+(perp1*math.cos(currAngle)+perp2*math.sin(currAngle))*radius
-        normal=perp1*math.cos(currAngle)+perp2*math.sin(currAngle)
-        normalWriter.addData3f(normal)
-        vertWriter.addData3f(adjCircle)
-        texReWriter.addData2f(sCoord,(i+0.001)/(numVertices-1))
-        colorWriter.addData4f(0.5,0.5,0.5,1)
-        drawReWriter.addData1f(keepDrawing)
-        currAngle+=angleSlice
-
-
-    drawReader=GeomVertexReader(vdata, "drawFlag")
-    drawReader.setRow(startRow-numVertices)
-
-    #we cant draw quads directly so we use Tristrips
-    if (startRow!=0) & (drawReader.getData1f()!=False):
-        lines=GeomTristrips(Geom.UHStatic)
-        half=int(numVertices*0.5)
-        for i in range(numVertices):
-            lines.addVertex(i+startRow)
-            if i< half:
-                lines.addVertex(i+startRow-half)
-            else:
-                lines.addVertex(i+startRow-half-numVertices)
-
-        lines.addVertex(startRow)
-        lines.addVertex(startRow-half)
-        lines.closePrimitive()
-        lines.decompose()
-        circleGeom.addPrimitive(lines)
-
-
-        circleGeomNode=GeomNode("Debug")
-        circleGeomNode.addGeom(circleGeom)
-
-        #I accidentally made the front-face face inwards. Make reverse makes the tree render properly and
-            #should cause any surprises to any poor programmer that tries to use this code
-        circleGeomNode.setAttrib(CullFaceAttrib.makeReverse(),1)
-        #nodePath.numPrimitives+=numVertices*2
-
-        nodePath.attachNewNode(circleGeomNode)
-
-#this draws leafs when we reach an end
-def drawLeaf(nodePath,vdata, leafModel, pos=Vec3(0,0,0),vecList=[Vec3(0,0,1), Vec3(1,0,0),Vec3(0,-1,0)], scale=0.125):
-
-    #use the vectors that describe the direction the branch grows to make the right
-        #rotation matrix
-    newCs=Mat4(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
-    newCs.setRow(0, vecList[2]) #right
-    newCs.setRow(1, vecList[1]) #up
-    newCs.setRow(2, vecList[0]) #forward
-    newCs.setRow(3, Vec3(0,0,0))
-    newCs.setCol(3,Vec4(0,0,0,1))
-
-    axisAdj=Mat4.scaleMat(scale)*newCs*Mat4.translateMat(pos)
-
-    #orginlly made the leaf out of geometry but that didnt look good
-    #I also think there should be a better way to handle the leaf texture other than
-    #hardcoding the filename
-    #leafModel=loader.loadModel('models/shrubbery')
-    #leafTexture=loader.loadTexture('models/material-10-cl.png')
-
-
-    leafModel.reparentTo(nodePath)
-    #leafModel.setTexture(leafTexture,1)
-    leafModel.setTransform(TransformState.makeMat(axisAdj))
 
 #you cant normalize in-place so this is a helper function
-def myNormalize(myVec):
+def my_normalize(myVec):
     myVec.normalize()
     return myVec
 
 #helper function to make a square given the Lower-Left-Hand and Upper-Right-Hand corners
-def makeSquare(x1,y1,z1, x2,y2,z2, tex_coord):
+def make_square(x1,y1,z1, x2,y2,z2, tex_coord):
     format=GeomVertexFormat.getV3n3t2()
     vdata=GeomVertexData('square', format, Geom.UHStatic)
 
@@ -337,10 +217,10 @@ def makeSquare(x1,y1,z1, x2,y2,z2, tex_coord):
         vertex.addData3f(x2, y2, z2)
         vertex.addData3f(x1, y1, z2)
 
-    normal.addData3f(myNormalize(Vec3(2*x1-1, 2*y1-1, 2*z1-1)))
-    normal.addData3f(myNormalize(Vec3(2*x2-1, 2*y2-1, 2*z1-1)))
-    normal.addData3f(myNormalize(Vec3(2*x2-1, 2*y2-1, 2*z2-1)))
-    normal.addData3f(myNormalize(Vec3(2*x1-1, 2*y1-1, 2*z2-1)))
+    normal.addData3f(my_normalize(Vec3(2*x1-1, 2*y1-1, 2*z1-1)))
+    normal.addData3f(my_normalize(Vec3(2*x2-1, 2*y2-1, 2*z1-1)))
+    normal.addData3f(my_normalize(Vec3(2*x2-1, 2*y2-1, 2*z2-1)))
+    normal.addData3f(my_normalize(Vec3(2*x1-1, 2*y1-1, 2*z2-1)))
 
     #adding different colors to the vertex for visibility
 
@@ -374,7 +254,7 @@ def makeSquare(x1,y1,z1, x2,y2,z2, tex_coord):
 
 
 # make square with 4 verticles
-def makeSquare_net(coord1, coord2, coord3, coord4, tex_coord):
+def make_square4v(coord1, coord2, coord3, coord4, tex_coord):
     format=GeomVertexFormat.getV3n3t2()
     vdata=GeomVertexData('square', format, Geom.UHStatic)
 

@@ -12,12 +12,15 @@ from pandac.PandaModules import CardMaker
 from pandac.PandaModules import NodePath
 from pandac.PandaModules import TextureStage
 from pandac.PandaModules import TransparencyAttrib
-from voxplanet.support import makeSquare_net, drawBody, drawLeaf, treeform
+from voxplanet.support import make_square4v
+from voxplanet.treegen import make_fractal_tree, treeform
 
 class TreeModel(NodePath):
 
-    def __init__(self, length, tex, leafModel, pos=Vec3(0, 0, 0), numIterations = 11, numCopies = 4, vecList=[Vec3(0,0,1),
-                        Vec3(1,0,0), Vec3(0,-1,0)]):
+    def __init__(self, length, tex, leafModel, leafTex,
+                 pos=Vec3(0, 0, 0), numIterations = 11,
+                 numCopies = 6, vecList=[Vec3(0,0,1),
+                 Vec3(1,0,0), Vec3(0,-1,0)]):
 
         NodePath.__init__(self, 'Tree')
 
@@ -29,37 +32,44 @@ class TreeModel(NodePath):
         self.vecList = vecList
         self.tex = tex
         self.leafModel = leafModel
-        self.make()
+        self.leafTex = leafTex
+        make_fractal_tree(self.bodydata, self, self.length)
         self.setTexture(self.tex, 1)
+        self.flattenStrong()
 
-    def make(self):
+class ForestNode(NodePath):
 
-        if self.numIterations > 0:
+    def __init__(self, config, world, level, chunk):
+        NodePath.__init__(self, 'ForestNode')
+        self.config = config
+        self.world = world
+        self.level = level
+        self.chunk = chunk
+        self.placetrees = {}
+        if self.level >= self.config.tree_level:
+            sx = self.chunk.start_x
+            sy = self.chunk.start_y
+            ex = self.chunk.size_x
+            ey = self.chunk.size_y
+            for x in xrange(0, ex - sx):
+                for y in xrange(0, ey - sy):
+                    z = self.world.map3d[x + sx, y + sy]
+                    tree = self.world.treeland[x + sx, y + sy, z]
+                    if tree != None:
+                        self.placetrees[x, y, z-1] = self.attachNewNode("Tree")
+                        tree.instanceTo(self.placetrees[x, y, z-1])
 
-            drawBody(self, self.bodydata, self.pos,
-                     self.vecList, self.length.getX())
 
+    def setNewCoord(self, DX, DY):
+        """Set to new X
 
-            #move foward along the right axis
-            newPos=self.pos + self.vecList[0] * self.length.length()
+        center X - self.size/2 - DX
+        """
+        x = self.chunk.start_x - DX
+        y = self.chunk.start_y - DY
+        for X, Y, Z in self.placetrees:
+            self.placetrees[X, Y, Z].setPos(X + x, Y + y, Z)
 
-
-            #only branch every third level (sorta)
-            if self.numIterations % 3 == 0:
-                #decrease dimensions when we branch
-                self.length = Vec3(self.length.getX() / 2, self.length.getY() / 2,
-                              self.length.getZ() / 1.1)
-                for i in range(self.numCopies):
-                    self.numIterations =- 1
-                    self.make()
-            else:
-                #just make another branch connected to this one with a small variation in direction
-                self.numIterations =- 1
-                self.make()
-
-        else:
-            drawBody(self, self.bodydata, self.pos, self.vecList, self.length.getX(), False)
-            drawLeaf(self, self.bodydata, self.leafModel, self.pos, self.vecList)
 
 class ChunkModel(NodePath):
     """Chunk for quick render and create voxel-objects
@@ -74,7 +84,7 @@ class ChunkModel(NodePath):
     """
     def __init__(self, config, heights, X, Y, size, chunk_len, tex_uv_height, tex):
 
-        NodePath.__init__(self, 'ChunkModel_{0}-{1}_{2}'.format(X, Y, size))
+        NodePath.__init__(self, 'ChunkModel')
         self.X = X
         self.Y = Y
         self.config = config
@@ -146,20 +156,20 @@ class ChunkModel(NodePath):
                 coord3 = sq_dx, sq_dy, self.Z[x+self.size_voxel, y+self.size_voxel]
                 coord4 = sq_x, sq_dy, self.Z[x, y+self.size_voxel]
 
-                cube.append( makeSquare_net(coord1, coord2, coord3, coord4, tex_coord) )
+                cube.append( make_square4v(coord1, coord2, coord3, coord4, tex_coord) )
 
 
                 # skirt
 
                 if x == self.start_x:
-                    cube.append( makeSquare_net((sq_x, sq_y, z),
+                    cube.append( make_square4v((sq_x, sq_y, z),
                                     (sq_x, sq_dy, self.Z[x, y + self.size_voxel]),
                                     (sq_x, sq_dy, self.Z[x, y + self.size_voxel]\
                                     - (self.size_voxel)),
                                     (sq_x, sq_y, dz),
                                     tex_coord) )
                 if dx == self.size_x:
-                    cube.append( makeSquare_net((sq_dx, sq_y, self.Z[x +\
+                    cube.append( make_square4v((sq_dx, sq_y, self.Z[x +\
                                     self.size_voxel, y]),
                                     (sq_dx, sq_dy,
                                     self.Z[x + self.size_voxel, y + self.size_voxel]),
@@ -170,14 +180,14 @@ class ChunkModel(NodePath):
                                     tex_coord) )
 
                 if y == self.start_y:
-                    cube.append( makeSquare_net((sq_x, sq_y, z),
+                    cube.append( make_square4v((sq_x, sq_y, z),
                                     (sq_dx, sq_y, self.Z[x + self.size_voxel, y]),
                                     (sq_dx, sq_y,  self.Z[x + self.size_voxel, y]\
                                      - (self.size_voxel)),
                                     (sq_x, sq_y, dz),
                                     tex_coord) )
                 if dy == self.size_y:
-                    cube.append( makeSquare_net((sq_x, sq_dy, self.Z[x, y +\
+                    cube.append( make_square4v((sq_x, sq_dy, self.Z[x, y +\
                                     self.size_voxel]),
                                     (sq_dx, sq_dy, self.Z[x + self.size_voxel,
                                      y + self.size_voxel]),
@@ -200,6 +210,15 @@ class ChunkModel(NodePath):
 
                 cubes.append(cube)
 
+
+                #if self.level >= self.config.tree_level:
+                    #if sq_x % 4 == 0 and sq_y % 4 == 0:
+                        #tree = self.treeland[x, y, z]
+                        #if tree != None:
+                            #placetree = self.attachNewNode("Tree")
+                            #placetree.setPos(sq_x, sq_y, z-1)
+                            #print 'Tree: ', x, y, z-1, ' -> ', sq_x, sq_y, z-1
+                            #tree.instanceTo(placetree)
                 sq_y += 1
             sq_x += 1
             sq_y = 0
