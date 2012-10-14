@@ -40,7 +40,7 @@ class Config():
     size_region = size_world / 256
     #size_region = size_world
     root_level = 0
-    tree_level = 21
+    tree_level = 23
 
     # detalized /2
     chunk_len = 4
