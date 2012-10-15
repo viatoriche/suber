@@ -24,6 +24,7 @@ loadPrcFileData("editor-startup", "show-frame-rate-meter #t")
 loadPrcFileData("want-pstats", "1")
 loadPrcFileData("task-timer-verbose", "1")
 loadPrcFileData("pstats-tasks", "1")
+loadPrcFileData("support-threads", "#f")
 
 PStatClient.connect()
 
