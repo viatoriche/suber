@@ -22,7 +22,7 @@ from voxplanet.support import smallRandomAxis
 from pandac.PandaModules import Texture, PNMImage
 
 class TreeLand(dict):
-    """Tree land - get Model of Tree on the X, Y, Z coord
+    """Tree land - get number of TreeModel on the X, Y, Z coord
 
     config - voxplanet.config
     """
@@ -67,7 +67,7 @@ class TreeLand(dict):
             if t >= 0.9 or (0.5 <= t <= 0.51):
                 tp = abs(self.perlin_types(x, y))
                 tp = tp * (len(self.world.trees)-1)
-                return self.world.trees[int(round(tp))]
+                return int(round(tp))
             else:
                 return None
         else:

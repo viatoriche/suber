@@ -40,7 +40,7 @@ class Config():
     size_region = size_world / 256
     #size_region = size_world
     root_level = 0
-    tree_level = 23
+    tree_level = 20
 
     # detalized /2
     chunk_len = 4
@@ -66,7 +66,7 @@ class Config():
     min_continents = 4
     max_continents = 6
 
-    tree_models = 10
+    tree_models = 5
     add_pre_heights = True
 # vi: ft=python:tw=0:ts=4
 

@@ -21,6 +21,7 @@ from voxplanet.map3d import Map3d
 from voxplanet.support import profile_decorator
 from voxplanet.treegen import TreeLand
 from direct.stdpy import threading2 as panda_threading
+from voxplanet.deprecated.shapeGenerator import Cube as CubeModel
 
 #sys.setrecursionlimit(65535)
 
@@ -182,7 +183,7 @@ class ChunksCollection():
 
         self.root = QuadroTreeNode(self, self.size_world, center = self.center)
         self.chunks_models = {}
-        self.forest_nodes = {}
+        self.forest = self.world.forest
 
         self.generate()
         self.show()
@@ -231,27 +232,25 @@ class ChunksCollection():
                                                            self.world.params.tex_uv_height,
                                                            self.world.params.chunks_tex
                                                            )
-                        self.forest_nodes[chunk] = ForestNode(self.config, self.world,
-                                             chunk[2], self.chunks_models[chunk])
+                        self.world.forest.add_trees(chunk, self.chunks_models[chunk])
 
 
         print 'Create chunks: ', time.time() - t
         t = time.time()
         # attach/detach hide/show models
+        self.world.forest.hide_all()
         for chunk in self.chunks_models:
             if self.chunks[chunk]:
                 self.chunks_models[chunk].setX(self.chunks_map.DX)
                 self.chunks_models[chunk].setY(self.chunks_map.DY)
-                self.forest_nodes[chunk].setNewCoord(self.chunks_map.DX, self.chunks_map.DY)
-                #print self.forest_nodes[chunk].getPos(), ' <> ', self.chunks_models[chunk].getPos()
+                self.forest.mark_show(chunk)
                 if self.chunks_models[chunk].getParent() != self.world.root_node:
                     self.chunks_models[chunk].reparentTo(self.world.root_node)
-                    self.forest_nodes[chunk].reparentTo(self.world.root_node)
             else:
                 if self.chunks_models[chunk].getParent() == self.world.root_node:
                     self.chunks_models[chunk].detachNode()
-                    self.forest_nodes[chunk].detachNode()
 
+        self.forest.show_forest(self.chunks_map.DX, self.chunks_map.DY)
         print 'Attach/Detach time: ', time.time() - t
 
 class ChunksMap():
@@ -399,6 +398,7 @@ class World():
 
         self.trees = []
         self.treeland = TreeLand(self.config, self)
+        self.forest = None
 
         #self.water = WaterNode(0.75)
         #self.water.show()
@@ -408,21 +408,27 @@ class World():
         """
         return self.map3d.get_map_3d_tex(size, filename)
 
+    def create_trees(self):
+        for tree in self.trees:
+            tree.removeNode()
+        self.trees = []
+        #for i in xrange(self.config.tree_models):
+            #self.trees.append(TreeModel(Vec3(0.3,0.3,random.randint(2,5)),
+                                        #self.params.tree_tex,
+                                        #self.params.leafModel,
+                                        #self.params.leafTex,
+                                        #numIterations = random.randint(8, 12),
+                                        #numCopies = random.randint(3,6)))
+        for i in xrange(self.config.tree_models):
+            self.trees.append(CubeModel(1, 1, 1))
+        self.forest = ForestNode(self.config, self)
+        self.forest.reparentTo(self.root_node)
+
     def new(self):
         """New world
         """
 
-
-        for tree in self.trees:
-            tree.removeNode()
-        self.trees = []
-        for i in xrange(self.config.tree_models):
-            self.trees.append(TreeModel(Vec3(0.3,0.3,random.randint(2,5)),
-                                        self.params.tree_tex,
-                                        self.params.leafModel,
-                                        self.params.leafTex,
-                                        numIterations = random.randint(9, 12),
-                                        numCopies = random.randint(4,8)))
+        self.create_trees()
 
         def create_world():
             global_map_gen = Map_generator_2D(self.config, self.seed)

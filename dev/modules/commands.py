@@ -11,6 +11,9 @@ from config import Config
 from voxplanet.support import profile_decorator
 from voxplanet.landplane import TreeModel
 from panda3d.core import Vec3
+from pandac.PandaModules import UnalignedLVecBase4f as Vec4
+from pandac.PandaModules import PTA_LVecBase4f as PTAVecBase4
+from pandac.PandaModules import Shader, NodePath
 
 class Command_Handler():
     """Handler for all commands
@@ -76,8 +79,8 @@ class Command_Handler():
         """
         if self.minimap:
             #textures['world_map'] = generate_map_texture(self.game.world.map_tree, 1)
-            self.game.gui.screen_images.add_image('world_map', 
-                                            self.game.world.get_map3d_tex(256), 
+            self.game.gui.screen_images.add_image('world_map',
+                                            self.game.world.get_map3d_tex(256),
                                             scale = 0.8, pos = (0, 0, 0.1))
             #self.game.gui.screen_images['world_map'].show()
 
@@ -158,10 +161,31 @@ class Command_Handler():
             print 'CharX, CharY: ', self.game.world.chunks_map.charX, self.game.world.chunks_map.charY
             print 'CamX, CamY: ', self.game.world.chunks_map.camX, self.game.world.chunks_map.camY
 
+    def cmd_anl(self, params = []):
+        print render.analyze()
+
     def cmd_tree(self, params = []):
-        self.game.gui.screen_images.add_image('treeland', 
-                                            self.game.world.treeland.gen_test_texture(),
-                                            scale = 0.8, pos = (0, 0, 0.1))
+        self.game.world.create_trees()
+
+        n2 = NodePath('2')
+
+        tree = self.game.world.trees[0]
+        tree.copyTo(n2)
+        n2.reparentTo(self.game.gui.render)
+        coords = []
+        for x in xrange(4):
+            for y in xrange(4):
+                coords.append(Vec4(x * 4, y * 4, random.randint(1, 5), 0))
+
+        count = len(coords)
+        offsets = PTAVecBase4.emptyArray(count)
+        for i, offset in enumerate(coords):
+            offsets[i] = offset
+
+        n2.setShaderInput('offsets', offsets)
+        strShader = open('res/shaders/instance.cg','r').read().replace('%%COUNT%%', str(count))
+        n2.setShader(Shader.make(strShader))
+        n2.setInstanceCount(count)
 
     def cmd_teleport(self, params = []):
         """Teleportation camera of X, Y, Z
@@ -201,7 +225,7 @@ class Command_Handler():
                                             self.game.textures['world_blocks'],
                                             scale = 0.8, pos = (0, 0, 0.1))
 
-    run_cmd = { 
+    run_cmd = {
                 'exit': cmd_exit,
                 'createmap': cmd_create_global_map,
                 'create': cmd_create_global_map,
@@ -219,6 +243,7 @@ class Command_Handler():
                 'port': cmd_teleport,
                 'savemap': cmd_save_map,
                 'tree': cmd_tree,
+                'anl': cmd_anl,
               }
 # vi: ts=4 sw=4
 

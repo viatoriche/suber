@@ -5,7 +5,7 @@ void vshader(float4 vtx_position: POSITION,
              float2 vtx_texcoord0: TEXCOORD0, 
              uniform float4x4 mat_modelproj, 
              int l_id: INSTANCEID, 
-             uniform float4 offsets[256], 
+             uniform float4 offsets[%%COUNT%%], 
              out float4 l_position : POSITION, 
              out float2 l_texcoord0 : TEXCOORD0) 
 { 

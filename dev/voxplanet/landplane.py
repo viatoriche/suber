@@ -14,6 +14,10 @@ from pandac.PandaModules import TextureStage
 from pandac.PandaModules import TransparencyAttrib
 from voxplanet.support import make_square4v
 from voxplanet.treegen import make_fractal_tree, treeform
+from pandac.PandaModules import UnalignedLVecBase4f as UVec4
+from pandac.PandaModules import PTA_LVecBase4f as PTAVecBase4
+from pandac.PandaModules import Shader
+
 
 class TreeModel(NodePath):
 
@@ -39,36 +43,79 @@ class TreeModel(NodePath):
 
 class ForestNode(NodePath):
 
-    def __init__(self, config, world, level, chunk):
+    def __init__(self, config, world):
         NodePath.__init__(self, 'ForestNode')
         self.config = config
         self.world = world
-        self.level = level
-        self.chunk = chunk
-        self.placetrees = {}
-        if self.level >= self.config.tree_level:
-            sx = self.chunk.start_x
-            sy = self.chunk.start_y
-            ex = self.chunk.size_x
-            ey = self.chunk.size_y
-            for x in xrange(0, ex - sx):
-                for y in xrange(0, ey - sy):
-                    z = self.world.map3d[x + sx, y + sy]
-                    tree = self.world.treeland[x + sx, y + sy, z]
+        self.setPos(0, 0, 0)
+        self.chunk_trees = {}
+        self.trees_status = {}
+        for tree in self.world.trees:
+            tree.reparentTo(self)
+
+    def add_trees(self, chunk_name, chunk):
+        # level
+        if self.chunk_trees.has_key(chunk_name):
+            return
+
+        if chunk_name[2] >= self.config.tree_level:
+            self.chunk_trees[chunk_name] = {}
+            self.trees_status[chunk_name] = False
+            sx = chunk.start_x
+            sy = chunk.start_y
+            ex = chunk.size_x
+            ey = chunk.size_y
+            for x in xrange(sx, ex):
+                for y in xrange(sy, ey):
+                    z = self.world.map3d[x, y]
+                    tree = self.world.treeland[x, y, z]
                     if tree != None:
-                        self.placetrees[x, y, z-1] = self.attachNewNode("Tree")
-                        tree.instanceTo(self.placetrees[x, y, z-1])
+                        if not self.chunk_trees[chunk_name].has_key(tree):
+                            self.chunk_trees[chunk_name][tree] = []
+                        self.chunk_trees[chunk_name][tree].append( (x, y, z-1) )
 
+    def hide_all(self):
+        for chunk_name in self.trees_status:
+            self.trees_status[chunk_name] = False
 
-    def setNewCoord(self, DX, DY):
+    def mark_show(self, chunk_name):
+        self.trees_status[chunk_name] = True
+
+    def show_forest(self, DX, DY):
         """Set to new X
 
         center X - self.size/2 - DX
         """
-        x = self.chunk.start_x - DX
-        y = self.chunk.start_y - DY
-        for X, Y, Z in self.placetrees:
-            self.placetrees[X, Y, Z].setPos(X + x, Y + y, Z)
+
+        for tree in self.world.trees:
+            tree.hide()
+
+        placetrees = {}
+        for chunk_name in self.chunk_trees:
+
+            if self.trees_status[chunk_name]:
+                all_trees = self.chunk_trees[chunk_name]
+                for tree in all_trees:
+                    if not placetrees.has_key(tree):
+                        placetrees[tree] = []
+                    for coord in all_trees[tree]:
+                        placetrees[tree].append(coord)
+
+        for tree_n in placetrees:
+            tree = self.world.trees[tree_n]
+            tree.show()
+            coord = placetrees[tree_n][:1][0]
+            coords = placetrees[tree_n][1:]
+            count = len(coords)
+            offsets = PTAVecBase4.emptyArray(count)
+            for i, offset in enumerate(coords):
+                X, Y, Z = offset
+                offsets[i] = UVec4(X - DX, Y - DY, Z, 0)
+
+            tree.setShaderInput('offsets', offsets)
+            strShader = open('res/shaders/instance.cg','r').read().replace('%%COUNT%%', str(count))
+            tree.setShader(Shader.make(strShader))
+            tree.setInstanceCount(count)
 
 
 class ChunkModel(NodePath):
