@@ -72,7 +72,7 @@ class ForestNode(NodePath):
                     if tree != None:
                         if not self.chunk_trees[chunk_name].has_key(tree):
                             self.chunk_trees[chunk_name][tree] = []
-                        self.chunk_trees[chunk_name][tree].append( (x, y, z-1) )
+                        self.chunk_trees[chunk_name][tree].append( (x, y, z) )
 
     def hide_all(self):
         for chunk_name in self.trees_status:
@@ -103,10 +103,18 @@ class ForestNode(NodePath):
 
         for tree_n in placetrees:
             tree = self.world.trees[tree_n]
+            coords = placetrees[tree_n][:1]
+            print coords
+            if coords == []:
+                continue
+            #print tree_n, ':', X, Y, Z
+            X, Y, Z = coords[0]
+            self.world.trees[tree_n].setPos(X - DX, Y - DY, Z)
             tree.show()
-            coord = placetrees[tree_n][:1][0]
             coords = placetrees[tree_n][1:]
             count = len(coords)
+            if count == 0:
+                continue
             offsets = PTAVecBase4.emptyArray(count)
             for i, offset in enumerate(coords):
                 X, Y, Z = offset

@@ -420,7 +420,8 @@ class World():
                                         #numIterations = random.randint(8, 12),
                                         #numCopies = random.randint(3,6)))
         for i in xrange(self.config.tree_models):
-            self.trees.append(CubeModel(1, 1, 1))
+            self.trees.append(CubeModel(1, 1, random.randint(6,12)))
+            self.trees[i].setTexture(self.params.tree_tex)
         self.forest = ForestNode(self.config, self)
         self.forest.reparentTo(self.root_node)
 
