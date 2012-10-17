@@ -3,11 +3,12 @@
 """Land classes - chunks, LandPlane, trees
 """
 
-import random
+import random, time
 
 from panda3d.core import Geom, GeomNode
 from panda3d.core import GeomVertexData
-from panda3d.core import Vec3
+from panda3d.core import Vec3, Vec2
+from panda3d.core import VBase3
 from pandac.PandaModules import CardMaker
 from pandac.PandaModules import NodePath
 from pandac.PandaModules import TextureStage
@@ -17,6 +18,7 @@ from voxplanet.treegen import make_fractal_tree, treeform
 from pandac.PandaModules import UnalignedLVecBase4f as UVec4
 from pandac.PandaModules import PTA_LVecBase4f as PTAVecBase4
 from pandac.PandaModules import Shader
+from panda3d.core import RigidBodyCombiner as RBC
 
 
 class TreeModel(NodePath):
@@ -47,83 +49,64 @@ class ForestNode(NodePath):
         NodePath.__init__(self, 'ForestNode')
         self.config = config
         self.world = world
-        self.setPos(0, 0, 0)
-        self.chunk_trees = {}
-        self.trees_status = {}
-        for tree in self.world.trees:
-            tree.reparentTo(self)
+        self.trees = {}
+        self.rbc = RBC('rbc')
+        self.rbc_node = NodePath(self.rbc)
+        self.rbc_node.reparentTo(self)
+        self.tree_nodes = {}
 
-    def add_trees(self, chunk_name, chunk):
+    def add_trees(self, chunk):
         # level
-        if self.chunk_trees.has_key(chunk_name):
-            return
+        sx = chunk.start_x
+        sy = chunk.start_y
+        ex = chunk.size_x
+        ey = chunk.size_y
 
-        if chunk_name[2] >= self.config.tree_level:
-            self.chunk_trees[chunk_name] = {}
-            self.trees_status[chunk_name] = False
-            sx = chunk.start_x
-            sy = chunk.start_y
-            ex = chunk.size_x
-            ey = chunk.size_y
-            for x in xrange(sx, ex):
-                for y in xrange(sy, ey):
-                    z = self.world.map3d[x, y]
-                    tree = self.world.treeland[x, y, z]
-                    if tree != None:
-                        if not self.chunk_trees[chunk_name].has_key(tree):
-                            self.chunk_trees[chunk_name][tree] = []
-                        self.chunk_trees[chunk_name][tree].append( (x, y, z) )
+        t = time.time()
+        trees = self.world.treeland[sx, sy, ex, ey]
+        for tree in trees:
+            if not self.trees.has_key(tree):
+                self.trees[tree] = []
+            self.trees[tree] = self.trees[tree] + trees[tree]
 
-    def hide_all(self):
-        for chunk_name in self.trees_status:
-            self.trees_status[chunk_name] = False
-
-    def mark_show(self, chunk_name):
-        self.trees_status[chunk_name] = True
-
-    def show_forest(self, DX, DY):
+    def show_forest(self, DX, DY, far, charpos):
         """Set to new X
 
         center X - self.size/2 - DX
         """
 
-        for tree in self.world.trees:
-            tree.hide()
+        collect = False
 
-        placetrees = {}
-        for chunk_name in self.chunk_trees:
+        for tree_n in self.trees:
+            # create or attach
+            for coord in self.trees[tree_n]:
+                length_cam = VBase3.length(Vec3(coord) - Vec3(charpos))
 
-            if self.trees_status[chunk_name]:
-                all_trees = self.chunk_trees[chunk_name]
-                for tree in all_trees:
-                    if not placetrees.has_key(tree):
-                        placetrees[tree] = []
-                    for coord in all_trees[tree]:
-                        placetrees[tree].append(coord)
+                if length_cam <= far:
 
-        for tree_n in placetrees:
-            tree = self.world.trees[tree_n]
-            coords = placetrees[tree_n][:1]
-            print coords
-            if coords == []:
-                continue
-            #print tree_n, ':', X, Y, Z
-            X, Y, Z = coords[0]
-            self.world.trees[tree_n].setPos(X - DX, Y - DY, Z)
-            tree.show()
-            coords = placetrees[tree_n][1:]
-            count = len(coords)
-            if count == 0:
-                continue
-            offsets = PTAVecBase4.emptyArray(count)
-            for i, offset in enumerate(coords):
-                X, Y, Z = offset
-                offsets[i] = UVec4(X - DX, Y - DY, Z, 0)
+                    if not self.tree_nodes.has_key(coord):
+                        tree = self.world.trees[tree_n]
+                        self.tree_nodes[coord] = self.rbc_node.attachNewNode('TreeNode')
+                        tree.copyTo(self.tree_nodes[coord])
+                        collect = True
+                    else:
+                        if self.tree_nodes[coord].getParent() != self.rbc_node:
+                            self.tree_nodes[coord].reparentTo(self.rbc_node)
+                            collect = True
 
-            tree.setShaderInput('offsets', offsets)
-            strShader = open('res/shaders/instance.cg','r').read().replace('%%COUNT%%', str(count))
-            tree.setShader(Shader.make(strShader))
-            tree.setInstanceCount(count)
+                    x, y, z = coord
+                    self.tree_nodes[coord].setPos(x - DX, y - DY, z-1)
+
+                else:
+                    if self.tree_nodes.has_key(coord):
+                        if self.tree_nodes[coord].getParent() == self.rbc_node:
+                            self.tree_nodes[coord].detachNode()
+                            collect = True
+
+
+
+        if collect:
+            self.rbc.collect()
 
 
 class ChunkModel(NodePath):

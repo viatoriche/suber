@@ -39,13 +39,14 @@ class Config():
 
     size_region = size_world / 256
     #size_region = size_world
-    root_level = 0
-    tree_level = 19
+    tree_level = 15
 
     # detalized /2
     chunk_len = 4
     count_chunks = 2
     factor_far = 100
+    factor_remove_far = 120
+    tree_far = 500
 
     land_mount_level = 1, 200
     low_mount_level = 201, 1000

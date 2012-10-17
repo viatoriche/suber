@@ -21,57 +21,99 @@ from voxplanet.support import randomAxis
 from voxplanet.support import smallRandomAxis
 from pandac.PandaModules import Texture, PNMImage
 
-class TreeLand(dict):
-    """Tree land - get number of TreeModel on the X, Y, Z coord
+#class TreeLand(dict):
+    #"""Tree land - get number of TreeModel on the X, Y, Z coord
 
-    config - voxplanet.config
+    #config - voxplanet.config
+    #"""
+    #def __init__(self, config, world):
+        #self.config = config
+        #self.world = world
+        #random.seed(self.world.seed)
+        #seed = random.randint(0, sys.maxint)
+        #self.perlin_trees = PerlinNoise2(sx = self.config.size_world, sy = self.config.size_world,
+                                  #table_size = 256, seed = seed)
+        #self.perlin_trees.setScale(2 ** (self.config.size_mod/32))
+        #seed = random.randint(0, sys.maxint)
+        #self.perlin_types = PerlinNoise2(sx = self.config.size_world, sy = self.config.size_world,
+                                  #table_size = 256, seed = seed)
+        #self.perlin_types.setScale(2 ** (self.config.size_mod/32))
+
+    #def gen_test_texture(self):
+        #image = PNMImage(256, 256)
+        #image.fill(100,100,100)
+        #for x in xrange(0, 256):
+            #for y in xrange(0, 256):
+                #r = 100
+                #g = 100
+                #b = 100
+                #if self[x, y, 3] != None:
+                    #r = 0
+                    #g = 100
+                    #b = 0
+                #image.setPixel(x, y, (r, g, b))
+
+        #texture = Texture()
+        #texture.load(image)
+        #return texture
+
+    #def __getitem__(self, item):
+        #"""item - X, Y, Z - return Tree Info
+
+        #"""
+        #x, y, z = item
+        #if 1 <= z <= self.config.low_mount_level[1]:
+            #t = round(self.perlin_trees(x, y),3)
+            #if t >= 0.9 or (0.5 <= t <= 0.51):
+                #tp = abs(self.perlin_types(x, y))
+                #tp = tp * (len(self.world.trees)-1)
+                #return int(round(tp))
+            #else:
+                #return None
+        #else:
+            #return None
+
+class TreeLand(dict):
+    """Tree land - return coords and tree number around center
+
+    TreeLand[(x, y, ex, ey)] -> {tree_n: coords}
+
+    config - voxplanet.config.Config
+    world - voxplanet.world.World
     """
     def __init__(self, config, world):
         self.config = config
         self.world = world
-        random.seed(self.world.seed)
-        seed = random.randint(0, sys.maxint)
-        self.perlin_trees = PerlinNoise2(sx = self.config.size_world, sy = self.config.size_world,
-                                  table_size = 256, seed = seed)
-        self.perlin_trees.setScale(2 ** (self.config.size_mod/32))
-        seed = random.randint(0, sys.maxint)
-        self.perlin_types = PerlinNoise2(sx = self.config.size_world, sy = self.config.size_world,
-                                  table_size = 256, seed = seed)
-        self.perlin_types.setScale(2 ** (self.config.size_mod/32))
-
-    def gen_test_texture(self):
-        image = PNMImage(256, 256)
-        image.fill(100,100,100)
-        for x in xrange(0, 256):
-            for y in xrange(0, 256):
-                r = 100
-                g = 100
-                b = 100
-                if self[x, y, 3] != None:
-                    r = 0
-                    g = 100
-                    b = 0
-                image.setPixel(x, y, (r, g, b))
-
-        texture = Texture()
-        texture.load(image)
-        return texture
+        self.seed = self.world.seed
 
     def __getitem__(self, item):
-        """item - X, Y, Z - return Tree Info
+        """item - X, Y, endX, endY - return Tree Info
 
         """
-        x, y, z = item
-        if 1 <= z <= self.config.low_mount_level[1]:
-            t = round(self.perlin_trees(x, y),3)
-            if t >= 0.9 or (0.5 <= t <= 0.51):
-                tp = abs(self.perlin_types(x, y))
-                tp = tp * (len(self.world.trees)-1)
-                return int(round(tp))
-            else:
-                return None
-        else:
-            return None
+        if dict.has_key(self, item):
+            return dict.__getitem__(self, item)
+
+        random.seed(self.seed)
+        sx, sy, ex, ey = item
+        size = ex - sx
+        seed = random.randint(0, (sx + sy) / 2)
+        random.seed(seed)
+
+        count = random.randint(size, size + (size/2))
+        lentrees = len(self.world.trees)-1
+        res = {}
+        for i in xrange(count):
+            tree = random.randint(0, lentrees)
+            if not res.has_key(tree):
+                res[tree] = []
+            x = random.randint(sx, ex)
+            y = random.randint(sy, ey)
+            z = self.world.map3d[x, y]
+            if 0 < z < self.config.low_mount_level[1]:
+                res[tree].append( (x, y, z) )
+
+        self[item] = res
+        return res
 
 # Shit for fucking trees
 

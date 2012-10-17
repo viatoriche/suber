@@ -423,13 +423,11 @@ class Map3d(dict):
         self.river_perlin_height = PerlinNoise2(sx = self.world_size, sy = self.world_size,
                                        table_size = 256, seed = seed)
         self.river_perlin_height.setScale(2 ** (self.config.size_mod-20))
-        print 'Octaves generated: ', time.time() - t
 
-        print 'generate_pre_heights: '
         t = time.time()
         random.seed(seed)
         self.global_template.generate_pre_heights()
-        print 'generated pre heights! ', time.time() - t
+        print 'generated pre heights: ', time.time() - t
         #self.river_map = RiverMap(self, self.config.rivermap_size)
         #self.river_mod = self.world_size / self.config.rivermap_size
 
@@ -483,7 +481,6 @@ class Map3d(dict):
 
         return G
 
-        #print tx1, tx2, dx, self.cosine_interpolate(tx1, tx2, dx)
 
 
     def __getitem__(self, item):

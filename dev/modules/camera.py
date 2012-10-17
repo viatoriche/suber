@@ -4,7 +4,7 @@ import time
 
 from config import Config
 from direct.showbase import DirectObject
-from panda3d.core import TPLow
+from panda3d.core import TPNormal
 from pandac.PandaModules import Vec3, WindowProperties
 
 class CamFree(DirectObject.DirectObject):
@@ -52,12 +52,10 @@ class CamFree(DirectObject.DirectObject):
 
         self.props = WindowProperties()
 
-        #taskMgr.setupTaskChain('camera_chain', numThreads = 1, tickClock = False,
-                       #threadPriority = TPLow, frameBudget = 1)
+        taskMgr.setupTaskChain('camera_chain', numThreads = 1, tickClock = False,
+                       threadPriority = TPNormal, frameSync = False)
 
-        #taskMgr.add(self.CamControl, 'CamControl', taskChain = 'camera_chain')
-        #taskMgr.add(self.CamControl, 'CamControl')
-        taskMgr.doMethodLater(0.1, self.CamControl, 'CamControl')
+        taskMgr.doMethodLater(0.01, self.CamControl, 'CamControl')
 
     def setKey(self, key, value):
         self.keyMap[key] = value
@@ -69,6 +67,7 @@ class CamFree(DirectObject.DirectObject):
         """Task for controlling of camera
         """
         if (self.keyMap["Mouse3"] != 0):
+            #self.game.world.mutex_repaint.acquire()
             if (self.CursorOffOn == 'On'):
                 self.props.setCursorHidden(True)
                 base.win.requestProperties(self.props)
@@ -78,9 +77,9 @@ class CamFree(DirectObject.DirectObject):
             dirTT = base.camera.getMat(self.root_node).getRow3(2)
             dirRL = base.camera.getMat(self.root_node).getRow3(0)
 
-            self.SpeedCam = camera.getZ(self.root_node)*0.01
-            if self.SpeedCam < 0.1:
-                self.SpeedCam = 0.1
+            self.SpeedCam = camera.getZ(self.root_node)*0.001
+            if self.SpeedCam < 0.01:
+                self.SpeedCam = 0.01
 
             md = base.win.getPointer(0)
             x = md.getX()
@@ -121,6 +120,8 @@ class CamFree(DirectObject.DirectObject):
                     camera.setP(self.root_node, -90)
                 if (camera.getP(self.root_node)>=90.1):
                     camera.setP(self.root_node, 90)
+
+            #self.game.world.mutex_repaint.release()
 
             #print self.level
             #self.showterrain()

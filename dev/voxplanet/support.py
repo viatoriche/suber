@@ -136,7 +136,6 @@ def makeCylinder(vdata,numVertices=40):
     body.addVertex(0)
     body.addVertex(numVertices)
     body.closePrimitive()
-    #print body
 
 
 
