@@ -469,7 +469,7 @@ class Map3d(dict):
         E = self.cosine_interpolate(A, B, dx)
         F = self.cosine_interpolate(C, D, dx)
 
-        G = self.cosine_interpolate(E, F, dy)
+        return self.cosine_interpolate(E, F, dy)
         #if G == 0:
             #return 0
         #if G > 0:
@@ -477,9 +477,9 @@ class Map3d(dict):
         #else:
             #G = -(abs(G) ** (1/2.))
 
-        G = int(round(G))
+        #G = int(round(G
 
-        return G
+        #return G
 
 
 
@@ -517,11 +517,12 @@ class Map3d(dict):
                 height += dh
 
             # rivers
-            if height > -4:
+            if height > -4.:
                 r = self.river_perlin(x, y)
                 if r >= 0.1 and r <= 0.101:
-                    height = -10 + (self.river_perlin_height(x, y) * 10)
+                    height = -10. + (self.river_perlin_height(x, y) * 10.)
 
+            self[item] = int(height)
             return int(height)
 
     def get_map_3d_tex(self, size, filename = None):

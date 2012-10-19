@@ -166,26 +166,13 @@ class Command_Handler():
 
     def cmd_tree(self, params = []):
         self.game.world.create_trees()
-
-        n2 = NodePath('2')
-
-        tree = self.game.world.trees[0]
-        tree.copyTo(n2)
-        n2.reparentTo(self.game.gui.render)
-        coords = []
-        for x in xrange(4):
-            for y in xrange(4):
-                coords.append(Vec4(x * 4, y * 4, random.randint(1, 5), 0))
-
-        count = len(coords)
-        offsets = PTAVecBase4.emptyArray(count)
-        for i, offset in enumerate(coords):
-            offsets[i] = offset
-
-        n2.setShaderInput('offsets', offsets)
-        strShader = open('res/shaders/instance.cg','r').read().replace('%%COUNT%%', str(count))
-        n2.setShader(Shader.make(strShader))
-        n2.setInstanceCount(count)
+        trees = self.game.world.trees
+        x = y = 0
+        for tree in trees:
+            x = random.randint(-100, 100)
+            y = random.randint(-100, 100)
+            tree.setPos(x, y, 0)
+            tree.reparentTo(self.game.gui.render)
 
     def cmd_teleport(self, params = []):
         """Teleportation camera of X, Y, Z

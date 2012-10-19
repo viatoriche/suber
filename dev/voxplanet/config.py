@@ -41,12 +41,13 @@ class Config():
     #size_region = size_world
     tree_level = 15
 
-    # detalized /2
-    chunk_len = 4
-    count_chunks = 2
-    factor_far = 100
-    factor_remove_far = 120
-    tree_far = 500
+    # detalized
+    chunk_len = 16
+    count_chunks = 16
+    factor_far = 16
+    factor_remove_far = factor_far * 2
+    tree_far = 200
+    tree_billboard = 2
 
     land_mount_level = 1, 200
     low_mount_level = 201, 1000
@@ -67,7 +68,7 @@ class Config():
     min_continents = 4
     max_continents = 6
 
-    tree_models = 5
+    tree_models = 30
     add_pre_heights = True
 # vi: ft=python:tw=0:ts=4
 

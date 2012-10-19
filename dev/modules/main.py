@@ -94,6 +94,7 @@ class Main():
 
         self.vox_config = VoxConfig()
         self.vox_params = VoxParams()
+        self.vox_params.gui = self.gui
         self.vox_params.status = self.write
         self.vox_params.root_node = self.gui.render
         self.vox_params.chunks_tex = self.textures['world_blocks']

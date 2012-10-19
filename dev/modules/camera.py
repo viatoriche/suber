@@ -4,7 +4,7 @@ import time
 
 from config import Config
 from direct.showbase import DirectObject
-from panda3d.core import TPNormal
+from panda3d.core import TPHigh
 from pandac.PandaModules import Vec3, WindowProperties
 
 class CamFree(DirectObject.DirectObject):
@@ -53,7 +53,7 @@ class CamFree(DirectObject.DirectObject):
         self.props = WindowProperties()
 
         taskMgr.setupTaskChain('camera_chain', numThreads = 1, tickClock = False,
-                       threadPriority = TPNormal, frameSync = False)
+                       threadPriority = TPHigh, frameSync = False)
 
         taskMgr.doMethodLater(0.01, self.CamControl, 'CamControl')
 

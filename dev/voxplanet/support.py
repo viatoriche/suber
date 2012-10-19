@@ -257,36 +257,15 @@ def make_square4v(coord1, coord2, coord3, coord4, tex_coord):
     format=GeomVertexFormat.getV3n3t2()
     vdata=GeomVertexData('square', format, Geom.UHStatic)
 
-    x1, y1, z1 = coord1
-    x2, y2, z2 = coord2
-    x3, y3, z3 = coord3
-    x4, y4, z4 = coord4
-
     vertex=GeomVertexWriter(vdata, 'vertex')
     normal=GeomVertexWriter(vdata, 'normal')
     texcoord=GeomVertexWriter(vdata, 'texcoord')
 
     #make sure we draw the sqaure in the right plane
-    vertex.addData3f(x1, y1, z1)
-    vertex.addData3f(x2, y2, z2)
-    vertex.addData3f(x3, y3, z3)
-    vertex.addData3f(x4, y4, z4)
-
-    #normal.addData3f(Vec3(x1, y1, z1+10))
-    #normal.addData3f(Vec3(x2, y2, z2+10))
-    #normal.addData3f(Vec3(x3, y3, z3+10))
-    #normal.addData3f(Vec3(x4, y4, z4+10))
-
-    #normal.addData3f(Vec3(Vec3(coord2)-Vec3(coord1)).cross(Vec3(Vec3(coord3)-Vec3(coord1))))
-    #normal.addData3f(Vec3(Vec3(coord2)-Vec3(coord1)).cross(Vec3(Vec3(coord3)-Vec3(coord1))))
-    #normal.addData3f(Vec3(Vec3(coord2)-Vec3(coord1)).cross(Vec3(Vec3(coord3)-Vec3(coord1))))
-    #normal.addData3f(Vec3(Vec3(coord4)-Vec3(coord1)).cross(Vec3(Vec3(coord3)-Vec3(coord1))))
-
-    coord1 = Vec3(coord1)
-    coord2 = Vec3(coord2)
-    coord3 = Vec3(coord3)
-    coord4 = Vec3(coord4)
-
+    vertex.addData3f(coord1)
+    vertex.addData3f(coord2)
+    vertex.addData3f(coord3)
+    vertex.addData3f(coord4)
 
     side1 = coord1 - coord2
     side2 = coord1 - coord4
@@ -318,10 +297,7 @@ def make_square4v(coord1, coord2, coord3, coord4, tex_coord):
     tri1.addVertex(1)
     tri1.addVertex(3)
 
-    tri1.addVertex(1)
-    tri1.addVertex(2)
-    tri1.addVertex(3)
-
+    tri1.addConsecutiveVertices(1,3)
 
     tri1.closePrimitive()
 
