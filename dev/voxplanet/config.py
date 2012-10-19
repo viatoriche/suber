@@ -39,13 +39,13 @@ class Config():
 
     size_region = size_world / 256
     #size_region = size_world
-    tree_level = 15
+    tree_level = 5
 
     # detalized
-    chunk_len = 16
-    count_chunks = 16
-    factor_far = 16
-    factor_remove_far = factor_far * 2
+    min_level = 4
+    chunk_len = 2 ** min_level
+    count_chunks = 160 / chunk_len
+    chunk_delay = 0.1
     tree_far = 200
     tree_billboard = 2
 
