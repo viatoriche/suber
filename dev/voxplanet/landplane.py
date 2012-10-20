@@ -104,6 +104,7 @@ class ForestNode(NodePath):
         NodePath.__init__(self, 'ForestNode')
         self.config = config
         self.world = world
+        self.added = []
         self.trees = {}
         self.tree_nodes = {}
         self.bill_nodes = {}
@@ -114,10 +115,18 @@ class ForestNode(NodePath):
 
     def add_trees(self, chunk):
         # level
-        sx = chunk.start_x
-        sy = chunk.start_y
-        ex = chunk.size_x
-        ey = chunk.size_y
+        if chunk not in self.added:
+            self.added.append(chunk)
+        else:
+            return
+
+        size2 = chunk[1] / 2
+        x = chunk[0][0]
+        y = chunk[0][1]
+        sx = x - size2
+        sy = y - size2
+        ex = x + size2
+        ey = y + size2
 
         t = time.time()
         trees = self.world.treeland[sx, sy, ex, ey]

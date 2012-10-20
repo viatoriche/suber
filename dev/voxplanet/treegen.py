@@ -99,7 +99,8 @@ class TreeLand(dict):
         seed = random.randint(0, (sx + sy) / 2)
         random.seed(seed)
 
-        count = random.randint(size, size + (size/2))
+        sq = size * size
+        count = random.randint(sq/800, sq/750)
         lentrees = len(self.world.trees)-1
         res = {}
         for i in xrange(count):
