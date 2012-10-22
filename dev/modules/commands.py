@@ -148,15 +148,15 @@ class Command_Handler():
                 else:
                     dm += 1
             cht = chf = 0
-            for ch in chct.chunks:
-                if chct.chunks[ch]:
+            for ch in chct.status_chunks:
+                if chct.status_chunks[ch]:
                     cht += 1
                 else:
                     chf += 1
 
             print 'Chunks models:', len(chct.chunks_models),\
                    ' * attached:',am, ' / detached:', dm
-            print 'Chunks (state dict):', len(chct.chunks), ' * active:', cht, ' / passive:', chf
+            print 'Status chunks (state dict):', len(chct.status_chunks), ' * active:', cht, ' / passive:', chf
             print 'DX, DY: ', self.game.world.chunks_map.DX, self.game.world.chunks_map.DY
             print 'CharX, CharY: ', self.game.world.chunks_map.charX, self.game.world.chunks_map.charY
             print 'CamX, CamY: ', self.game.world.chunks_map.camX, self.game.world.chunks_map.camY

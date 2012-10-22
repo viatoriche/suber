@@ -183,7 +183,6 @@ class ChunksCollection():
     # chunks[level] = center, size
     chunks = {}
     status_chunks = {}
-    level_chunks = {}
 
     def __init__(self, chunks_map, world, center, size_world):
 
@@ -216,63 +215,36 @@ class ChunksCollection():
         # TODO: add delete cube event
 
         # For get minimum size of visible chunks
-        return
 
         self.mutex.acquire()
         t = time.time()
-        try:
-            sizes = []
-            for chunk in self.chunks:
-                if self.chunks[chunk]:
-                    sizes.append(chunk[1])
+        chunks = self.chunks_models.keys()
 
-            # calculate distance for remove chunks - LOD
-            remove_far = min(sizes) * self.config.factor_remove_far
+        # calculate distance for remove chunks - LOD
+        remove_far = self.far * 3
 
-            to_remove = []
-            for chunk in self.chunks:
-                # if chunk was marked for show
-                length_cam = VBase2.length(Vec2(chunk[0][0], chunk[0][1]) - Vec2(self.chunks_map.charX,
-                                                                 self.chunks_map.charY
-                                                                 ))
-                # hide mark, if distance for chunk too long
-                if length_cam >= remove_far:
-                    to_remove.append(chunk)
-                    if self.chunks_models.has_key(chunk):
-                        self.chunks_models[chunk].removeNode()
-                        del self.chunks_models[chunk]
-
-            for chunk in to_remove:
-                del self.chunks[chunk]
-
-        except RuntimeError, e:
-            print e
+        for chunk in chunks:
+            # if chunk was marked for show
+            length_cam = VBase2.length(Vec2(chunk[0][0], chunk[0][1]) - Vec2(self.chunks_map.charX,
+                                                             self.chunks_map.charY
+                                                             ))
+            # hide mark, if distance for chunk too long
+            if length_cam >= remove_far:
+                if self.chunks_models.has_key(chunk):
+                    self.chunks_models[chunk].removeNode()
+                    del self.chunks_models[chunk]
+                    del self.status_chunks[chunk]
 
         print 'remove: ', time.time() - t
         self.mutex.release()
 
     #@profile_decorator
-    def update(self, FarCreate = False):
+    def update(self):
         """Create and show chunk models
         """
         # TODO: add delete cube event
 
         # For get minimum size of visible chunks
-
-        #if not Force:
-
-            #if len(self.chunks_map.way) <= 1:
-                #return False
-
-            #start = self.chunks_map.way[0]
-            #end = self.chunks_map.way[-1:][0]
-
-            #dist = VBase3.length(start - end)
-
-            #print dist, (self.far / self.config.factor_far) * (self.config.count_chunks / 2)
-
-            #if dist < (self.far / self.config.factor_far) * (self.config.count_chunks / 2):
-                #return False
 
         self.mutex.acquire()
 
@@ -305,61 +277,46 @@ class ChunksCollection():
                                                                self.world.params.tex_uv_height,
                                                                self.world.params.chunks_tex
                                                                )
-                                #if length_cam > chunk[1]:
-                                    #self.status_chunks[chunk] = False
-                                #return True
-            return False
 
+        for chunk in self.status_chunks:
+            self.status_chunks[chunk] = False
 
-        if not FarCreate:
+        self.generate(our_level)
 
-            for chunk in self.status_chunks:
-                self.status_chunks[chunk] = False
+        lim_level = our_level + self.config.count_levels
 
-            self.generate(our_level)
+        if lim_level > self.config.size_mod:
+            lim_level = self.config.size_mod
 
-            lim_level = our_level + self.config.count_levels
+        our_levels = range(our_level, lim_level)
 
-            if lim_level > self.config.size_mod:
-                lim_level = self.config.size_mod
+        # calculate distance for show or hide chunks - LOD
+        self.far = (2 ** max(our_levels)) * 2
+        self.world.params.fog.setLinearRange(0, self.far)
+        base.camLens.setFar(self.far * 2)
 
-            our_levels = range(our_level, lim_level)
+        t = time.time()
+        try:
+            tree_chunks = self.chunks[self.config.tree_level]
+            for chunk in tree_chunks:
+                center, size, level = chunk
+                length_cam = VBase2.length(Vec2(center[0], center[1]) - Vec2(self.chunks_map.charX,
+                                                                 self.chunks_map.charY
+                                                                 ))
+                # hide mark, if distance for chunk too long
+                if length_cam <= size:
+                    self.world.forest.add_trees(chunk)
+        except KeyError, e:
+            pass
 
+        print 'add new trees: ', time.time() - t
 
-            # calculate distance for show or hide chunks - LOD
-            self.far = (2 ** max(our_levels)) * 2
-            self.world.params.fog.setLinearRange(0, self.far)
-            base.camLens.setFar(self.far * 2)
+        t = time.time()
+        create_chunk(self.far)
+        print 'create chunks: ', time.time() - t
 
-            t = time.time()
-            try:
-                tree_chunks = self.chunks[self.config.tree_level]
-                for chunk in tree_chunks:
-                    center, size, level = chunk
-                    length_cam = VBase2.length(Vec2(center[0], center[1]) - Vec2(self.chunks_map.charX,
-                                                                     self.chunks_map.charY
-                                                                     ))
-                    # hide mark, if distance for chunk too long
-                    if length_cam <= size:
-                        self.world.forest.add_trees(chunk)
-            except KeyError, e:
-                pass
-
-            print 'add new trees: ', time.time() - t
-
-            t = time.time()
-            add_new = create_chunk(self.far)
-            print 'create chunks: ', time.time() - t
-
-            if add_new == False:
-                self.chunks_map.add_done = True
-
-            print 'update: ', time.time() - t
-        else:
-            self.chunks_map.add_far_done = True
 
         self.mutex.release()
-        return True
 
     #@profile_decorator
     def repaint(self):
@@ -429,12 +386,9 @@ class ChunksMap():
                        frameSync = False, threadPriority = TPLow, timeslicePriority = False)
         taskMgr.setupTaskChain('cam_check_chain', numThreads = 1,
                        frameSync = False, timeslicePriority = False)
-        self.removed = False
         self.add_done = False
-        self.add_far_done = False
-        self.need_repaint = False
         self.need_forest = False
-        self.need_update = False
+        self.need_remove = False
         self.get_coords()
         self.create()
 
@@ -461,17 +415,14 @@ class ChunksMap():
         self.test_coord()
 
     def camSetPos(self):
-        self.regen(FarCreate = False)
+        self.regen()
         self.repaint()
         self.world.forest.clear()
         self.need_forest = True
 
-        self.camX = self.charX - self.DX
-        self.camY = self.charY - self.DY
         base.camera.setPos(self.world.root_node, (self.camX,
                                      self.camY,
                                      float(self.camZ)) )
-        self.camPos = base.camera.getPos(self.world.root_node)
 
     def test_coord(self):
         """Test and fix char coords, DX, DY, change new cam coords, if need
@@ -488,10 +439,15 @@ class ChunksMap():
         newDX = (int(self.charX) / self.size_region) * self.size_region
         newDY = (int(self.charY) / self.size_region) * self.size_region
 
+        self.camX = self.charX - newDX
+        self.camY = self.charY - newDY
+        self.camPos = base.camera.getPos(self.world.root_node)
+
         if newDX != self.DX or newDY != self.DY:
             self.DX = newDX
             self.DY = newDY
             self.camSetPos()
+
 
     def set_char_coord(self, coord):
         """Set char/cam coords -> teleportation
@@ -528,20 +484,21 @@ class ChunksMap():
         for chunks_clt in self.chunks_clts.values():
             chunks_clt.remove_far()
 
-    def regen(self, FarCreate = False):
-        res = False
+    def regen(self):
         for chunks_clt in self.chunks_clts.values():
-            if chunks_clt.update(FarCreate):
-                res = True
-        return res
+            chunks_clt.update()
 
 
     def regen_task(self, task):
         if not self.add_done:
-            self.regen(FarCreate = False)
+            self.regen()
             self.repaint()
+            self.add_done = True
+            self.need_remove = True
             return task.cont
-            #self.regen(FarCreate = True)
+        elif self.need_remove:
+            self.remove_far()
+            self.need_remove = False
         return task.again
 
     def cam_check(self, task):
@@ -555,7 +512,6 @@ class ChunksMap():
                        int(self.camX), int(self.camY), int(self.camZ),
                        self.land_z, int(self.charX), int(self.charY)))
             self.add_done = False
-            self.add_far_done = False
             self.need_forest = True
         return task.again
 
