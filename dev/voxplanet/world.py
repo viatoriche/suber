@@ -24,10 +24,6 @@ from voxplanet.treegen import TreeLand
 
 #sys.setrecursionlimit(65535)
 
-class Sky():
-    def __init__(self):
-        base.setBackgroundColor(0, 136, 255)
-
 class WaterNode():
     """Water plane for nya
 
@@ -619,7 +615,6 @@ class World():
         self.chunks_map = ChunksMap(self, 0, 1)
         self.chunks_map.set_char_coord((self.config.size_world/2, self.config.size_world/2, 10000))
         #self.chunks_map.set_char_coord((30000, 30000, 300))
-        self.sky = Sky()
 
 # vi: ft=python:tw=0:ts=4
 

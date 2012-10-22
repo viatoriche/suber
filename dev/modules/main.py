@@ -84,13 +84,14 @@ class Main():
         alnp = self.gui.render.attachNewNode(alight)
         self.gui.render.setLight(alnp)
 
-        colour = (0.5, 0.8, 0.8)
+        colour = (0.28125, 0.53125, 0.80859375)
         fog = Fog("A linear-mode Fog node")
         fog.setColor(*colour)
         fog.setLinearFallback(0,500,550)
         self.gui.camera.attachNewNode(fog)
 
         self.gui.render.setFog(fog)
+        self.gui.setBackgroundColor(*colour)
 
         self.vox_config = VoxConfig()
         self.vox_params = VoxParams()
