@@ -4,24 +4,23 @@
 World
 """
 
+import math
 import random
 import sys
 import time
-import threading
 
+from panda3d.core import Mutex
 from panda3d.core import NodePath
 from panda3d.core import TPLow, TPHigh
 from panda3d.core import VBase3, VBase2
 from panda3d.core import Vec3, Vec2
-from panda3d.core import Mutex
 from pandac.PandaModules import Texture, TextureStage
 from pandac.PandaModules import TransparencyAttrib, Texture, TextureStage
-from voxplanet.landplane import LandNode, ChunkModel, LowTreeModel, ForestNode
+from voxplanet.landplane import LandNode, ChunkModel, LowTreeModel, ForestNode, TreeModel
 from voxplanet.map2d import Map_generator_2D
 from voxplanet.map3d import Map3d
 from voxplanet.support import profile_decorator
 from voxplanet.treegen import TreeLand
-from direct.stdpy import threading2 as panda_threading
 
 #sys.setrecursionlimit(65535)
 
@@ -113,7 +112,9 @@ class QuadroTreeNode:
         if self.level > level:
             #divide_dist = self.config.chunk_len * (3 ** (25 - self.level))
             #show_dist = self.chunks_map.far
-            divide_dist = self.size * self.config.count_chunks
+            s2 = self.size * self.size
+            s2 += s2
+            divide_dist = math.sqrt(s2)
             length_cam = VBase3.length(Vec3(self.center) - Vec3(self.chunks_map.charX,
                                                                 self.chunks_map.charY,
                                                                 self.chunks_map.camZ))
@@ -287,7 +288,6 @@ class ChunksCollection():
         def create_chunk(far):
 
             for our_level in our_levels:
-
                 for chunk in self.chunks[our_level]:
                     if self.status_chunks[chunk]:
                         center, size, level = chunk
@@ -305,6 +305,8 @@ class ChunksCollection():
                                                                self.world.params.tex_uv_height,
                                                                self.world.params.chunks_tex
                                                                )
+                                #if length_cam > chunk[1]:
+                                    #self.status_chunks[chunk] = False
                                 #return True
             return False
 
@@ -315,7 +317,6 @@ class ChunksCollection():
                 self.status_chunks[chunk] = False
 
             self.generate(our_level)
-            self.our_chunks = []
 
             lim_level = our_level + self.config.count_levels
 
@@ -326,10 +327,11 @@ class ChunksCollection():
 
 
             # calculate distance for show or hide chunks - LOD
-            self.far = (2 ** max(our_levels)) * self.config.count_chunks
+            self.far = (2 ** max(our_levels)) * 2
             self.world.params.fog.setLinearRange(0, self.far)
-            base.camLens.setFar(self.far)
+            base.camLens.setFar(self.far * 2)
 
+            t = time.time()
             try:
                 tree_chunks = self.chunks[self.config.tree_level]
                 for chunk in tree_chunks:
@@ -343,8 +345,11 @@ class ChunksCollection():
             except KeyError, e:
                 pass
 
+            print 'add new trees: ', time.time() - t
 
+            t = time.time()
             add_new = create_chunk(self.far)
+            print 'create chunks: ', time.time() - t
 
             if add_new == False:
                 self.chunks_map.add_done = True
@@ -382,13 +387,13 @@ class ChunksCollection():
     #@profile_decorator
     def repaint_forest(self):
         t = time.time()
-        self.forest.show_forest(self.chunks_map.DX, self.chunks_map.DY, self.far/2, self.config.tree_far,
+        self.forest.show_forest(self.chunks_map.DX, self.chunks_map.DY, self.far, self.config.tree_far,
                                                                 (
                                                                  self.chunks_map.charX,
                                                                  self.chunks_map.charY,
                                                                  self.chunks_map.camZ
-                                                                ),
-                                                                self.config.tree_far * self.config.tree_billboard)
+                                                                )
+                                                                )
         print 'forest: ', time.time() - t
 
 
@@ -420,12 +425,10 @@ class ChunksMap():
         self.way = []
         taskMgr.setupTaskChain('world_chain_generate', numThreads = 1,
                        frameSync = False, threadPriority = TPHigh, timeslicePriority = False)
-        #taskMgr.setupTaskChain('world_chain_repaint', numThreads = 1,
-                       #frameSync = True, timeslicePriority = True)
         taskMgr.setupTaskChain('world_forest_repaint', numThreads = 1,
-                       frameSync = True, threadPriority = TPLow, timeslicePriority = True)
+                       frameSync = False, threadPriority = TPLow, timeslicePriority = False)
         taskMgr.setupTaskChain('cam_check_chain', numThreads = 1,
-                       frameSync = True, timeslicePriority = True)
+                       frameSync = False, timeslicePriority = False)
         self.removed = False
         self.add_done = False
         self.add_far_done = False
@@ -457,6 +460,19 @@ class ChunksMap():
 
         self.test_coord()
 
+    def camSetPos(self):
+        self.regen(FarCreate = False)
+        self.repaint()
+        self.world.forest.clear()
+        self.need_forest = True
+
+        self.camX = self.charX - self.DX
+        self.camY = self.charY - self.DY
+        base.camera.setPos(self.world.root_node, (self.camX,
+                                     self.camY,
+                                     float(self.camZ)) )
+        self.camPos = base.camera.getPos(self.world.root_node)
+
     def test_coord(self):
         """Test and fix char coords, DX, DY, change new cam coords, if need
         """
@@ -469,15 +485,13 @@ class ChunksMap():
         if self.charY >= self.size_world:
             self.charY = self.size_world - 1
 
-        self.DX = (int(self.charX) / self.size_region) * self.size_region
-        self.DY = (int(self.charY) / self.size_region) * self.size_region
-        self.camX = self.charX - self.DX
-        self.camY = self.charY - self.DY
+        newDX = (int(self.charX) / self.size_region) * self.size_region
+        newDY = (int(self.charY) / self.size_region) * self.size_region
 
-        base.camera.setPos(self.world.root_node, (self.camX,
-                                     self.camY,
-                                     float(self.camZ)) )
-        self.camPos = base.camera.getPos(self.world.root_node)
+        if newDX != self.DX or newDY != self.DY:
+            self.DX = newDX
+            self.DY = newDY
+            self.camSetPos()
 
     def set_char_coord(self, coord):
         """Set char/cam coords -> teleportation
@@ -490,10 +504,6 @@ class ChunksMap():
         self.camZ = z
 
         self.test_coord()
-
-        self.regen(FarCreate = False)
-        self.repaint()
-        self.repaint_forest()
 
     #@profile_decorator
     def repaint(self):
@@ -560,8 +570,8 @@ class ChunksMap():
                                           self.world, name, self.size_world)
 
         taskMgr.doMethodLater(self.config.chunk_delay, self.regen_task, 'WorldRegen', taskChain = 'world_chain_generate')
-        taskMgr.doMethodLater(5, self.repaint_forest_task, 'WorldRepaintForest', taskChain = 'world_forest_repaint')
-        taskMgr.doMethodLater(0.1, self.cam_check, 'cam_check', taskChain = 'cam_check_chain')
+        taskMgr.doMethodLater(self.config.tree_delay, self.repaint_forest_task, 'WorldRepaintForest', taskChain = 'world_forest_repaint')
+        taskMgr.doMethodLater(0.01, self.cam_check, 'cam_check', taskChain = 'cam_check_chain')
 
 
 class World():
@@ -650,8 +660,8 @@ class World():
 
 
         self.chunks_map = ChunksMap(self, 0, 1)
-        #self.chunks_map.set_char_coord((self.config.size_world/2, self.config.size_world/2, 10000))
-        self.chunks_map.set_char_coord((30000, 30000, 300))
+        self.chunks_map.set_char_coord((self.config.size_world/2, self.config.size_world/2, 10000))
+        #self.chunks_map.set_char_coord((30000, 30000, 300))
         self.sky = Sky()
 
 # vi: ft=python:tw=0:ts=4

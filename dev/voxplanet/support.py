@@ -291,7 +291,6 @@ def make_square4v(coord1, coord2, coord3, coord4, tex_coord):
     #quads arent directly supported by the Geom interface
     #you might be interested in the CardMaker class if you are
     #interested in rectangle though
-    tri1=GeomTriangles(Geom.UHStatic)
 
     tri1.addVertex(0)
     tri1.addVertex(1)

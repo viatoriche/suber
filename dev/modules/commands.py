@@ -168,11 +168,10 @@ class Command_Handler():
         self.game.world.create_trees()
         trees = self.game.world.trees
         x = y = 0
-        for tree in trees:
-            x = random.randint(-100, 100)
-            y = random.randint(-100, 100)
-            tree.setPos(x, y, 0)
-            tree.reparentTo(self.game.gui.render)
+        tree = NodePath('tree')
+        trees[0].copyTo(tree)
+        tree.setPos(x, y, 0)
+        tree.reparentTo(self.game.gui.render)
 
     def cmd_teleport(self, params = []):
         """Teleportation camera of X, Y, Z

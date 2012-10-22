@@ -41,14 +41,16 @@ class Config():
     #size_region = size_world
 
     # detalized
-    min_level = 2
-    tree_level = min_level+5
+    min_level = 4
+    tree_level = 11
     chunk_len = 2 ** min_level
-    count_chunks = 4
-    count_levels = 2
+    #count_chunks = 1
+    count_levels = 6
     chunk_delay = 0.01
-    tree_far = 200
-    tree_billboard = 2
+    tree_delay = 0.1
+    tree_sleep = 0.1
+    tree_far = 500
+    freq_tree = 2
 
     land_mount_level = 1, 200
     low_mount_level = 201, 1000
@@ -69,7 +71,7 @@ class Config():
     min_continents = 4
     max_continents = 6
 
-    tree_models = 30
+    tree_models = 100
     add_pre_heights = True
 # vi: ft=python:tw=0:ts=4
 

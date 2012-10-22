@@ -7,6 +7,8 @@ import random, time
 
 from panda3d.core import Geom, GeomNode
 from panda3d.core import GeomVertexData
+from panda3d.core import GeomTriangles, GeomVertexWriter
+from panda3d.core import GeomVertexFormat
 from panda3d.core import Vec3, Vec2
 from panda3d.core import VBase3, VBase2
 from pandac.PandaModules import CardMaker
@@ -20,6 +22,7 @@ from pandac.PandaModules import PTA_LVecBase4f as PTAVecBase4
 from pandac.PandaModules import Shader
 from panda3d.core import RigidBodyCombiner as RBC
 from voxplanet.shapeGenerator import Cube as CubeModel
+from voxplanet.support import profile_decorator
 
 class LowTreeModel(NodePath):
     """Cube-like tree
@@ -106,12 +109,8 @@ class ForestNode(NodePath):
         self.world = world
         self.added = []
         self.trees = {}
-        self.tree_nodes = {}
-        self.bill_nodes = {}
-        self.rbc = RBC('rbc')
-        self.rbc_node = NodePath(self.rbc)
-        #self.billboard_node = NodePath('billboard')
-        #self.billboard_node.reparentTo(self)
+        self.trees_in_node = 10
+        self.flatten_node = NodePath('flatten_nodes')
 
     def add_trees(self, chunk):
         # level
@@ -135,6 +134,11 @@ class ForestNode(NodePath):
                 self.trees[tree] = []
             self.trees[tree] = self.trees[tree] + trees[tree]
 
+    def clear(self):
+        self.flatten_node.detachNode()
+        self.flatten_node.removeNode()
+        self.flatten_node = NodePath('flatten_nodes')
+
     def show_forest(self, DX, DY, char_far, far, charpos, billboard = 1000):
         """Set to new X
 
@@ -142,66 +146,62 @@ class ForestNode(NodePath):
         """
 
         tmp_node = NodePath('tmp')
-        self.rbc_node.copyTo(tmp_node)
+        self.flatten_node.copyTo(tmp_node)
         tmp_node.reparentTo(self)
-        self.rbc_node.detachNode()
+        self.flatten_node.removeNode()
+        self.tree_nodes = []
+        self.flatten_node = NodePath('flatten_nodes')
 
         t = time.time()
-        tex = self.world.trees[0].leaf_tex
+        count_trees = 0
         for tree_n in self.trees:
             # create or attach
             for coord in self.trees[tree_n]:
                 #length_cam_2d = VBase2.length(Vec2(coord[0], coord[1]) - Vec2(charpos[0], charpos[1]))
                 length_cam_3d = VBase3.length(Vec3(coord) - Vec3(charpos))
-
                 if char_far >= length_cam_3d <= far:
-                    if not self.tree_nodes.has_key(coord):
-                        tree = self.world.trees[tree_n]
-                        self.tree_nodes[coord] = self.attachNewNode('TreeNode')
-                        tree.copyTo(self.tree_nodes[coord])
-                    else:
-                        if self.tree_nodes[coord].getParent() != self:
-                            self.tree_nodes[coord].reparentTo(self)
-
+                    tree = self.world.trees[tree_n]
+                    self.tree_nodes.append(NodePath('TreeNode'))
+                    tree.copyTo(self.tree_nodes[count_trees])
                     x, y, z = coord
-                    self.tree_nodes[coord].setPos(x - DX, y - DY, z-1)
-                elif char_far >= length_cam_3d <= billboard:
-                    height = self.world.trees[tree_n].size[2] / 2
-                    height2 = height / 2
-                    if not self.bill_nodes.has_key(coord):
-                        maker = CardMaker( 'bill_tree' )
-                        self.bill_nodes[coord] = NodePath(maker.generate())
-                        self.bill_nodes[coord].reparentTo(self.rbc_node)
-                        self.bill_nodes[coord].setTransparency(TransparencyAttrib.MAlpha)
-                        self.bill_nodes[coord].setHpr(0,-90,0)
-                        ts = TextureStage('ts')
-                        self.bill_nodes[coord].setTexture(ts, tex)
-                        self.bill_nodes[coord].setScale(height, 0, height)
-                        self.bill_nodes[coord].setTexScale(ts, 10, 10)
-                    else:
-                        if self.bill_nodes[coord].getParent() != self.rbc_node:
-                            self.bill_nodes[coord].reparentTo(self.rbc_node)
+                    self.tree_nodes[count_trees].setPos(x - DX, y - DY, z-1)
+                    count_trees += 1
 
-                    x, y, z = coord
-                    self.bill_nodes[coord].setPos(x - DX - height2, y - DY - height2, z+height2)
+        print 'Attach detach loop: ', time.time() - t
 
-                if length_cam_3d > far or length_cam_3d > char_far:
-                    if self.tree_nodes.has_key(coord):
-                        if self.tree_nodes[coord].getParent() == self:
-                            self.tree_nodes[coord].detachNode()
-                if length_cam_3d > billboard or length_cam_3d > char_far:
-                    if self.bill_nodes.has_key(coord):
-                        if self.bill_nodes[coord].getParent() == self.rbc_node:
-                            self.bill_nodes[coord].detachNode()
-
-
-        print 'Attach/detach trees loop: ', time.time() - t
+        if count_trees == 0:
+            tmp_node.removeNode()
+            return
 
         t = time.time()
-        self.rbc.collect()
-        self.rbc_node.reparentTo(self)
+
+        self.count_f_nodes = (count_trees / self.trees_in_node)+1
+        self.flatten_nodes = [NodePath('flatten_node') for i in xrange(self.count_f_nodes)]
+        s = 0
+        e = self.trees_in_node
+        added = 0
+        for node in self.flatten_nodes:
+            t_nodes = self.tree_nodes[s : e]
+            s += self.trees_in_node
+            e += self.trees_in_node
+            for t_node in t_nodes:
+                t_node.reparentTo(node)
+                added += 1
+            tt = time.time()
+            node.flattenStrong()
+            print 'Flatten node: ', time.time() - tt
+            time.sleep(self.config.tree_sleep)
+            node.reparentTo(self.flatten_node)
+            if added == count_trees:
+                break
+
+        print 'Added: ', added, time.time() - t
+
+        t = time.time()
+        self.flatten_node.flattenStrong()
+        self.flatten_node.reparentTo(self)
         tmp_node.removeNode()
-        print 'collect: ', time.time() - t
+        print 'flatten all: ', time.time() - t
 
 
 class ChunkModel(NodePath):
@@ -215,11 +215,13 @@ class ChunkModel(NodePath):
     tex_uv_height - function return of uv coordinates for height voxel
     tex - texture map
     """
+
     def __init__(self, config, heights, X, Y, size, chunk_len, tex_uv_height, tex):
 
         NodePath.__init__(self, 'ChunkModel')
         self.X = X
         self.Y = Y
+        self.Z = {}
         self.config = config
         self.heights = heights
         self.tex_uv_height = tex_uv_height
@@ -232,90 +234,125 @@ class ChunkModel(NodePath):
         self.size2 = self.size / 2
         self.start_x = self.X - self.size2
         self.start_y = self.Y - self.size2
-        self.size_x = self.X + self.size2
-        self.size_y = self.Y + self.size2
 
         chunk_geom = GeomNode('chunk_geom')
+        self.v_format = GeomVertexFormat.getV3n3t2()
+        self.v_data = GeomVertexData('chunk', self.v_format, Geom.UHStatic)
 
-        sq_x = sq_y  = 0
-        for x in xrange(self.start_x, self.size_x, self.size_voxel):
-            sq_dx = sq_x + 1
-            for y in xrange(self.start_y, self.size_y, self.size_voxel):
-                dx = x + self.size_voxel
-                dy = y + self.size_voxel
-                z = self.heights[x, y]
-                dz = z - (self.size_voxel)
+        vertex = GeomVertexWriter(self.v_data, 'vertex')
+        normal = GeomVertexWriter(self.v_data, 'normal')
+        texcoord = GeomVertexWriter(self.v_data, 'texcoord')
+
+        # make buffer of vertices
+        vertices = []
+        n_vert = 0
+        t = time.time()
+        tri=GeomTriangles(Geom.UHStatic)
+
+        def add_data(n_vert, v0, v1, v2, v3):
+            vertex.addData3f(v0)
+            vertex.addData3f(v1)
+            vertex.addData3f(v2)
+            vertex.addData3f(v3)
+
+            side1 = v0 - v1
+            side2 = v0 - v3
+            norm1 = side1.cross(side2)
+            side1 = v1 - v2
+            side2 = v1 - v3
+            norm2 = side1.cross(side2)
+
+            normal.addData3f(norm1)
+            normal.addData3f(norm1)
+            normal.addData3f(norm1)
+            normal.addData3f(norm2)
+
+            heights = []
+            heights.append(v0[2])
+            heights.append(v1[2])
+            heights.append(v2[2])
+            heights.append(v3[2])
+            maxh = max(heights)
+
+            u1, v1, u2, v2 = self.tex_uv_height(maxh)
+
+            texcoord.addData2f(u1, v2)
+            texcoord.addData2f(u1, v1)
+            texcoord.addData2f(u2, v1)
+            texcoord.addData2f(u2, v2)
+
+            tri.addConsecutiveVertices(0 + n_vert, 3)
+
+            tri.addVertex(2 + n_vert)
+            tri.addVertex(3 + n_vert)
+            tri.addVertex(0 + n_vert)
 
 
-                cube = []
 
-                sq_dy = sq_y + 1
+        end = self.chunk_len - 1
 
-                heights = []
-                heights.append(self.heights[x, y])
-                heights.append(self.heights[x+self.size_voxel, y])
-                heights.append(self.heights[x, y+self.size_voxel])
-                heights.append(self.heights[x+self.size_voxel, y+self.size_voxel])
-                maxh = max(heights)
+        for x in xrange(0, self.chunk_len):
+            for y in xrange(0, self.chunk_len):
+                X = self.X - self.size2 + (x * self.size_voxel)
+                Y = self.Y - self.size2 + (y * self.size_voxel)
+                dX = X + self.size_voxel
+                dY = Y + self.size_voxel
 
-                tex_coord = self.tex_uv_height(maxh)
+                dx = x + 1
+                dy = y + 1
 
-                coord1 = Vec3(sq_x, sq_y, z)
-                coord2 = Vec3(sq_dx, sq_y, self.heights[x+self.size_voxel, y])
-                coord3 = Vec3(sq_dx, sq_dy, self.heights[x+self.size_voxel, y+self.size_voxel])
-                coord4 = Vec3(sq_x, sq_dy, self.heights[x, y+self.size_voxel])
+                v0 = Vec3(x, dy, self.heights[X, dY])
+                v1 = Vec3(x, y, self.heights[X, Y])
+                v2 = Vec3(dx, y, self.heights[dX, Y])
+                v3 = Vec3(dx, dy, self.heights[dX, dY])
 
-                chunk_geom.addGeom( make_square4v(coord1, coord2, coord3, coord4, tex_coord) )
+                add_data(n_vert, v0, v1, v2, v3)
+                n_vert += 4
 
+                if x == 0:
+                    v0 = Vec3(x, y, self.heights[X, Y] - self.size_voxel)
+                    v1 = Vec3(x, y, self.heights[X, Y])
+                    v2 = Vec3(x, dy, self.heights[X, dY])
+                    v3 = Vec3(x, dy, self.heights[X, dY] - self.size_voxel)
+                    add_data(n_vert, v0, v1, v2, v3)
+                    n_vert += 4
 
-                # skirt
+                if y == 0:
+                    v0 = Vec3(dx, y, self.heights[dX, Y] - self.size_voxel)
+                    v1 = Vec3(dx, y, self.heights[dX, Y])
+                    v2 = Vec3(x, y, self.heights[X, Y])
+                    v3 = Vec3(x, y, self.heights[X, Y] - self.size_voxel)
+                    add_data(n_vert, v0, v1, v2, v3)
+                    n_vert += 4
 
-                if x == self.start_x:
-                    chunk_geom.addGeom( make_square4v(Vec3(sq_x, sq_y, z),
-                                    Vec3(sq_x, sq_dy, self.heights[x, y + self.size_voxel]),
-                                    Vec3(sq_x, sq_dy, self.heights[x, y + self.size_voxel]\
-                                    - (self.size_voxel)),
-                                    Vec3(sq_x, sq_y, dz),
-                                    tex_coord) )
-                elif dx == self.size_x:
-                    chunk_geom.addGeom( make_square4v(Vec3(sq_dx, sq_y, self.heights[x +\
-                                    self.size_voxel, y]),
-                                    Vec3(sq_dx, sq_dy,
-                                    self.heights[x + self.size_voxel, y + self.size_voxel]),
-                                    Vec3(sq_dx, sq_dy, self.heights[x + self.size_voxel,\
-                                    y + self.size_voxel] - (self.size_voxel)),
-                                    Vec3(sq_dx, sq_y, self.heights[x + self.size_voxel, y]\
-                                    - (self.size_voxel)),
-                                    tex_coord) )
+                if x == end:
+                    v0 = Vec3(dx, dy, self.heights[dX, dY] - self.size_voxel)
+                    v1 = Vec3(dx, dy, self.heights[dX, dY])
+                    v2 = Vec3(dx, y, self.heights[dX, Y])
+                    v3 = Vec3(dx, y, self.heights[dX, Y] - self.size_voxel)
+                    add_data(n_vert, v0, v1, v2, v3)
+                    n_vert += 4
 
-                if y == self.start_y:
-                    chunk_geom.addGeom( make_square4v(Vec3(sq_x, sq_y, z),
-                                    Vec3(sq_dx, sq_y, self.heights[x + self.size_voxel, y]),
-                                    Vec3(sq_dx, sq_y,  self.heights[x + self.size_voxel, y]\
-                                     - (self.size_voxel)),
-                                    Vec3(sq_x, sq_y, dz),
-                                    tex_coord) )
-                elif dy == self.size_y:
-                    chunk_geom.addGeom( make_square4v(Vec3(sq_x, sq_dy, self.heights[x, y +\
-                                    self.size_voxel]),
-                                    Vec3(sq_dx, sq_dy, self.heights[x + self.size_voxel,
-                                     y + self.size_voxel]),
-                                    Vec3(sq_dx, sq_dy, self.heights[x + self.size_voxel,\
-                                     y + self.size_voxel] - (self.size_voxel)),
-                                    Vec3(sq_x, sq_dy, self.heights[x, y + self.size_voxel]\
-                                    - (self.size_voxel)),
-                                    tex_coord) )
+                if y == end:
+                    v0 = Vec3(x, dy, self.heights[X, dY] - self.size_voxel)
+                    v1 = Vec3(x, dy, self.heights[X, dY])
+                    v2 = Vec3(dx, dy, self.heights[dX, dY])
+                    v3 = Vec3(dx, dy, self.heights[dX, dY] - self.size_voxel)
+                    add_data(n_vert, v0, v1, v2, v3)
+                    n_vert += 4
 
-                sq_y += 1
-            sq_x += 1
-            sq_y = 0
-
+        geom = Geom(self.v_data)
+        geom.addPrimitive(tri)
+        chunk_geom.addGeom( geom )
         self.attachNewNode(chunk_geom)
-        self.setTwoSided(True)
+        #self.setTwoSided(True)
         ts = TextureStage('ts')
         self.setTexture(ts, self.tex)
         self.setScale(self.size_voxel, self.size_voxel, 1)
+        #t = time.time()
+        # i love this function ^--^
         self.flattenStrong()
+        #print 'flatten chunk: ', time.time() - t
 
     def setX(self, DX):
         """Set to new X

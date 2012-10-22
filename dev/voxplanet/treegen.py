@@ -100,7 +100,7 @@ class TreeLand(dict):
         random.seed(seed)
 
         sq = size * size
-        count = random.randint(sq/800, sq/750)
+        count = random.randint(sq/(size*self.config.freq_tree), sq/(size*self.config.freq_tree-1))
         lentrees = len(self.world.trees)-1
         res = {}
         for i in xrange(count):
@@ -130,7 +130,7 @@ treeform = GeomVertexFormat.registerFormat(treeform)
 #triangles to form the body.
 #this keepDrawing paramter tells the function wheter or not we're at an end
 #if the vertices before you were an end, dont draw branches to it
-def draw_body(nodePath, vdata, pos, vecList, radius=1, keepDrawing=True,numVertices=8):
+def draw_body(nodePath, vdata, pos, vecList, radius=1, keepDrawing=True,numVertices=3):
 
     circleGeom=Geom(vdata)
 
@@ -263,7 +263,7 @@ def make_fractal_tree(bodydata, nodePath,length, pos=Vec3(0,0,0), numIterations=
 
     else:
         draw_body(nodePath,bodydata, pos, vecList, length.getX(),False)
-        draw_leaf(nodePath,bodydata, pos, vecList)
+        #draw_leaf(nodePath,bodydata, pos, vecList)
 
 
 # vi: ft=python:tw=0:ts=4
