@@ -261,22 +261,23 @@ class ChunksCollection():
 
             for our_level in our_levels:
                 for chunk in self.chunks[our_level]:
-                    if self.status_chunks[chunk]:
-                        center, size, level = chunk
-                        length_cam = VBase2.length(Vec2(center[0], center[1]) - Vec2(self.chunks_map.charX,
-                                                                         self.chunks_map.charY
-                                                                         ))
-                        # hide mark, if distance for chunk too long
-                        if length_cam > far:
-                            self.status_chunks[chunk] = False
-                        if length_cam <= far:
-                            if not self.chunks_models.has_key(chunk):
-                                self.chunks_models[chunk] = ChunkModel(self.config, self.world.map3d,
-                                                               center[0], center[1], size,
-                                                               self.chunks_map.chunk_len,
-                                                               self.world.params.tex_uv_height,
-                                                               self.world.params.chunks_tex
-                                                               )
+                    if self.status_chunks.has_key(chunk):
+                        if self.status_chunks[chunk]:
+                            center, size, level = chunk
+                            length_cam = VBase2.length(Vec2(center[0], center[1]) - Vec2(self.chunks_map.charX,
+                                                                             self.chunks_map.charY
+                                                                             ))
+                            # hide mark, if distance for chunk too long
+                            if length_cam > far:
+                                self.status_chunks[chunk] = False
+                            if length_cam <= far:
+                                if not self.chunks_models.has_key(chunk):
+                                    self.chunks_models[chunk] = ChunkModel(self.config, self.world.map3d,
+                                                                   center[0], center[1], size,
+                                                                   self.chunks_map.chunk_len,
+                                                                   self.world.params.tex_uv_height,
+                                                                   self.world.params.chunks_tex
+                                                                   )
 
         for chunk in self.status_chunks:
             self.status_chunks[chunk] = False
