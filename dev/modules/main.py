@@ -12,6 +12,8 @@ from pandac.PandaModules import TransparencyAttrib, PointLight, Fog
 from modules.textures import TextureCollection
 from modules.commands import Command_Handler
 from modules.graph import GUI
+from panda3d.core import TPHigh
+from direct.actor.Actor import Actor
 from voxplanet.world import World
 from voxplanet.config import Config as VoxConfig
 from voxplanet.params import Params as VoxParams
@@ -56,6 +58,12 @@ class Main():
 
     def start(self):
         self.textures.load_all()
+
+        self.char = Actor("res/models/ralph",
+                                {"run":"res/models/ralph-run",
+                                "walk":"res/models/ralph-walk"})
+        self.char.setScale(.2)
+
         self.gui.buttons.add_button(name = 'Exit', text = ("Exit", "Exit", "Exit", "disabled"),
                                pos = (1.23, 0, -0.95),
                                scale = 0.07, command=self.stop)
@@ -63,10 +71,15 @@ class Main():
         self.gui.screen_texts.add_text(name = 'status',
                                text = 'Hello! Suber was started!',
                                pos = (-1.3, -0.95), scale = 0.07)
-        self.gui.entries.add_entry(name = 'console',text = "" ,
-                               pos = (-1.29, 0, -0.85),
-                               scale=0.07,command=self.cmd_handler.cmd_handle,
-                               initialText="", width = 37, numLines = 1,focus=0)
+        #self.gui.entries.add_entry(name = 'console',text = "" ,
+                               #pos = (-1.29, 0, -0.85),
+                               #scale=0.07,command=self.cmd_handler.cmd_handle,
+                               #initialText="", width = 37, numLines = 1,focus=0)
+        self.gui.screen_texts.add_text(name = 'help',
+                               text = 'c - create world\nm - toggle map\nF1 - toggle help\nEsc - exit\ni - render info',
+                               pos = (-1, 0.8), scale = 0.07)
+
+        self.gui.hotkeys.accept('f1', self.toggle_help)
 
         self.gui.screen_images.add_image('sight',
                                self.textures['sight'],
@@ -90,12 +103,18 @@ class Main():
         fog.setLinearFallback(0,500,550)
         self.gui.camera.attachNewNode(fog)
 
+        colour = (0.28125, 0.53125, 0.80859375)
         self.gui.render.setFog(fog)
         self.gui.setBackgroundColor(*colour)
+
+        self.cam = base.camera
+        self.camfree = None
+        self.tp_cam = None
 
         self.vox_config = VoxConfig()
         self.vox_params = VoxParams()
         self.vox_params.gui = self.gui
+        self.vox_params.camera = self.cam
         self.vox_params.status = self.write
         self.vox_params.root_node = self.gui.render
         self.vox_params.chunks_tex = self.textures['world_blocks']
@@ -107,7 +126,19 @@ class Main():
         #self.vox_params.sun = sun
         self.world = World(self.vox_config, self.vox_params)
 
+        self.gui.taskMgr.setupTaskChain('Ticker', tickClock = True)
+        self.gui.taskMgr.doMethodLater(0.05, self.ticker, 'taskTicker', taskChain = 'Ticker')
+
         self.gui.start()
+
+    def ticker(self, task):
+        return task.again
+
+    def toggle_help(self):
+        if self.gui.screen_texts['help'].isHidden():
+            self.gui.screen_texts['help'].show()
+        else:
+            self.gui.screen_texts['help'].hide()
 
 # vi: ft=python:tw=0:ts=4
 

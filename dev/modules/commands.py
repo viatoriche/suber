@@ -14,6 +14,7 @@ from panda3d.core import Vec3
 from pandac.PandaModules import UnalignedLVecBase4f as Vec4
 from pandac.PandaModules import PTA_LVecBase4f as PTAVecBase4
 from pandac.PandaModules import Shader, NodePath
+from modules.interactive import GlobalMap, CamFree, TPCam
 
 class Command_Handler():
     """Handler for all commands
@@ -23,7 +24,17 @@ class Command_Handler():
 
     def __init__(self, game):
         self.game = game
-        self.minimap = True
+        self.hotkeys = self.game.gui.hotkeys
+        self.hotkeys.accept("t", self.testmap)
+        self.hotkeys.accept("m", self.cmd_minimap)
+        self.hotkeys.accept("c", self.cmd_create_global_map)
+        self.hotkeys.accept("escape", self.cmd_exit)
+        self.hotkeys.accept("i", self.cmd_info)
+        self.hotkeys.accept("n", self.cmd_anl)
+        self.hotkeys.accept('f3', self.cmd_start)
+        self.minimap = False
+        #self.gm_clicker = GlobalMap(self.game, self.game.gui.screen_images['world_map'])
+        self.gm_clicker = None
 
     def cmd_exit(self, params = []):
         """Exit the game
@@ -41,7 +52,7 @@ class Command_Handler():
         """
         Generate global map with test seed
         """
-        self.cmd_create_global_map([833650645])
+        self.cmd_create_global_map([34568])
 
     #@profile_decorator
     def cmd_create_global_map(self, params = []):
@@ -53,16 +64,39 @@ class Command_Handler():
         else:
             seed = random.randint(0, sys.maxint)
 
-        seed = 34568
+        #seed = 34568
 
         #seed = 2789334
 
         print 'Seed of world: ', seed
+        self.game.write('Creating world...')
         self.game.world.seed = seed
         self.game.world.new()
+        if self.game.camfree == None:
+            self.game.camfree = CamFree(self.game)
+        if self.game.tp_cam != None:
+            self.game.tp_cam.set_enable(False)
+        self.game.cam = self.game.camfree
+        self.game.cam.set_enable(True)
+        self.game.write('World was created! Seed: {0}'.format(seed))
 
 
+    def cmd_start(self, params = []):
+        """Start game
+        """
+        try:
+            if self.game.camfree != None:
+                self.game.camfree.set_enable(False)
+        except TypeError:
+            self.game.camfree.set_enable(False)
+        try:
+            if self.game.tp_cam == None:
+                self.game.tp_cam = TPCam(self.game)
+        except TypeError:
+            pass
 
+        self.game.cam = self.game.tp_cam
+        self.game.cam.set_enable(True)
 
     def cmd_minimap(self, params = []):
         """
@@ -78,10 +112,15 @@ class Command_Handler():
         docstring for cmd_show_map
         """
         if self.minimap:
+            self.game.write('Creating map...')
             #textures['world_map'] = generate_map_texture(self.game.world.map_tree, 1)
             self.game.gui.screen_images.add_image('world_map',
                                             self.game.world.get_map3d_tex(256),
                                             scale = 0.8, pos = (0, 0, 0.1))
+            if self.gm_clicker == None:
+                self.gm_clicker = GlobalMap(self.game)
+            self.gm_clicker.image = self.game.gui.screen_images['world_map']
+            self.game.write('Map created!')
             #self.game.gui.screen_images['world_map'].show()
 
     def cmd_save_map(self, params = []):
@@ -96,6 +135,7 @@ class Command_Handler():
         docstring for cmd_hide_map
         """
         self.game.gui.screen_images.del_image('world_map')
+        self.gm_clicker.image = None
 
     def cmd_save(self, params = []):
         """
@@ -186,7 +226,7 @@ class Command_Handler():
         if len(params) == 0:
             x = random.randint(0, self.game.world.chunks_map.size_world)
             y = random.randint(0, self.game.world.chunks_map.size_world)
-            z = self.game.world.chunks_map.camZ
+            z = self.game.world.map3d[x, y]+100
         elif len(params) == 1:
             z = params[0]
             x = self.game.world.chunks_map.charX
@@ -200,7 +240,7 @@ class Command_Handler():
             try:
                 z = params[2]
             except:
-                z = 0
+                z = self.game.world.map3d[x, y]+100
 
         coords = int(x), int(y), int(z)
         print 'port to ', coords
@@ -230,6 +270,7 @@ class Command_Handler():
                 'savemap': cmd_save_map,
                 'tree': cmd_tree,
                 'anl': cmd_anl,
+                'start': cmd_start,
               }
 # vi: ts=4 sw=4
 

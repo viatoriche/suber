@@ -525,7 +525,7 @@ class Map3d(dict):
             self[item] = int(height)
             return int(height)
 
-    def get_map_3d_tex(self, size, filename = None):
+    def get_map_3d_tex(self, size, filename = None, charPos = None):
         """Generate texture of map
         """
         mod = self.world_size / size
@@ -563,9 +563,11 @@ class Map3d(dict):
         if filename != None:
             image.write(filename)
 
-        #for x in xrange(-1, 2):
-            #for y in xrange(-1, 2):
-               #image.setPixel(int(world.chunks_map.charX)+x, int(world.chunks_map.charY)+y, (255, 0, 0))
+        if charPos != None:
+            charX, charY = charPos
+            for x in xrange(-1, 2):
+                for y in xrange(-1, 2):
+                   image.setPixel(int(charX/mod)+x, int(charY/mod)+y, (255, 0, 0))
 
         texture = Texture()
         texture.load(image)

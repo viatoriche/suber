@@ -10,7 +10,7 @@ class Config():
     name_game - name of game
     """
     #tex_suffix = ''
-    tex_suffix = '64/'
+    tex_suffix = '256/'
     name_game = 'Suber'
 
 # vi: ft=python:tw=0:ts=4

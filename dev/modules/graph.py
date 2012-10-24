@@ -11,14 +11,13 @@ from direct.gui.DirectGui import DirectButton, DirectEntry
 from direct.gui.OnscreenImage import OnscreenImage
 from direct.gui.OnscreenText import OnscreenText
 from direct.showbase.ShowBase import ShowBase
-from modules.camera import CamFree
+from modules.interactive import HotKeys
 from modules.support import generate_hash
 from panda3d.core import TextNode, LODNode, NodePath
 from pandac.PandaModules import TransparencyAttrib
 
 class OnscreenImages(dict):
-    """
-    All screen images collection
+    """    All screen images collection
     """
     def add_image(self, name = '', filename = '', pos = (0,0,0), scale = 1):
         if name == '':
@@ -112,22 +111,16 @@ class GUI(ShowBase):
         self.screen_texts = OnscreenTexts()
         self.buttons = DirectButtons()
         self.entries = DirectEntries()
-
-
+        self.hotkeys = HotKeys(self)
 
     def write(self, text):
-        """
-            write Text on screen
+        """write Text on screen
         """
         self.screen_texts['status'].setText(text)
 
     def start(self):
+        """run GUI
         """
-        run GUI
-        """
-        # start plugin game
-        self.camFree = CamFree(self.game)
-        self.camera.setHpr(0, -90, 0)
         self.run()
 
 # vi: ft=python:tw=0:ts=4

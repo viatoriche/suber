@@ -74,15 +74,16 @@ class TextureCollection(dict):
     def get_block_uv_height(self, z):
         # u1, v1, u2, v2
         config = self.game.vox_config
-        tex_coord = 0.0, 1.0, 0.0625, 0.9375
+        du = 0.0005
+        tex_coord = 0.0+du, 1.0-du, 0.0625-du, 0.9375+du
         if z >= config.land_mount_level[0] and z <= config.land_mount_level[1]:
-            tex_coord = 0.0625, 1.0, 0.125, 0.9375
+            tex_coord = 0.0625+du, 1.0-du, 0.125-du, 0.9375+du
         elif z >= config.low_mount_level[0] and z <= config.low_mount_level[1]:
-            tex_coord = 0.125, 1.0, 0.1875, 0.9375
+            tex_coord = 0.125+du, 1.0-du, 0.1875-du, 0.9375+du
         elif z >= config.mid_mount_level[0] and z <= config.mid_mount_level[1]:
-            tex_coord = 0.1875, 1.0, 0.25, 0.9375
+            tex_coord = 0.1875+du, 1.0-du, 0.25-du, 0.9375+du
         elif z >= config.high_mount_level[0]:
-            tex_coord = 0.25, 1.0, 0.3125, 0.9375
+            tex_coord = 0.25+du, 1.0-du, 0.3125-du, 0.9375+du
 
         return tex_coord
 

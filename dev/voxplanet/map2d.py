@@ -8,7 +8,6 @@ License: GPL (see http://www.gnu.org/licenses/gpl.txt)
 
 import random
 import os
-from PIL import Image
 
 class MapDict2D(dict):
     """Base class for Map
@@ -115,21 +114,21 @@ class Maps2D(dict):
                     break
         return coasts
 
-    def create_image(self, filename, level = 0):
-        """Create image of map and save to filename
-        """
-        cmap = self[level]
-        size = cmap.size
-        image = Image.new("RGB", (size, size), (0,0,0,0))
-        for x, y in cmap:
-            # water
-            if cmap[(x,y)] == 0:
-                image.putpixel((x, y), (0, 0, 128))
-            # land
-            else:
-                image.putpixel((x, y), (0, 200, 0))
-        image.save(filename, 'PNG')
-        del image
+    #def create_image(self, filename, level = 0):
+        #"""Create image of map and save to filename
+        #"""
+        #cmap = self[level]
+        #size = cmap.size
+        #image = Image.new("RGB", (size, size), (0,0,0,0))
+        #for x, y in cmap:
+            ##water
+            #if cmap[(x,y)] == 0:
+                #image.putpixel((x, y), (0, 0, 128))
+            ##land
+            #else:
+                #image.putpixel((x, y), (0, 200, 0))
+        #image.save(filename, 'PNG')
+        #del image
 
     def get_round_xy_land(self, target_coord, size):
         """Get 3x3 square, where target location in center
