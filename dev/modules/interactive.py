@@ -7,7 +7,7 @@ from panda3d.core import CompassEffect
 from config import Config
 from direct.showbase import DirectObject
 from panda3d.core import TPNormal
-from pandac.PandaModules import Vec3, WindowProperties
+from pandac.PandaModules import Vec3, VBase3, WindowProperties
 from panda3d.core import CollisionTraverser,CollisionNode
 from panda3d.core import CollisionHandlerQueue,CollisionRay
 from panda3d.core import PandaNode,NodePath,Camera,TextNode
@@ -71,32 +71,23 @@ class GlobalMap(DirectObject.DirectObject):
         return self.distanceScale + dx, self.distanceScale + dy
 
 
-class CamFree():
+class CamFreeMgr(DirectObject.DirectObject):
     """Free fly camera
 
     game - modules.main.Main()
     root_node - root render for game
     """
-    config = Config()
-    def __init__(self, game, root_node = None):
+    def __init__(self, game):
         self.game = game
-        if root_node == None:
-            self.root_node = render
-        else:
-            self.root_node = root_node
-
         self.SpeedRot = 0.05
         self.SpeedMult = 10
         self.delay = 0.02
 
         self.props = WindowProperties()
 
-        self.set_enable(True)
-
         #taskMgr.setupTaskChain('camera_chain', numThreads = 1,
                        #threadPriority = TPNormal, frameSync = False)
 
-        taskMgr.doMethodLater(self.delay, self.cam_control, 'CamControl')
 
     def set_key(self, key, value):
         self.keyMap[key] = value
@@ -104,41 +95,46 @@ class CamFree():
     def cam_speed(self, sd):
         self.SpeedCam *= sd
 
-    def __getattr__(self, attr, *args, **params):
-        return eval('self.game.gui.camera.{0}(*args, **params)'.format(attr))
-
     def set_enable(self, value):
-        self.CursorOffOn = 'On'
-        self.keyMap = {"FORWARD":0, "BACK":0, "RIGHT":0,
-                       "LEFT":0, "Mouse3":0, "LSHIFT":0,
-                       "UPWARDS":0, "DOWNWARDS":0}
-
-        self.game.gui.hotkeys.accept("w", self.set_key, ["FORWARD",1])
-        self.game.gui.hotkeys.accept("w-up", self.set_key, ["FORWARD",0])
-        self.game.gui.hotkeys.accept("s", self.set_key, ["BACK",1])
-        self.game.gui.hotkeys.accept("s-up", self.set_key, ["BACK",0])
-        self.game.gui.hotkeys.accept("d", self.set_key, ["RIGHT",1])
-        self.game.gui.hotkeys.accept("d-up", self.set_key, ["RIGHT",0])
-        self.game.gui.hotkeys.accept("a", self.set_key, ["LEFT",1])
-        self.game.gui.hotkeys.accept("a-up", self.set_key, ["LEFT",0])
-        self.game.gui.hotkeys.accept("q", self.set_key, ["UPWARDS",1])
-        self.game.gui.hotkeys.accept("q-up", self.set_key, ["UPWARDS",0])
-        self.game.gui.hotkeys.accept("e", self.set_key, ["DOWNWARDS",1])
-        self.game.gui.hotkeys.accept("e-up", self.set_key, ["DOWNWARDS",0])
-        self.game.gui.hotkeys.accept("mouse3", self.set_key, ["Mouse3",1])
-        self.game.gui.hotkeys.accept("mouse3-up", self.set_key, ["Mouse3",0])
-        self.game.gui.hotkeys.accept("lshift", self.set_key, ["LSHIFT",1])
-        self.game.gui.hotkeys.accept("lshift-up", self.set_key, ["LSHIFT",0])
-        self.game.gui.hotkeys.accept("wheel_up", self.cam_speed, [1.1])
-        self.game.gui.hotkeys.accept("wheel_down", self.cam_speed, [0.9])
-
         self.enable = value
+
+        self.root_node = self.game.world.root_node
+        self.camera = self.game.gui.camera
+        self.hotkeys = self.game.gui.hotkeys
+
+        if self.enable:
+            self.CursorOffOn = 'On'
+            self.keyMap = {"FORWARD":0, "BACK":0, "RIGHT":0,
+                           "LEFT":0, "Mouse3":0, "LSHIFT":0,
+                           "UPWARDS":0, "DOWNWARDS":0}
+
+            self.hotkeys.accept("w", self.set_key, ["FORWARD",1])
+            self.hotkeys.accept("w-up", self.set_key, ["FORWARD",0])
+            self.hotkeys.accept("s", self.set_key, ["BACK",1])
+            self.hotkeys.accept("s-up", self.set_key, ["BACK",0])
+            self.hotkeys.accept("d", self.set_key, ["RIGHT",1])
+            self.hotkeys.accept("d-up", self.set_key, ["RIGHT",0])
+            self.hotkeys.accept("a", self.set_key, ["LEFT",1])
+            self.hotkeys.accept("a-up", self.set_key, ["LEFT",0])
+            self.hotkeys.accept("q", self.set_key, ["UPWARDS",1])
+            self.hotkeys.accept("q-up", self.set_key, ["UPWARDS",0])
+            self.hotkeys.accept("e", self.set_key, ["DOWNWARDS",1])
+            self.hotkeys.accept("e-up", self.set_key, ["DOWNWARDS",0])
+            self.hotkeys.accept("mouse3", self.set_key, ["Mouse3",1])
+            self.hotkeys.accept("mouse3-up", self.set_key, ["Mouse3",0])
+            self.hotkeys.accept("lshift", self.set_key, ["LSHIFT",1])
+            self.hotkeys.accept("lshift-up", self.set_key, ["LSHIFT",0])
+            self.hotkeys.accept("wheel_up", self.cam_speed, [1.1])
+            self.hotkeys.accept("wheel_down", self.cam_speed, [0.9])
+
+            self.camera.reparentTo(self.root_node)
+            taskMgr.doMethodLater(self.delay, self.cam_control, 'CamControl')
 
     def cam_control(self, task):
         """Task for controlling of camera
         """
         if not self.enable:
-            return task.again
+            return task.done
 
 
         if (self.keyMap["Mouse3"] != 0):
@@ -149,7 +145,6 @@ class CamFree():
                 self.CursorOffOn = 'Off'
 
             dirFB = self.game.gui.camera.getMat(self.root_node).getRow3(1)
-            dirTT = self.game.gui.camera.getMat(self.root_node).getRow3(2)
             dirRL = self.game.gui.camera.getMat(self.root_node).getRow3(0)
 
             d = 1000 * globalClock.getDt()
@@ -193,280 +188,71 @@ class CamFree():
                 camera.setZ(self.root_node, camera.getZ(self.root_node)-Speed)
                 #self.root_node.setZ(self.root_node.getZ()+Speed)
 
-            if self.game.gui.win.movePointer(0, self.game.gui.win.getXSize()/2, self.game.gui.win.getYSize()/2):
-                self.game.gui.camera.setH(self.root_node, self.game.gui.camera.getH(self.root_node) -  (x - self.game.gui.win.getXSize()/2)*self.SpeedRot)
-                self.game.gui.camera.setP(self.root_node, self.game.gui.camera.getP(self.root_node) - (y - self.game.gui.win.getYSize()/2)*self.SpeedRot)
-                if (self.game.gui.camera.getP(self.root_node)<=-90.1):
-                    self.game.gui.camera.setP(self.root_node, -90)
-                if (self.game.gui.camera.getP(self.root_node)>=90.1):
-                    self.game.gui.camera.setP(self.root_node, 90)
+            if self.game.gui.win.movePointer(0, self.game.gui.win.getXSize()/2,
+                                             self.game.gui.win.getYSize()/2):
+                self.camera.setH(self.root_node,
+                                 self.camera.getH(self.root_node) -\
+                                 (x - self.game.gui.win.getXSize()/2)*self.SpeedRot)
+                self.camera.setP(self.root_node,
+                                 self.camera.getP(self.root_node) -\
+                                 (y - self.game.gui.win.getYSize()/2)*self.SpeedRot)
+                if (self.camera.getP(self.root_node)<=-90.1):
+                    self.camera.setP(self.root_node, -90)
+                if (self.camera.getP(self.root_node)>=90.1):
+                    self.camera.setP(self.root_node, 90)
 
         else:
             self.CursorOffOn = 'On'
             self.props.setCursorHidden(False)
             self.game.gui.win.requestProperties(self.props)
 
-        #time.sleep(0.1)
         return task.again
 
-class TPCam():
-    def __init__(self, game, near = 5., far = 2000., dist = 30.,
-                 step = 20., heading = -30., pitch = -45., ms = 0.3,
-                 slowness = 30., linear = False):
-
-        self.game = game
-        self.target = self.game.char
-        self.near = near
-        self.far = far
-        self.dist = dist
-        self.step = step
-        self.heading = heading
-        self.pitch = pitch
-        self.mouse_sensitivity = ms
-        self.slowness = slowness
-        self.linear = linear
-        self.dragging = False
-        self.enable = False
-
-        taskMgr.add(self.update, 'camera.update')
-
-        self.parent = render.attachNewNode('parent')
-        self.parent.reparentTo(self.target)
-        self.parent.setEffect(CompassEffect.make(render))
-        base.camera.reparentTo(self.parent)
-        base.camera.lookAt(self.parent)
-        base.camera.setY(-self.dist)
-
-    def set_enable(self, value):
-        self.enable = value
-        self.game.gui.disableMouse()
-        self.game.gui.hotkeys.accept('wheel_up', self.wheel_up)
-        self.game.gui.hotkeys.accept('wheel_down', self.wheel_down)
-        self.game.gui.hotkeys.accept('mouse3', self.start_drag)
-        self.game.gui.hotkeys.accept('mouse3-up', self.stop_drag)
-        if self.enable:
-            self.target.reparentTo(self.game.gui.render)
-        else:
-            self.target.detachNode()
-
-    def wheel_up(self):
-        if not self.enable:
-            return
-        if self.linear:
-            self.dist = self.dist - self.step
-        else:
-            self.dist = self.dist / 2
-        if self.dist < self.near:
-            self.dist = self.near
-
-    def wheel_down(self):
-        if not self.enable:
-            return
-        if self.linear:
-            self.dist = self.dist + self.step
-        else:
-            self.dist = self.dist * 2
-        if self.dist > self.far:
-            self.dist = self.far
-
-    def __getattr__(self, attr, *args, **params):
-        if not self.enable:
-            return
-        print attr, args, params
-        return eval('self.target.{0}(*args, **params)'.format(attr))
-
-    def start_drag(self):
-        if not self.enable:
-            return
-        self.dragging = True
-        md = base.win.getPointer(0)
-        self.mx = md.getX()
-        self.my = md.getY()
-
-    def stop_drag(self):
-        if not self.enable:
-            return
-        md = base.win.getPointer(0)
-        mx = (self.mx - md.getX())*self.mouse_sensitivity
-        my = (self.my - md.getY())*self.mouse_sensitivity
-        self.heading = self.heading + mx
-        self.pitch = self.pitch + my
-        self.dragging = False
-
-    def update(self, task):
-        if not self.enable:
-            return task.cont
-
-        if self.dragging:
-            md = base.win.getPointer(0)
-            mx = (self.mx - md.getX())*self.mouse_sensitivity
-            my = (self.my - md.getY())*self.mouse_sensitivity
-            self.parent.setHpr(self.heading + mx, self.pitch + my, 0)
-        else:
-            self.parent.setHpr(self.heading, self.pitch, 0)
-
-        camdist = base.camera.getDistance(self.target)
-        delta = self.dist - camdist
-        delta = delta / self.slowness
-        curdist = camdist + delta
-        base.camera.setY(-curdist)
-
-        return task.cont
-
-class CharCam():
+class TPCamMgr(DirectObject.DirectObject):
     def __init__(self, game):
         self.game = game
-        self.game.gui.disableMouse()
         self.char = self.game.char
-        self.keyMap = {"left":0, "right":0, "forward":0, "cam-left":0, "cam-right":0}
-        self.isMoving = False
-        self.isDebug = False
-        self.SpeedRot = 0.05
-        self.head = NodePath(PandaNode("head"))
-        self.head.reparentTo(render)
-        taskMgr.add(self.move, "moveTask")
+        self.win = self.game.gui.win
+        self.hotkeys = self.game.gui.hotkeys
+        self.node = NodePath('char')
+        self.Ccentr = NodePath('Ccentr')
+        self.Ccentr.reparentTo(self.node)
+        self.Ccentr.setZ(1)
+        self.camera = self.game.gui.camera
+        self.char.reparentTo(self.node)
 
-    def __getattr__(self, attr, *args, **params):
-        print attr, args, params
-        return eval('self.char.{0}(*args, **params)'.format(attr))
-
-    def set_enable(self, value):
+    def set_enable(self, value, dist):
         self.enable = value
+        self.dist = dist
 
-        self.game.gui.hotkeys.accept("arrow_left", self.setKey, ["left",1])
-        self.game.gui.hotkeys.accept("arrow_right", self.setKey, ["right",1])
-        self.game.gui.hotkeys.accept("arrow_up", self.setKey, ["forward",1])
-        self.game.gui.hotkeys.accept("a", self.setKey, ["cam-left",1])
-        self.game.gui.hotkeys.accept("s", self.setKey, ["cam-right",1])
-        self.game.gui.hotkeys.accept("arrow_left-up", self.setKey, ["left",0])
-        self.game.gui.hotkeys.accept("arrow_right-up", self.setKey, ["right",0])
-        self.game.gui.hotkeys.accept("arrow_up-up", self.setKey, ["forward",0])
-        self.game.gui.hotkeys.accept("a-up", self.setKey, ["cam-left",0])
-        self.game.gui.hotkeys.accept("s-up", self.setKey, ["cam-right",0])
-        self.game.gui.hotkeys.accept("f2", self.toggleDebug)
-
-        self.game.char.setPos(self.game.world.chunks_map.charRX,
-                              self.game.world.chunks_map.charRY,
-                              self.game.world.chunks_map.charZ)
-
-        self.head.setY(self.char.getY())
-        self.head.setX(self.char.getX())
-        self.head.setZ(self.char.getZ()+2)
-
-        self.cTrav = CollisionTraverser()
-
-        self.charGroundRay = CollisionRay()
-        self.charGroundRay.setOrigin(0,0,1000)
-        self.charGroundRay.setDirection(0,0,-1)
-        self.charGroundCol = CollisionNode('charRay')
-        self.charGroundCol.addSolid(self.charGroundRay)
-        self.charGroundColNp = self.char.attachNewNode(self.charGroundCol)
-        self.charGroundHandler = CollisionHandlerQueue()
-        self.cTrav.addCollider(self.charGroundColNp, self.charGroundHandler)
-
+        self.node.reparentTo(self.game.world.root_node)
+        self.node.setPos(self.game.world.avatar.getPos())
         if self.enable:
-            self.game.char.reparentTo(self.game.gui.render)
+            self.camera.reparentTo(self.Ccentr)
+            self.camera.setPos(0, self.dist, 0)
+            self.camera.lookAt(self.Ccentr)
+            taskMgr.add(self.mouseUpdate, 'mouse-task')
         else:
-            self.game.char.detachNode()
+            self.camera.reparentTo(self.game.world.root_node)
+            self.camera.setPos(self.node.getPos())
+            self.node.detachNode()
 
-    def setKey(self, key, value):
-        self.keyMap[key] = value
+        print 'Ccentr, node, camera, char'
+        print self.Ccentr.getPos(), self.node.getPos(), self.camera.getPos(), self.char.getPos()
+        print self.Ccentr.getPos(self.game.world.root_node), self.node.getPos(self.game.world.root_node), self.camera.getPos(self.game.world.root_node), self.char.getPos(self.game.world.root_node)
 
-    def toggleDebug(self):
-        if self.isDebug:
-            # Uncomment this line to see the collision rays
-            self.charGroundColNp.hide()
-            # Uncomment this line to show a visual representation of the
-            # collisions occuring
-            self.cTrav.hideCollisions()
-        else:
-            # Uncomment this line to see the collision rays
-            self.charGroundColNp.show()
-            # Uncomment this line to show a visual representation of the
-            # collisions occuring
-            self.cTrav.showCollisions(render)
-        self.isDebug = not self.isDebug
-        print 'Collision debug: ', self.isDebug
-
-    def move(self, task):
-
+    def mouseUpdate(self,task):
+        """ this task updates the mouse """
         if not self.enable:
-            return task.cont
+            return task.done
 
-        # If the camera-left key is pressed, move camera left.
-        # If the camera-right key is pressed, move camera right.
-
-
-        # save char's initial position so that we can restore it,
-        # in case he falls off the map or runs into something.
-
-        #self.char.setZ(self.game.world.chunks_map.land_z)
-
-
-        startpos = self.char.getPos()
-
-        self.head.setY(self.char.getY())
-        self.head.setX(self.char.getX())
-        self.head.setZ(self.char.getZ()+2)
-
-        md = self.game.gui.win.getPointer(0)
+        md = base.win.getPointer(0)
         x = md.getX()
         y = md.getY()
-
-        oldH = self.head.getH()
-        oldP = self.head.getP()
-
-        if self.game.gui.win.movePointer(0, self.game.gui.win.getXSize()/2, self.game.gui.win.getYSize()/2):
-            self.head.setH(oldH - (x - self.game.gui.win.getXSize()/2)*self.SpeedRot)
-            self.head.setP(oldP - (y - self.game.gui.win.getYSize()/2)*self.SpeedRot)
-            if (self.head.getP() <= -90.1):
-                self.head.setP(-90)
-            if (self.head.getP() >= 90.1):
-                self.head.setP(90)
-
-        if (self.keyMap["forward"]!=0):
-            self.char.setY(self.char, + 20 * globalClock.getDt())
-
-        self.char.setH(self.head.getH())
-        #self.char.setP(self.game.gui.camera.getP())
-        # If char is moving, loop the run animation.
-        # If he is standing still, stop the animation.
-
-        if (self.keyMap["forward"]!=0) or (self.keyMap["left"]!=0) or (self.keyMap["right"]!=0):
-            if self.isMoving is False:
-                self.char.loop("run")
-                self.isMoving = True
-        else:
-            if self.isMoving:
-                self.char.stop()
-                self.char.pose("walk",5)
-                self.isMoving = False
-
-        # If the camera is too far from char, move it closer.
-        # If the camera is too close to char, move it farther.
-
-        # Now check for collisions.
-
-        self.cTrav.traverse(render)
-
-        # Adjust char's Z coordinate.  If ralph's ray hit terrain,
-        # update his Z. If it hit anything else, or didn't hit anything, put
-        # him back where he was last frame.
-
-        #entries = []
-        #for i in range(self.charGroundHandler.getNumEntries()):
-            #entry = self.charGroundHandler.getEntry(i)
-            #entries.append(entry)
-        #entries.sort(lambda x,y: cmp(y.getSurfacePoint(render).getZ(),
-                                     #x.getSurfacePoint(render).getZ()))
-        #if (len(entries)>0):
-            #print 'char collision entries: ', entries
-            #self.char.setZ(entries[0].getSurfacePoint(render).getZ())
-        #else:
-            #self.char.setPos(startpos)
-
-        # Keep the camera at one foot above the terrain,
-        # or two feet above char, whichever is greater.
-
+        if self.win.movePointer(0, self.win.getXSize()/2, self.win.getYSize()/2):
+            self.node.setH(self.node.getH() -  (x - self.win.getXSize()/2)*0.1)
+            self.Ccentr.setP(self.Ccentr.getP() - (y - self.win.getYSize()/2)*0.1)
         return task.cont
 
+    def point_dist(self, p1, p2):
+        return math.sqrt((p1[0]-p2[0])**2+(p1[1]-p2[1])**2+(p1[2]-p2[2])**2)

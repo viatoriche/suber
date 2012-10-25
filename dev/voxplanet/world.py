@@ -368,14 +368,13 @@ class ChunksMap():
         self.size_world = self.config.size_world
         self.chunk_len = self.config.chunk_len
         self.chunks_clts = {}
-        self.charPos = self.world.camera.getPos(self.world.root_node)
+        self.charPos = self.world.avatar.getPos(self.world.root_node)
         self.charX = 0
         self.charY = 0
         self.charRX = 0
         self.charRY = 0
         self.DX = 0
         self.DY = 0
-        self.way = []
         taskMgr.setupTaskChain('world_chain_generate', numThreads = 1,
                        frameSync = False, threadPriority = TPHigh, timeslicePriority = False)
         taskMgr.setupTaskChain('world_forest_repaint', numThreads = 1,
@@ -385,28 +384,18 @@ class ChunksMap():
         self.add_done = False
         self.need_forest = False
         self.need_remove = False
-        self.get_coords()
         self.create()
 
     def get_coords(self):
         """Get charX, charY coords from camera
         """
-        d_charX = self.world.camera.getX(self.world.root_node) - self.charRX
-        d_charY = self.world.camera.getY(self.world.root_node) - self.charRY
-        coord = self.world.camera.getPos(self.world.root_node)
+        d_charX = self.world.avatar.getX(self.world.root_node) - self.charRX
+        d_charY = self.world.avatar.getY(self.world.root_node) - self.charRY
+        coord = self.world.avatar.getPos(self.world.root_node)
         self.charRX, self.charRY, self.charZ = coord
-        self.way.append(coord)
-
-        #self.far = self.charZ*self.config.factor_far
 
         self.charX += d_charX
         self.charY += d_charY
-
-        self.land_z = int(self.world.map3d[int(self.charX), int(self.charY)])
-
-        #if self.far < 1000:
-            #self.far = 1000
-        #base.camLens.setFar(self.far*2)
 
         self.test_coord()
 
@@ -416,11 +405,11 @@ class ChunksMap():
         self.world.forest.clear()
         self.need_forest = True
 
-        self.world.camera.setPos(self.world.root_node, (self.charRX,
+        self.world.avatar.setPos(self.world.root_node, (self.charRX,
                                      self.charRY,
                                      float(self.charZ)) )
 
-    def test_coord(self):
+    def test_coord(self, Force = False):
         """Test and fix char coords, DX, DY, change new cam coords, if need
         """
         if self.charX < 0:
@@ -437,9 +426,11 @@ class ChunksMap():
 
         self.charRX = self.charX - newDX
         self.charRY = self.charY - newDY
-        self.charPos = self.world.camera.getPos(self.world.root_node)
 
-        if newDX != self.DX or newDY != self.DY:
+        self.land_z = int(self.world.map3d[int(self.charX), int(self.charY)])
+        self.charPos = self.world.avatar.getPos(self.world.root_node)
+
+        if newDX != self.DX or newDY != self.DY or Force:
             self.DX = newDX
             self.DY = newDY
             self.charSetPos()
@@ -450,12 +441,8 @@ class ChunksMap():
 
         coord - X, Y, Z
         """
-        x, y, z = coord
-        self.charX = x
-        self.charY = y
-        self.charZ = z
-
-        self.test_coord()
+        self.charX, self.charY, self.charZ = coord
+        self.test_coord(Force = True)
 
     #@profile_decorator
     def repaint(self):
@@ -501,10 +488,10 @@ class ChunksMap():
         """check cam for update
 
         """
-        if self.charPos != self.world.camera.getPos(self.world.root_node):
+        if self.charPos != self.world.avatar.getPos(self.world.root_node):
             self.get_coords()
-            self.world.status('CamPos: X: {0}, Y: {1}, Z: {2}, '\
-                      'land height: {3} | Char: X: {4}, Y: {5}'.format(
+            self.world.status('rX: {0}, rY: {1}, Z: {2}, '\
+                      'land z: {3} | wX: {4}, wY: {5}'.format(
                        int(self.charRX), int(self.charRY), int(self.charZ),
                        self.land_z, int(self.charX), int(self.charY)))
             self.add_done = False
@@ -520,6 +507,9 @@ class ChunksMap():
                        (y*self.size_world) + (self.size_world / 2), 0
                 self.chunks_clts[name] = ChunksCollection(self,
                                           self.world, name, self.size_world)
+
+        coord = self.config.size_world/2, self.config.size_world/2, 10000
+        self.set_char_coord(coord)
 
         taskMgr.doMethodLater(self.config.chunk_delay, self.regen_task, 'WorldRegen', taskChain = 'world_chain_generate')
         taskMgr.doMethodLater(self.config.tree_delay, self.repaint_forest_task, 'WorldRepaintForest', taskChain = 'world_forest_repaint')
@@ -537,15 +527,19 @@ class World():
         self.params = params
         self.seed = random.randint(0, sys.maxint)
         self.root_node = NodePath('Root_World')
-        self.root_node.reparentTo(self.params.root_node)
-        self.gui = self.params.gui
-        self.camera = self.params.camera
-        self.status = self.params.status
+        self.change_params(params)
 
         self.mutex_repaint = Mutex('repaint')
         self.trees = []
         self.treeland = TreeLand(self.config, self)
         self.forest = None
+
+    def change_params(self, params):
+        self.params = params
+        self.root_node.reparentTo(self.params.root_node)
+        self.gui = self.params.gui
+        self.avatar = self.params.avatar
+        self.status = self.params.status
 
     def get_map3d_tex(self, size = 512, filename = None):
         """Generate texture of map world
@@ -612,10 +606,7 @@ class World():
 
         create_world()
 
-
         self.chunks_map = ChunksMap(self, 0, 1)
-        self.chunks_map.set_char_coord((self.config.size_world/2, self.config.size_world/2, 10000))
-        #self.chunks_map.set_char_coord((30000, 30000, 300))
 
 # vi: ft=python:tw=0:ts=4
 

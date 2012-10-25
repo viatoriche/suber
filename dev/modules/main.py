@@ -12,7 +12,7 @@ from pandac.PandaModules import TransparencyAttrib, PointLight, Fog
 from modules.textures import TextureCollection
 from modules.commands import Command_Handler
 from modules.graph import GUI
-from panda3d.core import TPHigh
+from modules.interactive import CamFreeMgr, TPCamMgr
 from direct.actor.Actor import Actor
 from voxplanet.world import World
 from voxplanet.config import Config as VoxConfig
@@ -63,6 +63,7 @@ class Main():
                                 {"run":"res/models/ralph-run",
                                 "walk":"res/models/ralph-walk"})
         self.char.setScale(.2)
+        self.char.setH(180)
 
         self.gui.buttons.add_button(name = 'Exit', text = ("Exit", "Exit", "Exit", "disabled"),
                                pos = (1.23, 0, -0.95),
@@ -107,14 +108,13 @@ class Main():
         self.gui.render.setFog(fog)
         self.gui.setBackgroundColor(*colour)
 
-        self.cam = base.camera
-        self.camfree = None
-        self.tp_cam = None
+        self.camfree_mgr = CamFreeMgr(self)
+        self.tpcam_mgr = TPCamMgr(self)
 
         self.vox_config = VoxConfig()
         self.vox_params = VoxParams()
         self.vox_params.gui = self.gui
-        self.vox_params.camera = self.cam
+        self.vox_params.avatar = self.gui.camera
         self.vox_params.status = self.write
         self.vox_params.root_node = self.gui.render
         self.vox_params.chunks_tex = self.textures['world_blocks']

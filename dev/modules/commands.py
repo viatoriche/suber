@@ -14,7 +14,7 @@ from panda3d.core import Vec3
 from pandac.PandaModules import UnalignedLVecBase4f as Vec4
 from pandac.PandaModules import PTA_LVecBase4f as PTAVecBase4
 from pandac.PandaModules import Shader, NodePath
-from modules.interactive import GlobalMap, CamFree, TPCam
+from modules.interactive import GlobalMap
 
 class Command_Handler():
     """Handler for all commands
@@ -31,7 +31,8 @@ class Command_Handler():
         self.hotkeys.accept("escape", self.cmd_exit)
         self.hotkeys.accept("i", self.cmd_info)
         self.hotkeys.accept("n", self.cmd_anl)
-        self.hotkeys.accept('f3', self.cmd_start)
+        self.hotkeys.accept('f2', self.cmd_free)
+        self.hotkeys.accept('f3', self.cmd_tp)
         self.minimap = False
         #self.gm_clicker = GlobalMap(self.game, self.game.gui.screen_images['world_map'])
         self.gm_clicker = None
@@ -72,31 +73,23 @@ class Command_Handler():
         self.game.write('Creating world...')
         self.game.world.seed = seed
         self.game.world.new()
-        if self.game.camfree == None:
-            self.game.camfree = CamFree(self.game)
-        if self.game.tp_cam != None:
-            self.game.tp_cam.set_enable(False)
-        self.game.cam = self.game.camfree
-        self.game.cam.set_enable(True)
+        self.cmd_free()
         self.game.write('World was created! Seed: {0}'.format(seed))
 
+    def cmd_free(self, params = []):
+        self.game.tpcam_mgr.set_enable(False)
+        self.game.camfree_mgr.set_enable(True)
+        self.game.vox_params.avatar = self.game.gui.camera
+        self.game.world.change_params(self.game.vox_params)
 
-    def cmd_start(self, params = []):
+    def cmd_tp(self, params = []):
         """Start game
         """
-        try:
-            if self.game.camfree != None:
-                self.game.camfree.set_enable(False)
-        except TypeError:
-            self.game.camfree.set_enable(False)
-        try:
-            if self.game.tp_cam == None:
-                self.game.tp_cam = TPCam(self.game)
-        except TypeError:
-            pass
+        self.game.camfree_mgr.set_enable(False)
+        self.game.tpcam_mgr.set_enable(True)
+        self.game.vox_params.avatar = self.game.tpcam_mgr.node
+        self.game.world.change_params(self.game.vox_params)
 
-        self.game.cam = self.game.tp_cam
-        self.game.cam.set_enable(True)
 
     def cmd_minimap(self, params = []):
         """
@@ -270,7 +263,8 @@ class Command_Handler():
                 'savemap': cmd_save_map,
                 'tree': cmd_tree,
                 'anl': cmd_anl,
-                'start': cmd_start,
+                'tp': cmd_tp,
+                'free': cmd_free,
               }
 # vi: ts=4 sw=4
 
