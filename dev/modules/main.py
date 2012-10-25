@@ -12,7 +12,7 @@ from pandac.PandaModules import TransparencyAttrib, PointLight, Fog
 from modules.textures import TextureCollection
 from modules.commands import Command_Handler
 from modules.graph import GUI
-from modules.interactive import CamFreeMgr, TPCamMgr
+from modules.interactive import CamManager, FlyAvatar
 from direct.actor.Actor import Actor
 from voxplanet.world import World
 from voxplanet.config import Config as VoxConfig
@@ -62,6 +62,7 @@ class Main():
         self.char = Actor("res/models/ralph",
                                 {"run":"res/models/ralph-run",
                                 "walk":"res/models/ralph-walk"})
+        self.char.pose('walk', 5)
         self.char.setScale(.2)
         self.char.setH(180)
 
@@ -108,13 +109,13 @@ class Main():
         self.gui.render.setFog(fog)
         self.gui.setBackgroundColor(*colour)
 
-        self.camfree_mgr = CamFreeMgr(self)
-        self.tpcam_mgr = TPCamMgr(self)
+        self.cam_manager = CamManager(self)
+        self.fly_avatar = FlyAvatar(self)
 
         self.vox_config = VoxConfig()
         self.vox_params = VoxParams()
         self.vox_params.gui = self.gui
-        self.vox_params.avatar = self.gui.camera
+        self.vox_params.avatar = self.cam_manager.node
         self.vox_params.status = self.write
         self.vox_params.root_node = self.gui.render
         self.vox_params.chunks_tex = self.textures['world_blocks']

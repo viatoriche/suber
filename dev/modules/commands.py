@@ -29,13 +29,15 @@ class Command_Handler():
         self.hotkeys.accept("m", self.cmd_minimap)
         self.hotkeys.accept("c", self.cmd_create_global_map)
         self.hotkeys.accept("escape", self.cmd_exit)
+        self.hotkeys.accept("f4", self.cmd_toggle_cam)
         self.hotkeys.accept("i", self.cmd_info)
         self.hotkeys.accept("n", self.cmd_anl)
-        self.hotkeys.accept('f2', self.cmd_free)
-        self.hotkeys.accept('f3', self.cmd_tp)
+        self.hotkeys.accept('f2', self.cmd_cam_first)
+        self.hotkeys.accept('f3', self.cmd_cam_third)
         self.minimap = False
         #self.gm_clicker = GlobalMap(self.game, self.game.gui.screen_images['world_map'])
         self.gm_clicker = None
+        self.cam_enable = True
 
     def cmd_exit(self, params = []):
         """Exit the game
@@ -73,23 +75,32 @@ class Command_Handler():
         self.game.write('Creating world...')
         self.game.world.seed = seed
         self.game.world.new()
-        self.cmd_free()
+        self.game.fly_avatar.set_enable(True)
+        self.cmd_cam_third()
         self.game.write('World was created! Seed: {0}'.format(seed))
 
-    def cmd_free(self, params = []):
-        self.game.tpcam_mgr.set_enable(False)
-        self.game.camfree_mgr.set_enable(True)
-        self.game.vox_params.avatar = self.game.gui.camera
-        self.game.world.change_params(self.game.vox_params)
+    def cmd_toggle_cam(self, params = []):
+        self.cam_enable = not self.cam_enable
+        self.change_cam(self.cam_enable)
 
-    def cmd_tp(self, params = []):
+    def change_cam(self, enable):
+        self.cam_enable = enable
+        self.game.cam_manager.set_enable(self.cam_enable, self.game.cam_manager.third)
+        self.game.fly_avatar.set_enable(self.cam_enable)
+
+    def cmd_enable_cam(self, params = []):
+        self.change_cam(True)
+
+    def cmd_disable_cam(self, params = []):
+        self.change_cam(False)
+
+    def cmd_cam_third(self, params = []):
+        self.game.cam_manager.set_enable(True, True)
+
+    def cmd_cam_first(self, params = []):
         """Start game
         """
-        self.game.camfree_mgr.set_enable(False)
-        self.game.tpcam_mgr.set_enable(True)
-        self.game.vox_params.avatar = self.game.tpcam_mgr.node
-        self.game.world.change_params(self.game.vox_params)
-
+        self.game.cam_manager.set_enable(True, False)
 
     def cmd_minimap(self, params = []):
         """
@@ -105,6 +116,7 @@ class Command_Handler():
         docstring for cmd_show_map
         """
         if self.minimap:
+            self.cmd_disable_cam()
             self.game.write('Creating map...')
             #textures['world_map'] = generate_map_texture(self.game.world.map_tree, 1)
             self.game.gui.screen_images.add_image('world_map',
@@ -129,6 +141,7 @@ class Command_Handler():
         """
         self.game.gui.screen_images.del_image('world_map')
         self.gm_clicker.image = None
+        self.cmd_enable_cam()
 
     def cmd_save(self, params = []):
         """
@@ -191,8 +204,9 @@ class Command_Handler():
                    ' * attached:',am, ' / detached:', dm
             print 'Status chunks (state dict):', len(chct.status_chunks), ' * active:', cht, ' / passive:', chf
             print 'DX, DY: ', self.game.world.chunks_map.DX, self.game.world.chunks_map.DY
-            print 'CharX, CharY: ', self.game.world.chunks_map.charX, self.game.world.chunks_map.charY
-            print 'CamX, CamY: ', self.game.world.chunks_map.camX, self.game.world.chunks_map.camY
+            print 'CharX, CharY, Z: ', self.game.world.chunks_map.charX,\
+                                    self.game.world.chunks_map.charY, self.game.world.chunks_map.charZ
+            print 'CamX, CamY: ', self.game.world.chunks_map.charRX, self.game.world.chunks_map.charRY
 
     def cmd_anl(self, params = []):
         print render.analyze()
@@ -263,8 +277,11 @@ class Command_Handler():
                 'savemap': cmd_save_map,
                 'tree': cmd_tree,
                 'anl': cmd_anl,
-                'tp': cmd_tp,
-                'free': cmd_free,
+                'third': cmd_cam_third,
+                'first': cmd_cam_first,
+                'cam_toggle': cmd_toggle_cam,
+                'cam_enable': cmd_enable_cam,
+                'cam_disable': cmd_disable_cam,
               }
 # vi: ts=4 sw=4
 
