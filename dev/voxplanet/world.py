@@ -235,7 +235,7 @@ class ChunksCollection():
         self.mutex.release()
 
     #@profile_decorator
-    def update(self):
+    def update(self, Force = False):
         """Create and show chunk models
         """
         # TODO: add delete cube event
@@ -268,12 +268,16 @@ class ChunksCollection():
                                 self.status_chunks[chunk] = False
                             if length <= far:
                                 if not self.chunks_models.has_key(chunk):
-                                    self.chunks_models[chunk] = ChunkModel(self.config, self.world.map3d,
+                                    t = time.time()
+                                    self.chunks_models[chunk] = ChunkModel(self.world, self.config, self.world.map3d,
                                                                    center[0], center[1], size,
                                                                    self.chunks_map.chunk_len,
                                                                    self.world.params.tex_uv_height,
                                                                    self.world.params.chunks_tex
                                                                    )
+                                    print 'Create one chunk: ', time.time() - t
+                                    if not Force:
+                                        time.sleep(self.config.chunk_sleep)
 
         for chunk in self.status_chunks:
             self.status_chunks[chunk] = False
@@ -376,7 +380,7 @@ class ChunksMap():
         self.DX = 0
         self.DY = 0
         taskMgr.setupTaskChain('world_chain_generate', numThreads = 1,
-                       frameSync = False, threadPriority = TPHigh, timeslicePriority = False)
+                       frameSync = False, threadPriority = TPLow, timeslicePriority = False)
         taskMgr.setupTaskChain('world_forest_repaint', numThreads = 1,
                        frameSync = False, threadPriority = TPLow, timeslicePriority = False)
         taskMgr.setupTaskChain('char_check_chain', numThreads = 1,
@@ -400,7 +404,7 @@ class ChunksMap():
         self.test_coord()
 
     def charSetPos(self):
-        self.regen()
+        self.regen(Force = True)
         self.repaint()
         self.world.forest.clear()
         self.need_forest = True
@@ -467,9 +471,9 @@ class ChunksMap():
         for chunks_clt in self.chunks_clts.values():
             chunks_clt.remove_far()
 
-    def regen(self):
+    def regen(self, Force = False):
         for chunks_clt in self.chunks_clts.values():
-            chunks_clt.update()
+            chunks_clt.update(Force)
 
 
     def regen_task(self, task):
@@ -538,6 +542,8 @@ class World():
         self.params = params
         self.root_node.reparentTo(self.params.root_node)
         self.gui = self.params.gui
+        self.cTrav = self.params.gui.cTrav
+        self.cTrav.showCollisions(self.gui.render)
         self.avatar = self.params.avatar
         self.status = self.params.status
 

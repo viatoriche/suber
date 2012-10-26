@@ -12,7 +12,7 @@ from pandac.PandaModules import TransparencyAttrib, PointLight, Fog
 from modules.textures import TextureCollection
 from modules.commands import Command_Handler
 from modules.graph import GUI
-from modules.interactive import CamManager, FlyAvatar
+from modules.interactive import CamManager, MoveAvatar, CollisionAvatar
 from direct.actor.Actor import Actor
 from voxplanet.world import World
 from voxplanet.config import Config as VoxConfig
@@ -78,7 +78,12 @@ class Main():
                                #scale=0.07,command=self.cmd_handler.cmd_handle,
                                #initialText="", width = 37, numLines = 1,focus=0)
         self.gui.screen_texts.add_text(name = 'help',
-                               text = 'c - create world\nm - toggle map\nF1 - toggle help\nEsc - exit\ni - render info',
+                               text = 'F5 - create world\nm - toggle map\nF1 - toggle'+\
+                               ' help\nEsc - exit\nF10 - render info\n'+\
+                               'F2/F3 - 1st/3d person camera\n'+\
+                               'F4 - toggle fly/terrain\n'+\
+                               'F9 - Cam disable\n'+\
+                               'F11/F12 - show polygons / disable textures',
                                pos = (-1, 0.8), scale = 0.07)
 
         self.gui.hotkeys.accept('f1', self.toggle_help)
@@ -110,7 +115,7 @@ class Main():
         self.gui.setBackgroundColor(*colour)
 
         self.cam_manager = CamManager(self)
-        self.fly_avatar = FlyAvatar(self)
+        self.move_avatar = MoveAvatar(self)
 
         self.vox_config = VoxConfig()
         self.vox_params = VoxParams()
@@ -124,8 +129,12 @@ class Main():
         self.vox_params.leafModel = self.gui.loader.loadModel("res/models/shrubbery")
         self.vox_params.leafTex = self.textures['leaf']
         self.vox_params.fog = fog
-        #self.vox_params.sun = sun
+
         self.world = World(self.vox_config, self.vox_params)
+
+        self.collision_avatar = CollisionAvatar(self)
+
+        #self.vox_params.sun = sun
 
         self.gui.taskMgr.setupTaskChain('Ticker', tickClock = True)
         self.gui.taskMgr.doMethodLater(0.05, self.ticker, 'taskTicker', taskChain = 'Ticker')

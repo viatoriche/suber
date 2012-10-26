@@ -27,17 +27,19 @@ class Command_Handler():
         self.hotkeys = self.game.gui.hotkeys
         self.hotkeys.accept("t", self.testmap)
         self.hotkeys.accept("m", self.cmd_minimap)
-        self.hotkeys.accept("c", self.cmd_create_global_map)
+        self.hotkeys.accept("f5", self.cmd_create_global_map)
         self.hotkeys.accept("escape", self.cmd_exit)
-        self.hotkeys.accept("f4", self.cmd_toggle_cam)
-        self.hotkeys.accept("i", self.cmd_info)
-        self.hotkeys.accept("n", self.cmd_anl)
+        self.hotkeys.accept("f9", self.cmd_toggle_cam)
+        self.hotkeys.accept("f10", self.cmd_info)
+        #self.hotkeys.accept("n", self.cmd_anl)
         self.hotkeys.accept('f2', self.cmd_cam_first)
         self.hotkeys.accept('f3', self.cmd_cam_third)
+        self.hotkeys.accept('f4', self.cmd_toggle_fly)
         self.minimap = False
         #self.gm_clicker = GlobalMap(self.game, self.game.gui.screen_images['world_map'])
         self.gm_clicker = None
         self.cam_enable = True
+        self.fly = True
 
     def cmd_exit(self, params = []):
         """Exit the game
@@ -75,7 +77,8 @@ class Command_Handler():
         self.game.write('Creating world...')
         self.game.world.seed = seed
         self.game.world.new()
-        self.game.fly_avatar.set_enable(True)
+        self.game.move_avatar.set_enable(True)
+        self.game.collision_avatar.set_enable(True, self.fly)
         self.cmd_cam_third()
         self.game.write('World was created! Seed: {0}'.format(seed))
 
@@ -83,10 +86,15 @@ class Command_Handler():
         self.cam_enable = not self.cam_enable
         self.change_cam(self.cam_enable)
 
+    def cmd_toggle_fly(self, params = []):
+        self.fly = not self.fly
+        self.change_cam(self.cam_enable)
+
     def change_cam(self, enable):
         self.cam_enable = enable
         self.game.cam_manager.set_enable(self.cam_enable, self.game.cam_manager.third)
-        self.game.fly_avatar.set_enable(self.cam_enable)
+        self.game.move_avatar.set_enable(self.cam_enable, self.fly)
+        self.game.collision_avatar.set_enable(self.cam_enable, self.fly)
 
     def cmd_enable_cam(self, params = []):
         self.change_cam(True)
@@ -95,12 +103,12 @@ class Command_Handler():
         self.change_cam(False)
 
     def cmd_cam_third(self, params = []):
-        self.game.cam_manager.set_enable(True, True)
+        self.game.cam_manager.set_enable(self.cam_enable, True)
 
     def cmd_cam_first(self, params = []):
         """Start game
         """
-        self.game.cam_manager.set_enable(True, False)
+        self.game.cam_manager.set_enable(self.cam_enable, False)
 
     def cmd_minimap(self, params = []):
         """

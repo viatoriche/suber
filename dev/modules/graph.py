@@ -14,7 +14,7 @@ from direct.showbase.ShowBase import ShowBase
 from modules.interactive import HotKeys
 from modules.support import generate_hash
 from panda3d.core import TextNode, LODNode, NodePath
-from pandac.PandaModules import TransparencyAttrib
+from pandac.PandaModules import TransparencyAttrib, CollisionTraverser
 
 class OnscreenImages(dict):
     """    All screen images collection
@@ -112,6 +112,7 @@ class GUI(ShowBase):
         self.buttons = DirectButtons()
         self.entries = DirectEntries()
         self.hotkeys = HotKeys(self)
+        self.cTrav = CollisionTraverser()
 
     def write(self, text):
         """write Text on screen

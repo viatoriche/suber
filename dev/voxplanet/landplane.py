@@ -10,7 +10,7 @@ from panda3d.core import GeomVertexData
 from panda3d.core import GeomTriangles, GeomVertexWriter
 from panda3d.core import GeomVertexFormat
 from panda3d.core import Vec3, Vec2
-from panda3d.core import VBase3, VBase2
+from panda3d.core import VBase3, VBase2, BitMask32
 from pandac.PandaModules import CardMaker
 from pandac.PandaModules import NodePath
 from pandac.PandaModules import TextureStage
@@ -23,12 +23,14 @@ from pandac.PandaModules import Shader
 from panda3d.core import RigidBodyCombiner as RBC
 from voxplanet.shapeGenerator import Cube as CubeModel
 from voxplanet.support import profile_decorator
+from pandac.PandaModules import CollisionNode, CollisionPolygon
 
 class LowTreeModel(NodePath):
     """Cube-like tree
     """
     def __init__(self, name, size, body_tex = None, leaf_tex = None):
         NodePath.__init__(self, name)
+        self.name = name
         self.size = size
         self.body_tex = body_tex
         self.leaf_tex = leaf_tex
@@ -38,6 +40,7 @@ class LowTreeModel(NodePath):
     def make(self):
         self.body = CubeModel(*self.size)
         self.body.reparentTo(self)
+        self.body.setTag('Tree', '{0}'.format(self.name))
         self.set_body_tex(self.body_tex)
         start_leaf = random.randint(2, 4)
         if start_leaf > self.size[2]-1:
@@ -216,9 +219,10 @@ class ChunkModel(NodePath):
     tex - texture map
     """
 
-    def __init__(self, config, heights, X, Y, size, chunk_len, tex_uv_height, tex):
+    def __init__(self, world, config, heights, X, Y, size, chunk_len, tex_uv_height, tex):
 
         NodePath.__init__(self, 'ChunkModel')
+        self.world = world
         self.X = X
         self.Y = Y
         self.Z = {}
@@ -235,7 +239,7 @@ class ChunkModel(NodePath):
         self.start_x = self.X - self.size2
         self.start_y = self.Y - self.size2
 
-        chunk_geom = GeomNode('chunk_geom')
+        self.chunk_geom = GeomNode('self.chunk_geom')
         self.v_format = GeomVertexFormat.getV3n3t2()
         self.v_data = GeomVertexData('chunk', self.v_format, Geom.UHStatic)
 
@@ -286,7 +290,6 @@ class ChunkModel(NodePath):
             tri.addVertex(2 + n_vert)
             tri.addVertex(3 + n_vert)
             tri.addVertex(0 + n_vert)
-
 
 
         end = self.chunk_len - 1
@@ -341,10 +344,12 @@ class ChunkModel(NodePath):
                     add_data(n_vert, v0, v1, v2, v3)
                     n_vert += 4
 
-        geom = Geom(self.v_data)
-        geom.addPrimitive(tri)
-        chunk_geom.addGeom( geom )
-        self.attachNewNode(chunk_geom)
+        self.geom = Geom(self.v_data)
+        self.geom.addPrimitive(tri)
+        self.chunk_geom.addGeom( self.geom )
+        self.attachNewNode(self.chunk_geom)
+        self.chunk_geom.setIntoCollideMask(BitMask32.bit(1))
+        self.setTag('Chunk', 'Chunk: {0} {1} {2}'.format(self.X, self.Y, self.size))
         #self.setTwoSided(True)
         ts = TextureStage('ts')
         self.setTexture(ts, self.tex)

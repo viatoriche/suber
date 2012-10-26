@@ -6,21 +6,25 @@ import random, sys, os
 from panda3d.core import CompassEffect
 from config import Config
 from direct.showbase import DirectObject
-from panda3d.core import TPNormal
+from panda3d.core import TPHigh, TPUrgent
 from pandac.PandaModules import Vec3, VBase3, WindowProperties
-from panda3d.core import CollisionTraverser,CollisionNode
+from panda3d.core import CollisionNode, GeomNode, CollisionSphere
 from panda3d.core import CollisionHandlerQueue,CollisionRay
 from panda3d.core import PandaNode,NodePath,Camera,TextNode
 from panda3d.core import Vec3,Vec4,BitMask32
+from voxplanet.support import profile_decorator
 
 class HotKeys(DirectObject.DirectObject):
     config = Config()
     def __init__(self, gui):
         self.gui = gui
-        self.accept("x", self.toggle_wire)
+        self.accept("f12", self.toggle_wire_texture)
+        self.accept("f11", self.toggle_wire_frame)
 
-    def toggle_wire(self):
+    def toggle_wire_frame(self):
         self.gui.toggleWireframe()
+
+    def toggle_wire_texture(self):
         self.gui.toggleTexture()
 
 class GlobalMap(DirectObject.DirectObject):
@@ -70,28 +74,82 @@ class GlobalMap(DirectObject.DirectObject):
         dy = -self.distanceScale * y
         return self.distanceScale + dx, self.distanceScale + dy
 
+class CollisionAvatar():
+    """Collision for avatar
+    """
+    def __init__(self, game):
+        self.game = game
+        self.enable = False
+        self.camera = self.game.gui.camera
 
-class FlyAvatar(DirectObject.DirectObject):
+        self.ray_node = CollisionNode('downRay')
+        self.ray_nodepath = self.game.world.avatar.attachNewNode(self.ray_node)
+        self.ray_node.setFromCollideMask(BitMask32.bit(1))
+        self.ray = CollisionRay()
+        self.ray.setOrigin(0, 0, 5)
+        self.ray.setDirection(0, 0, -1)
+        self.ray_node.addSolid(self.ray)
+        self.ray_handler = CollisionHandlerQueue()
+        self.ray_nodepath.show()
+
+
+    def set_enable(self, value, Fly = True):
+        self.enable = value
+        self.fly = Fly
+        if self.enable:
+            self.game.gui.cTrav.addCollider(self.ray_nodepath, self.ray_handler)
+            taskMgr.doMethodLater(0.01, self.detector, 'collision_detector')
+        else:
+            self.game.gui.cTrav.removeCollider(self.ray_nodepath)
+
+    def detector(self, task):
+        if not self.enable:
+            return task.done
+
+        self.game.gui.cTrav.traverse(self.game.world.root_node)
+
+        if self.ray_handler.getNumEntries() > 0:
+            self.ray_handler.sortEntries()
+            pickedObj = self.ray_handler.getEntry(0).getIntoNodePath()
+            pickedObj = pickedObj.findNetTag('Chunk')
+            if not pickedObj.isEmpty():
+                Z = self.ray_handler.getEntry(0).\
+                                            getSurfacePoint(self.game.world.root_node).getZ()
+                if self.fly:
+                    if Z > self.game.world.avatar.getZ(self.game.world.root_node):
+                        self.game.world.avatar.setZ(self.game.world.root_node, Z)
+                else:
+                    self.game.world.avatar.setZ(self.game.world.root_node, Z)
+
+
+        return task.again
+
+
+class MoveAvatar(DirectObject.DirectObject):
     """Free fly avatar
-
     game - modules.main.Main()
     root_node - root render for game
     """
     def __init__(self, game):
         self.game = game
-        self.SpeedRot = 0.05
-        self.SpeedMult = 10
-        self.delay = 0.02
+        self.SpeedCam = 0.05
+        self.sleep = 0.01
+        self.fly_mod = 0.01
+        self.SpeedMult = 3
         self.isMoving = False
+        self.fly = True
         self.CursorOffOn = 'On'
-
+        taskMgr.setupTaskChain('avatar_move', numThreads = 1,
+                       frameSync = False, threadPriority = TPUrgent, timeslicePriority = False)
         self.props = WindowProperties()
+
 
     def set_key(self, key, value):
         self.keyMap[key] = value
 
-    def set_enable(self, value):
+    def set_enable(self, value, Fly = True):
         self.enable = value
+        self.fly = Fly
 
         self.root_node = self.game.world.root_node
         self.avatar = self.game.world.avatar
@@ -118,7 +176,7 @@ class FlyAvatar(DirectObject.DirectObject):
             self.hotkeys.accept("lshift", self.set_key, ["LSHIFT",1])
             self.hotkeys.accept("lshift-up", self.set_key, ["LSHIFT",0])
 
-            taskMgr.doMethodLater(self.delay, self.avatar_control, 'CamControl')
+            taskMgr.add(self.avatar_control, 'CamControl', taskChain = 'avatar_move')
         else:
             self.game.gui.enableMouse()
 
@@ -138,45 +196,44 @@ class FlyAvatar(DirectObject.DirectObject):
             self.game.gui.win.requestProperties(self.props)
             self.CursorOffOn = 'Off'
 
-        dirFB = self.game.gui.camera.getMat(self.root_node).getRow3(1)
-        dirRL = self.game.gui.camera.getMat(self.root_node).getRow3(0)
+        #dirFB = self.game.gui.camera.getMat(self.root_node).getRow3(1)
+        #dirRL = self.game.gui.camera.getMat(self.root_node).getRow3(0)
 
-        d = 1000 * globalClock.getDt()
-
-        md = self.game.gui.win.getPointer(0)
-        x = md.getX()
-        y = md.getY()
         z = self.avatar.getZ(self.root_node)
 
-        real_z = (z - self.game.world.chunks_map.land_z)
-
-        spd = real_z * self.delay
-
-        self.SpeedCam = spd + self.delay + (2*globalClock.getDt())
-        Speed = self.SpeedCam
+        fly_spd = abs(z - self.game.world.chunks_map.land_z) * self.fly_mod
+        #
+        Speed = (self.SpeedCam + fly_spd)
 
         avatar_run = False
 
         if (self.keyMap["LSHIFT"]!=0):
-            Speed = self.SpeedCam*self.SpeedMult
+            Speed = (self.SpeedCam + fly_spd) * self.SpeedMult
+
         if (self.keyMap["FORWARD"]!=0):
-            self.avatar.setPos(self.root_node, self.avatar.getPos(self.root_node)+dirFB*Speed)
             avatar_run = True
+            self.avatar.setY(self.avatar, Speed)
         if (self.keyMap["BACK"]!=0):
             avatar_run = True
-            self.avatar.setPos(self.root_node, self.avatar.getPos(self.root_node)-dirFB*Speed)
+            self.avatar.setY(self.avatar, -Speed)
         if (self.keyMap["RIGHT"]!=0):
             avatar_run = True
-            self.avatar.setPos(self.root_node, self.avatar.getPos(self.root_node)+dirRL*Speed)
+            self.avatar.setX(self.avatar, Speed)
         if (self.keyMap["LEFT"]!=0):
             avatar_run = True
-            self.avatar.setPos(self.root_node, self.avatar.getPos(self.root_node)-dirRL*Speed)
+            self.avatar.setX(self.avatar, -Speed)
+
         if (self.keyMap["UPWARDS"]!=0):
-            avatar_run = True
-            self.avatar.setZ(self.root_node, self.avatar.getZ(self.root_node)+Speed)
+            if self.fly:
+                avatar_run = True
+                self.avatar.setZ(self.avatar, Speed)
         if (self.keyMap["DOWNWARDS"]!=0):
-            avatar_run = True
-            self.avatar.setZ(self.root_node, self.avatar.getZ(self.root_node)-Speed)
+            if self.fly:
+                avatar_run = True
+                self.avatar.setZ(self.avatar, -Speed)
+
+        if self.avatar.getZ(self.game.world.root_node) < self.game.world.chunks_map.land_z-5:
+            self.avatar.setZ(self.game.world.root_node, self.game.world.chunks_map.land_z)
 
         if avatar_run:
             if not self.isMoving:
@@ -187,7 +244,9 @@ class FlyAvatar(DirectObject.DirectObject):
             self.game.char.pose('walk', 5)
             self.isMoving = False
 
-        return task.again
+        time.sleep(self.sleep)
+
+        return task.cont
 
 class CamManager(DirectObject.DirectObject):
     """1st or 3d person camera, or disable
@@ -204,6 +263,9 @@ class CamManager(DirectObject.DirectObject):
         self.third_dist = -6
         self.camera = self.game.gui.camera
         self.char.reparentTo(self.node)
+        taskMgr.setupTaskChain('cam_move', numThreads = 1,
+                       frameSync = False, threadPriority = TPUrgent, timeslicePriority = False)
+
 
     def set_enable(self, value, third = False):
         self.enable = value
@@ -226,7 +288,7 @@ class CamManager(DirectObject.DirectObject):
             self.camera.setPos(self.node.getPos())
             self.node.detachNode()
 
-
+    #@profile_decorator
     def mouseUpdate(self,task):
         """ this task updates the mouse """
         if not self.enable:

@@ -118,6 +118,9 @@ class TileMap(dict):
                 self[start_coord] = random.randint(self.config.mid_mount_level[0],
                                                    self.config.mid_mount_level[1])
 
+            if land_coords == []:
+                return
+
             while count_land > 0:
                 # for lands
                 if count_land > 0:
