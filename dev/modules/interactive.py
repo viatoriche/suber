@@ -83,6 +83,7 @@ class FlyAvatar(DirectObject.DirectObject):
         self.SpeedMult = 10
         self.delay = 0.02
         self.isMoving = False
+        self.CursorOffOn = 'On'
 
         self.props = WindowProperties()
 
@@ -98,7 +99,6 @@ class FlyAvatar(DirectObject.DirectObject):
 
         if self.enable:
             self.game.gui.disableMouse()
-            self.CursorOffOn = 'On'
             self.keyMap = {"FORWARD":0, "BACK":0, "RIGHT":0,
                            "LEFT":0, "Mouse3":0, "LSHIFT":0,
                            "UPWARDS":0, "DOWNWARDS":0}
@@ -162,31 +162,21 @@ class FlyAvatar(DirectObject.DirectObject):
         if (self.keyMap["FORWARD"]!=0):
             self.avatar.setPos(self.root_node, self.avatar.getPos(self.root_node)+dirFB*Speed)
             avatar_run = True
-            #self.root_node.setPos(self.root_node.getPos()-dirFB*Speed)
-            #self.avatar.setZ(z)
         if (self.keyMap["BACK"]!=0):
             avatar_run = True
             self.avatar.setPos(self.root_node, self.avatar.getPos(self.root_node)-dirFB*Speed)
-            #self.root_node.setPos(self.root_node.getPos()+dirFB*Speed)
-            #self.avatar.setZ(z)
         if (self.keyMap["RIGHT"]!=0):
             avatar_run = True
             self.avatar.setPos(self.root_node, self.avatar.getPos(self.root_node)+dirRL*Speed)
-            #self.root_node.setPos(self.root_node.getPos()-dirRL*Speed)
-            #self.avatar.setZ(z)
         if (self.keyMap["LEFT"]!=0):
             avatar_run = True
             self.avatar.setPos(self.root_node, self.avatar.getPos(self.root_node)-dirRL*Speed)
-            #self.root_node.setPos(self.root_node.getPos()+dirRL*Speed)
-            #self.avatar.setZ(z)
         if (self.keyMap["UPWARDS"]!=0):
             avatar_run = True
             self.avatar.setZ(self.root_node, self.avatar.getZ(self.root_node)+Speed)
-            #self.root_node.setZ(self.root_node.getZ()-Speed)
         if (self.keyMap["DOWNWARDS"]!=0):
             avatar_run = True
             self.avatar.setZ(self.root_node, self.avatar.getZ(self.root_node)-Speed)
-            #self.root_node.setZ(self.root_node.getZ()+Speed)
 
         if avatar_run:
             if not self.isMoving:
@@ -230,7 +220,7 @@ class CamManager(DirectObject.DirectObject):
                 self.camera.setPos(0, 0, 0)
                 self.char.hide()
             self.camera.lookAt(self.Ccentr)
-            taskMgr.add(self.mouseUpdate, 'mouse-task')
+            taskMgr.doMethodLater(0.01, self.mouseUpdate, 'mouse-task')
         else:
             self.camera.reparentTo(self.game.world.root_node)
             self.camera.setPos(self.node.getPos())
@@ -248,7 +238,7 @@ class CamManager(DirectObject.DirectObject):
         if self.win.movePointer(0, self.win.getXSize()/2, self.win.getYSize()/2):
             self.node.setH(self.node.getH() -  (x - self.win.getXSize()/2)*0.1)
             self.Ccentr.setP(self.Ccentr.getP() - (y - self.win.getYSize()/2)*0.1)
-        return task.cont
+        return task.again
 
     def point_dist(self, p1, p2):
         return math.sqrt((p1[0]-p2[0])**2+(p1[1]-p2[1])**2+(p1[2]-p2[2])**2)
