@@ -542,8 +542,6 @@ class World():
         self.params = params
         self.root_node.reparentTo(self.params.root_node)
         self.gui = self.params.gui
-        self.cTrav = self.params.gui.cTrav
-        self.cTrav.showCollisions(self.gui.render)
         self.avatar = self.params.avatar
         self.status = self.params.status
 

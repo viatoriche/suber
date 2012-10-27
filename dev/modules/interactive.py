@@ -81,32 +81,56 @@ class CollisionAvatar():
         self.game = game
         self.enable = False
         self.camera = self.game.gui.camera
+        self.debug = False
+
+        self.sphere_node = CollisionNode('Sphere')
+        self.sphere_nodepath = self.game.world.avatar.attachNewNode(self.sphere_node)
+        self.sphere_node.setFromCollideMask(BitMask32.bit(2))
+        self.sphere_node.setIntoCollideMask(BitMask32.bit(4))
+        self.sphere = CollisionSphere(0, 0, 0.5, 0.5)
+        self.sphere_node.addSolid(self.sphere)
+        self.sphere_handler = CollisionHandlerQueue()
 
         self.ray_node = CollisionNode('downRay')
         self.ray_nodepath = self.game.world.avatar.attachNewNode(self.ray_node)
         self.ray_node.setFromCollideMask(BitMask32.bit(1))
+        self.ray_node.setIntoCollideMask(BitMask32.bit(3))
         self.ray = CollisionRay()
         self.ray.setOrigin(0, 0, 5)
         self.ray.setDirection(0, 0, -1)
         self.ray_node.addSolid(self.ray)
         self.ray_handler = CollisionHandlerQueue()
-        self.ray_nodepath.show()
 
+    def set_debug(self, value):
+        """docstring for debug
+        """
+        self.debug = value
+        if self.debug:
+            self.ray_nodepath.show()
+            self.sphere_nodepath.show()
+        else:
+            self.ray_nodepath.hide()
+            self.sphere_nodepath.hide()
 
     def set_enable(self, value, Fly = True):
         self.enable = value
         self.fly = Fly
         if self.enable:
             self.game.gui.cTrav.addCollider(self.ray_nodepath, self.ray_handler)
-            taskMgr.doMethodLater(0.01, self.detector, 'collision_detector')
+            self.game.gui.cTrav.addCollider(self.sphere_nodepath, self.sphere_handler)
         else:
             self.game.gui.cTrav.removeCollider(self.ray_nodepath)
+            self.game.gui.cTrav.removeCollider(self.sphere_nodepath)
 
-    def detector(self, task):
+    def detector(self):
         if not self.enable:
-            return task.done
+            return
 
         self.game.gui.cTrav.traverse(self.game.world.root_node)
+
+        if self.sphere_handler.getNumEntries() > 0:
+            #self.sphere_handler.sortEntries()
+            self.game.world.avatar.setPos(self.game.world.root_node, self.lastpos)
 
         if self.ray_handler.getNumEntries() > 0:
             self.ray_handler.sortEntries()
@@ -121,8 +145,6 @@ class CollisionAvatar():
                 else:
                     self.game.world.avatar.setZ(self.game.world.root_node, Z)
 
-
-        return task.again
 
 
 class MoveAvatar(DirectObject.DirectObject):
@@ -199,6 +221,8 @@ class MoveAvatar(DirectObject.DirectObject):
         #dirFB = self.game.gui.camera.getMat(self.root_node).getRow3(1)
         #dirRL = self.game.gui.camera.getMat(self.root_node).getRow3(0)
 
+        self.game.collision_avatar.lastpos = self.avatar.getPos(self.root_node)
+
         z = self.avatar.getZ(self.root_node)
 
         fly_spd = abs(z - self.game.world.chunks_map.land_z) * self.fly_mod
@@ -244,6 +268,7 @@ class MoveAvatar(DirectObject.DirectObject):
             self.game.char.pose('walk', 5)
             self.isMoving = False
 
+        self.game.collision_avatar.detector()
         time.sleep(self.sleep)
 
         return task.cont
@@ -277,10 +302,10 @@ class CamManager(DirectObject.DirectObject):
             self.camera.reparentTo(self.Ccentr)
             if self.third:
                 self.camera.setPos(0, self.third_dist, 0)
-                self.char.show()
+                #self.char.show()
             else:
                 self.camera.setPos(0, 0, 0)
-                self.char.hide()
+                #self.char.hide()
             self.camera.lookAt(self.Ccentr)
             taskMgr.doMethodLater(0.01, self.mouseUpdate, 'mouse-task')
         else:

@@ -359,10 +359,10 @@ class Geometry(NodePath):
     geom = Geom(vdata)
     geom.addPrimitive(prim)
 
-    node = GeomNode('gnode')
-    node.addGeom(geom)
+    self.geom_node = GeomNode('gnode')
+    self.geom_node.addGeom(geom)
 
-    nodePath = self.attachNewNode(node)
+    nodePath = self.attachNewNode(self.geom_node)
     return nodePath
 
 

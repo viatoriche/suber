@@ -39,6 +39,7 @@ class LowTreeModel(NodePath):
 
     def make(self):
         self.body = CubeModel(*self.size)
+        self.body.geom_node.setIntoCollideMask(BitMask32.bit(2))
         self.body.reparentTo(self)
         self.body.setTag('Tree', '{0}'.format(self.name))
         self.set_body_tex(self.body_tex)

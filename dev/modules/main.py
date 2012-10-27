@@ -83,7 +83,8 @@ class Main():
                                'F2/F3 - 1st/3d person camera\n'+\
                                'F4 - toggle fly/terrain\n'+\
                                'F9 - Cam disable\n'+\
-                               'F11/F12 - show polygons / disable textures',
+                               'F8 - Toggle Collisions\n'+\
+                               'F11/F12 - toggle polygons / disable textures',
                                pos = (-1, 0.8), scale = 0.07)
 
         self.gui.hotkeys.accept('f1', self.toggle_help)

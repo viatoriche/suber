@@ -35,10 +35,12 @@ class Command_Handler():
         self.hotkeys.accept('f2', self.cmd_cam_first)
         self.hotkeys.accept('f3', self.cmd_cam_third)
         self.hotkeys.accept('f4', self.cmd_toggle_fly)
+        self.hotkeys.accept('f8', self.cmd_toggle_collisions)
         self.minimap = False
         #self.gm_clicker = GlobalMap(self.game, self.game.gui.screen_images['world_map'])
         self.gm_clicker = None
         self.cam_enable = True
+        self.debug_collisions = False
         self.fly = True
 
     def cmd_exit(self, params = []):
@@ -52,6 +54,16 @@ class Command_Handler():
         if len(params) > 0:
             text = ' '.join(params)
             self.game.write(text)
+
+    def cmd_toggle_collisions(self, params = []):
+        self.game.collision_avatar.set_enable(False, self.fly)
+        self.debug_collisions = not self.debug_collisions
+        if self.debug_collisions:
+            self.game.gui.cTrav.showCollisions(self.game.gui.render)
+        else:
+            self.game.gui.cTrav.hideCollisions()
+        self.game.collision_avatar.set_debug(self.debug_collisions)
+        self.game.collision_avatar.set_enable(self.cam_enable, self.fly)
 
     def testmap(self, params = []):
         """
@@ -241,7 +253,7 @@ class Command_Handler():
         if len(params) == 0:
             x = random.randint(0, self.game.world.chunks_map.size_world)
             y = random.randint(0, self.game.world.chunks_map.size_world)
-            z = self.game.world.map3d[x, y]+100
+            z = self.game.world.map3d[x, y]
         elif len(params) == 1:
             z = params[0]
             x = self.game.world.chunks_map.charX
@@ -255,7 +267,7 @@ class Command_Handler():
             try:
                 z = params[2]
             except:
-                z = self.game.world.map3d[x, y]+100
+                z = self.game.world.map3d[x, y]
 
         coords = int(x), int(y), int(z)
         print 'port to ', coords
