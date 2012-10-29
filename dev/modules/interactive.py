@@ -218,9 +218,6 @@ class MoveAvatar(DirectObject.DirectObject):
             self.game.gui.win.requestProperties(self.props)
             self.CursorOffOn = 'Off'
 
-        #dirFB = self.game.gui.camera.getMat(self.root_node).getRow3(1)
-        #dirRL = self.game.gui.camera.getMat(self.root_node).getRow3(0)
-
         self.game.collision_avatar.lastpos = self.avatar.getPos(self.root_node)
 
         z = self.avatar.getZ(self.root_node)
@@ -286,6 +283,7 @@ class CamManager(DirectObject.DirectObject):
         self.Ccentr.reparentTo(self.node)
         self.Ccentr.setZ(1)
         self.third_dist = -6
+        self.sleep = 0.001
         self.camera = self.game.gui.camera
         self.char.reparentTo(self.node)
         taskMgr.setupTaskChain('cam_move', numThreads = 1,
@@ -307,14 +305,14 @@ class CamManager(DirectObject.DirectObject):
                 self.camera.setPos(0, 0, 0)
                 #self.char.hide()
             self.camera.lookAt(self.Ccentr)
-            taskMgr.doMethodLater(0.01, self.mouseUpdate, 'mouse-task')
+            taskMgr.add(self.mouse_update, 'mouse-task')
         else:
             self.camera.reparentTo(self.game.world.root_node)
-            self.camera.setPos(self.node.getPos())
+            self.camera.setPos(self.game.world.root_node, self.game.world.avatar.getPos(self.game.world.root_node))
             self.node.detachNode()
 
     #@profile_decorator
-    def mouseUpdate(self,task):
+    def mouse_update(self, task):
         """ this task updates the mouse """
         if not self.enable:
             return task.done
@@ -325,7 +323,9 @@ class CamManager(DirectObject.DirectObject):
         if self.win.movePointer(0, self.win.getXSize()/2, self.win.getYSize()/2):
             self.node.setH(self.node.getH() -  (x - self.win.getXSize()/2)*0.1)
             self.Ccentr.setP(self.Ccentr.getP() - (y - self.win.getYSize()/2)*0.1)
-        return task.again
+
+        time.sleep(self.sleep)
+        return task.cont
 
     def point_dist(self, p1, p2):
         return math.sqrt((p1[0]-p2[0])**2+(p1[1]-p2[1])**2+(p1[2]-p2[2])**2)

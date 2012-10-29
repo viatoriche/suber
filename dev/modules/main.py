@@ -105,15 +105,15 @@ class Main():
         alnp = self.gui.render.attachNewNode(alight)
         self.gui.render.setLight(alnp)
 
-        colour = (0.28125, 0.53125, 0.80859375)
+        color = (0.28125, 0.53125, 0.80859375)
         fog = Fog("A linear-mode Fog node")
-        fog.setColor(*colour)
+        fog.setColor(*color)
         fog.setLinearFallback(0,500,550)
         self.gui.camera.attachNewNode(fog)
 
-        colour = (0.28125, 0.53125, 0.80859375)
+        color = (0.28125, 0.53125, 0.80859375)
         self.gui.render.setFog(fog)
-        self.gui.setBackgroundColor(*colour)
+        self.gui.setBackgroundColor(*color)
 
         self.cam_manager = CamManager(self)
         self.move_avatar = MoveAvatar(self)

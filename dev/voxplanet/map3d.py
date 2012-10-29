@@ -11,7 +11,7 @@ import random
 import sys
 import time
 
-from pandac.PandaModules import PerlinNoise2
+from pandac.PandaModules import PerlinNoise2, PerlinNoise3
 from pandac.PandaModules import Texture, PNMImage
 
 class TileMap(dict):
@@ -410,19 +410,47 @@ class Map3d(dict):
         t = time.time()
         mod = self.config.size_mod / 2
         mod += mod / 2
-        count_octaves = mod / 2
-        count_octaves += count_octaves / 4
-        for level in xrange(count_octaves):
-            seed = random.randint(0, sys.maxint)
-            self.perlin[level] = (PerlinNoise2(sx = self.world_size, sy = self.world_size,
-                                       table_size = 256, seed = seed))
-            mod -= 1
-            ds = 2 ** mod
-            self.perlin[level].setScale(ds)
 
+        seed = random.randint(0, sys.maxint)
+        level = 0
+        scale = 2 ** (self.config.size_mod/2+1)
+        self.perlin[level] = PerlinNoise2(sx = scale, sy = scale,
+                                       table_size = 256, seed = seed)
+
+        seed = random.randint(0, sys.maxint)
+        level = 1
+        scale = 2 ** (self.config.size_mod/2-1)
+        self.perlin[level] = PerlinNoise2(sx = scale, sy = scale,
+                                       table_size = 256, seed = seed)
+
+        seed = random.randint(0, sys.maxint)
+        level = 2
+        scale = 2 ** (self.config.size_mod/2-3)
+        self.perlin[level] = PerlinNoise2(sx = scale, sy = scale,
+                                       table_size = 256, seed = seed)
+
+        seed = random.randint(0, sys.maxint)
+        level = 3
+        scale = 2 ** (self.config.size_mod/2-4)
+        self.perlin[level] = PerlinNoise2(sx = scale, sy = scale,
+                                       table_size = 256, seed = seed)
+
+        seed = random.randint(0, sys.maxint)
+        level = 4
+        scale = 2 ** (self.config.size_mod/2-5)
+        self.perlin[level] = PerlinNoise2(sx = scale, sy = scale,
+                                       table_size = 256, seed = seed)
+
+        seed = random.randint(0, sys.maxint)
+        scale = 2 ** (self.config.size_mod/2-3)
+        self.perlin_3d = PerlinNoise3(sx = scale, sy = scale, sz = scale,
+                                       table_size = 256, seed = seed)
+
+        seed = random.randint(0, sys.maxint)
         self.river_perlin = PerlinNoise2(sx = self.world_size, sy = self.world_size,
                                        table_size = 256, seed = seed)
         self.river_perlin.setScale(2 ** (self.config.size_mod-4))
+        seed = random.randint(0, sys.maxint)
         self.river_perlin_height = PerlinNoise2(sx = self.world_size, sy = self.world_size,
                                        table_size = 256, seed = seed)
         self.river_perlin_height.setScale(2 ** (self.config.size_mod-20))
@@ -431,8 +459,6 @@ class Map3d(dict):
         random.seed(seed)
         self.global_template.generate_pre_heights()
         print 'generated pre heights: ', time.time() - t
-        #self.river_map = RiverMap(self, self.config.rivermap_size)
-        #self.river_mod = self.world_size / self.config.rivermap_size
 
     def cosine_interpolate(self, a, b, x):
         """Cosine interpolate for scale minimap
@@ -484,7 +510,14 @@ class Map3d(dict):
 
         #return G
 
-
+    def check_xyz(self, coord):
+        """Return True, if XYZ - not nil
+        """
+        x, y, z = coord
+        if self.perlin_3d(x, y, z) >= 0:
+            return True
+        else:
+            return False
 
     def __getitem__(self, item):
         """If item not in dict, when perlin generate and return
@@ -506,15 +539,15 @@ class Map3d(dict):
                 y = y - self.world_size
 
             height = self.template_height(x, y)
-            p = self.perlin[4](x, y) ** 2
+            p = self.perlin[0](x, y) ** 2
             height += height * p
-            p = self.perlin[6](x, y)
+            p = self.perlin[1](x, y)
             height += height * p * 0.1
-            p = self.perlin[8](x, y)
+            p = self.perlin[2](x, y)
             height += height * p * 0.05
-            p = self.perlin[9](x, y)
+            p = self.perlin[3](x, y)
             height += height * p * 0.02
-            p = self.perlin[10](x, y)
+            p = self.perlin[4](x, y)
             h = height + (10 * p)
             if height >= 1:
                 if h < 1:
@@ -523,17 +556,6 @@ class Map3d(dict):
                 if h >= 1:
                     h = 0
             height = h
-            #for level in self.perlin:
-                #p = self.perlin[level](x, y) ** 2
-                #if height > level+1 or height < -level-1:
-                    #dh = p * height * (1./(((level/4)+1) ** 2))
-                #else:
-                    #if 1 > height > 0:
-                        #height = 1
-                    #elif 0 >= height > -1:
-                        #height = -1
-                    #dh = p * height
-                #height += height * p
 
             # rivers
             #if height > -4.:

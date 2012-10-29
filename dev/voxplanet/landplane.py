@@ -141,6 +141,7 @@ class ForestNode(NodePath):
         self.added = []
         self.trees = {}
         self.trees_in_node = 10
+        self.mutex = self.world.mutex_repaint
         self.flatten_node = NodePath('flatten_nodes')
 
     def add_trees(self, chunk):
@@ -170,7 +171,7 @@ class ForestNode(NodePath):
         self.flatten_node.removeNode()
         self.flatten_node = NodePath('flatten_nodes')
 
-    def show_forest(self, DX, DY, char_far, far, charpos, billboard = 1000):
+    def show_forest(self, DX, DY, char_far, far, charpos, Force = False):
         """Set to new X
 
         center X - self.size/2 - DX
@@ -178,8 +179,10 @@ class ForestNode(NodePath):
 
         tmp_node = NodePath('tmp')
         self.flatten_node.copyTo(tmp_node)
+        self.mutex.acquire()
         tmp_node.reparentTo(self)
         self.flatten_node.removeNode()
+        self.mutex.release()
         self.tree_nodes = []
         self.flatten_node = NodePath('flatten_nodes')
 
@@ -201,7 +204,9 @@ class ForestNode(NodePath):
         print 'Attach detach loop: ', time.time() - t
 
         if count_trees == 0:
+            self.mutex.acquire()
             tmp_node.removeNode()
+            self.mutex.release()
             return
 
         t = time.time()
@@ -218,10 +223,9 @@ class ForestNode(NodePath):
             for t_node in t_nodes:
                 t_node.reparentTo(node)
                 added += 1
-            tt = time.time()
             node.flattenStrong()
-            print 'Flatten node: ', time.time() - tt
-            time.sleep(self.config.tree_sleep)
+            if not Force:
+                time.sleep(self.config.tree_sleep)
             node.reparentTo(self.flatten_node)
             if added == count_trees:
                 break
@@ -230,9 +234,11 @@ class ForestNode(NodePath):
 
         t = time.time()
         self.flatten_node.flattenStrong()
+        self.mutex.acquire()
         self.flatten_node.reparentTo(self)
         tmp_node.removeNode()
-        print 'flatten all: ', time.time() - t
+        self.mutex.release()
+        print 'flatten all trees: ', time.time() - t
 
 
 class ChunkModel(NodePath):
