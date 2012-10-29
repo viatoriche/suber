@@ -24,53 +24,6 @@ from voxplanet.treegen import TreeLand
 
 #sys.setrecursionlimit(65535)
 
-class WaterNode():
-    """Water plane for nya
-
-    config - voxplanet.config
-    water_z - Z coord for water
-    """
-    def __init__(self, config, water_z):
-        self.config = config
-        self.water_z = water_z
-        self.create(0, 0, (self.config.size_region/2, self.config.size_region/2))
-
-    def create(self, x, y, scale):
-        """create node
-
-        x, y - start coords
-        scale - size
-        """
-        self.water = LandNode(self.water_z, self.config.size_region)
-        #textures['water'].setWrapU(Texture.WMRepeat)
-        #textures['water'].setWrapV(Texture.WMRepeat)
-        ts = TextureStage('ts')
-        #ts.setMode(TextureStage.MDecal)
-        self.water.landNP.setTransparency(TransparencyAttrib.MAlpha)
-        self.water.landNP.setTexture(ts, textures['water'])
-        scale_x, scale_y = scale
-        self.water.landNP.setTexScale(ts, scale_x, scale_y)
-
-    def show(self):
-        """Show method
-        """
-        self.water.landNP.show()
-
-    def hide(self):
-        """Hide method
-        """
-        self.water.landNP.hide()
-
-    def reset(self, x, y):
-        """Show on new x, y coords
-        """
-        #self.Destroy()
-        #self.create(x, y)
-        self.water.landNP.show()
-        try:
-            self.water.landNP.setPos(x, y, self.water_z)
-        except:
-            pass
 
 class QuadroTreeNode:
     """Node - one cube, which may divide on 4 chunks, when char is near
@@ -273,7 +226,8 @@ class ChunksCollection():
                                                                    center[0], center[1], size,
                                                                    self.chunks_map.chunk_len,
                                                                    self.world.params.tex_uv_height,
-                                                                   self.world.params.chunks_tex
+                                                                   self.world.params.chunks_tex,
+                                                                   self.world.params.water_tex
                                                                    )
                                     print 'Create one chunk: ', time.time() - t
                                     if not Force:
@@ -283,8 +237,18 @@ class ChunksCollection():
             self.status_chunks[chunk] = False
 
         self.generate(our_level)
+        land_level = 0
 
-        lim_level = our_level + self.config.count_levels
+        if self.config.low_mount_level[1] >= self.chunks_map.land_z >= self.config.low_mount_level[0]:
+            land_level = 1
+
+        if self.config.mid_mount_level[1] >= self.chunks_map.land_z >= self.config.mid_mount_level[0]:
+            land_level = 2
+
+        if self.config.high_mount_level[1] >= self.chunks_map.land_z >= self.config.high_mount_level[0]:
+            land_level = 3
+
+        lim_level = our_level + self.config.count_levels[land_level]
 
         if lim_level > self.config.size_mod:
             lim_level = self.config.size_mod

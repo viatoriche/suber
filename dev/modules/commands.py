@@ -173,6 +173,7 @@ class Command_Handler():
         """
         """
         self.cmd_write([str(self.game.world.seed)])
+        print self.game.world.seed
 
     def cmd_load(self, params):
         """
@@ -227,6 +228,7 @@ class Command_Handler():
             print 'CharX, CharY, Z: ', self.game.world.chunks_map.charX,\
                                     self.game.world.chunks_map.charY, self.game.world.chunks_map.charZ
             print 'CamX, CamY: ', self.game.world.chunks_map.charRX, self.game.world.chunks_map.charRY
+            print 'Seed: ', self.game.world.seed
 
     def cmd_anl(self, params = []):
         print render.analyze()

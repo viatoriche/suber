@@ -127,6 +127,7 @@ class Main():
         self.vox_params.chunks_tex = self.textures['world_blocks']
         self.vox_params.tex_uv_height = self.textures.get_block_uv_height
         self.vox_params.tree_tex = self.textures['tree']
+        self.vox_params.water_tex = self.textures['water']
         self.vox_params.leafModel = self.gui.loader.loadModel("res/models/shrubbery")
         self.vox_params.leafTex = self.textures['leaf']
         self.vox_params.fog = fog

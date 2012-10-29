@@ -45,7 +45,7 @@ class Config():
     tree_level = 11
     chunk_len = 2 ** min_level
     #count_chunks = 1
-    count_levels = 6
+    count_levels = 5, 7, 9, 11
     chunk_delay = 0.01
     tree_delay = 0.01
     chunk_sleep = 0.01

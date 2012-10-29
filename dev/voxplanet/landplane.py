@@ -25,6 +25,33 @@ from voxplanet.shapeGenerator import Cube as CubeModel
 from voxplanet.support import profile_decorator
 from pandac.PandaModules import CollisionNode, CollisionPolygon
 
+class LandNode(NodePath):
+    """Water / Land
+
+    just square
+    """
+    def __init__(self, sx, sy, z, length):
+        maker = CardMaker( 'land' )
+        NodePath.__init__(self, maker.generate())
+        #self.landNP = render.attachNewNode(maker.generate())
+        self.setHpr(0,-90,0)
+        self.setPos(sx, sy, z)
+        self.setScale(length, 0, length)
+
+class WaterNode(LandNode):
+    """Water plane for nya
+
+    config - voxplanet.config
+    water_z - Z coord for water
+    """
+    def __init__(self, sx, sy, length, tex):
+        LandNode.__init__(self, sx, sy, 0.5, length)
+        ts = TextureStage('ts')
+        self.setTransparency(TransparencyAttrib.MAlpha)
+        self.setTexture(ts, tex)
+        self.setTexScale(ts, 10000, 10000)
+
+
 class LowTreeModel(NodePath):
     """Cube-like tree
     """
@@ -220,7 +247,7 @@ class ChunkModel(NodePath):
     tex - texture map
     """
 
-    def __init__(self, world, config, heights, X, Y, size, chunk_len, tex_uv_height, tex):
+    def __init__(self, world, config, heights, X, Y, size, chunk_len, tex_uv_height, tex, water_tex):
 
         NodePath.__init__(self, 'ChunkModel')
         self.world = world
@@ -231,6 +258,7 @@ class ChunkModel(NodePath):
         self.heights = heights
         self.tex_uv_height = tex_uv_height
         self.tex = tex
+        self.water_tex = water_tex
         self.size = size
         self.chunk_len = chunk_len
         self.size_voxel = self.size / self.chunk_len
@@ -348,13 +376,17 @@ class ChunkModel(NodePath):
         self.geom = Geom(self.v_data)
         self.geom.addPrimitive(tri)
         self.chunk_geom.addGeom( self.geom )
-        self.attachNewNode(self.chunk_geom)
+        self.chunk_np = self.attachNewNode('chunk_np')
+        self.chunk_np.attachNewNode(self.chunk_geom)
         self.chunk_geom.setIntoCollideMask(BitMask32.bit(1))
-        self.setTag('Chunk', 'Chunk: {0} {1} {2}'.format(self.X, self.Y, self.size))
+        self.chunk_np.setTag('Chunk', 'Chunk: {0} {1} {2}'.format(self.X, self.Y, self.size))
         #self.setTwoSided(True)
+        self.water = WaterNode(0, 0, self.size, self.water_tex)
+        self.water.setTwoSided(True)
+        self.water.reparentTo(self)
         ts = TextureStage('ts')
-        self.setTexture(ts, self.tex)
-        self.setScale(self.size_voxel, self.size_voxel, 1)
+        self.chunk_np.setTexture(ts, self.tex)
+        self.chunk_np.setScale(self.size_voxel, self.size_voxel, 1)
         #t = time.time()
         # i love this function ^--^
         self.flattenStrong()
@@ -375,33 +407,6 @@ class ChunkModel(NodePath):
         """
         y = self.start_y - DY
         NodePath.setY(self, y)
-
-class LandNode():
-    """Water / Land
-
-    just square
-    """
-    def __init__(self, z, region):
-        maker = CardMaker( 'land' )
-
-        #self.landNP = render.attachNewNode(maker.generate())
-        self.landNP = NodePath(maker.generate())
-        self.landNP.reparentTo(render)
-        self.landNP.setHpr(0,-90,0)
-        self.landNP.setPos(-region, -region, z)
-        self.landNP.setScale(region*3, 0, region*3)
-        self.landNP.hide()
-        self.landNP.setTransparency(TransparencyAttrib.MAlpha )
-
-    def Destroy(self):
-        self.landNP.removeNode()
-
-
-    def hide(self):
-        self.landNP.hide()
-
-    def show(self):
-        self.landNP.show()
 
 
 # vi: ft=python:tw=0:ts=4

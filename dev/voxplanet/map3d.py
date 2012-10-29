@@ -506,24 +506,40 @@ class Map3d(dict):
                 y = y - self.world_size
 
             height = self.template_height(x, y)
-
-            for level in self.perlin:
-                p = self.perlin[level](x, y)
-                if height > level+1 or height < -level-1:
-                    dh = (p * height) / (level+1)
-                else:
-                    if 1 > height > 0:
-                        height = 1
-                    elif 0 >= height > -1:
-                        height = -1
-                    dh = p * height
-                height += dh
+            p = self.perlin[4](x, y) ** 2
+            height += height * p
+            p = self.perlin[6](x, y)
+            height += height * p * 0.1
+            p = self.perlin[8](x, y)
+            height += height * p * 0.05
+            p = self.perlin[9](x, y)
+            height += height * p * 0.02
+            p = self.perlin[10](x, y)
+            h = height + (10 * p)
+            if height >= 1:
+                if h < 1:
+                    h = 1
+            elif height < 1:
+                if h >= 1:
+                    h = 0
+            height = h
+            #for level in self.perlin:
+                #p = self.perlin[level](x, y) ** 2
+                #if height > level+1 or height < -level-1:
+                    #dh = p * height * (1./(((level/4)+1) ** 2))
+                #else:
+                    #if 1 > height > 0:
+                        #height = 1
+                    #elif 0 >= height > -1:
+                        #height = -1
+                    #dh = p * height
+                #height += height * p
 
             # rivers
-            if height > -4.:
-                r = self.river_perlin(x, y)
-                if r >= 0.1 and r <= 0.101:
-                    height = -10. + (self.river_perlin_height(x, y) * 10.)
+            #if height > -4.:
+                #r = self.river_perlin(x, y)
+                #if r >= 0.1 and r <= 0.101:
+                    #height = -10. + (self.river_perlin_height(x, y) * 10.)
 
             self[item] = int(height)
             return int(height)
