@@ -9,8 +9,8 @@ class Config():
     tex_suffix - suffix for textures-packs
     name_game - name of game
     """
-    #tex_suffix = ''
-    tex_suffix = '256/'
+    #tex_suffix = 'my_tex/'
+    tex_suffix = ''
     name_game = 'Suber'
 
 # vi: ft=python:tw=0:ts=4

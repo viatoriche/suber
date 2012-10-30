@@ -187,7 +187,7 @@ class ChunksCollection():
 
         print 'remove: ', time.time() - t
 
-    @profile_decorator
+    #@profile_decorator
     def update(self, Force = False):
         """Create and show chunk models
         """

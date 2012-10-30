@@ -20,6 +20,14 @@ class TextureCollection(dict):
         self.map_len = 0
         self.map_coords = []
         self.create_map_coords()
+        start = self.map_len - self.map_size
+        self.block_number = {
+                'sand': start,
+                'grass': start + 1,
+                'dirt_grass': start + 2,
+                'stone': start + 3,
+                'snow': start + 4,
+            }
 
     def create_map_coords(self):
         du = 1. / self.map_size
@@ -55,16 +63,16 @@ class TextureCollection(dict):
         images.append(PNMImage('res/textures/{0}sand.png'.format(
                                         Config().tex_suffix)))
         # 1 - land
-        images.append(PNMImage('res/textures/{0}land.png'.format(
+        images.append(PNMImage('res/textures/{0}grass.png'.format(
                                         Config().tex_suffix)))
         # 2 - low_mount
-        images.append(PNMImage("res/textures/{0}low_mount.png".format(
+        images.append(PNMImage("res/textures/{0}dirt_grass.png".format(
                                         Config().tex_suffix)))
         # 3 - mid_mount
-        images.append(PNMImage("res/textures/{0}mid_mount.png".format(
+        images.append(PNMImage("res/textures/{0}stone.png".format(
                                         Config().tex_suffix)))
         # 4 - high_mount
-        images.append(PNMImage("res/textures/{0}high_mount.png".format(
+        images.append(PNMImage("res/textures/{0}snow.png".format(
                                         Config().tex_suffix)))
         d = images[0].getReadXSize()
         # 16 x 16 textures
@@ -86,29 +94,20 @@ class TextureCollection(dict):
         self['world_blocks'].setMinfilter(Texture.FTLinearMipmapLinear)
 
     def get_block_uv(self, id):
-        # u1, v1, u2, v2
-        # default - sand
-        # 16 * 16, d_uv
-        tex_coord = self.map_coords[self.map_len - self.map_size]
-        if id == 'grass':
-            tex_coord = self.map_coords[self.map_len - self.map_size + 1]
-        elif id == 'dirt_grass':
-            tex_coord = self.map_coords[self.map_len - self.map_size + 2]
-        elif id == 'stone':
-            tex_coord = self.map_coords[self.map_len - self.map_size + 3]
-        elif id == 'snow':
-            tex_coord = self.map_coords[self.map_len - self.map_size + 4]
-
-        return tex_coord
+        return self.map_coords[self.block_number[id]]
 
     def load_all(self):
         self.make_blocks_texmap()
-        self['sight'] = loader.loadTexture('res/textures/sight.png')
+        self['sight'] = loader.loadTexture('res/textures/{0}sight.png'.format(
+                                        Config().tex_suffix))
 
-        self['water'] = loader.loadTexture("res/textures/water.png")
+        self['water'] = loader.loadTexture("res/textures/{0}water.png".format(
+                                        Config().tex_suffix))
 
-        self['tree'] = loader.loadTexture("res/textures/tree.png")
-        self['leaf'] = loader.loadTexture("res/textures/leaf.png")
+        self['tree'] = loader.loadTexture("res/textures/{0}tree.png".format(
+                                        Config().tex_suffix))
+        self['leaf'] = loader.loadTexture("res/textures/{0}leaf.png".format(
+                                        Config().tex_suffix))
 
 
 # vi: ft=python:tw=0:ts=4
