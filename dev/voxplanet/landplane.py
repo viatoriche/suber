@@ -242,21 +242,43 @@ class ForestNode(NodePath):
 
 
 class Voxel():
-    def __init__(self, empty, block_type):
+    def __init__(self, empty, block):
         self.empty = empty
-        self.block_type = block_type
+        self.block = block
+        self.get_top_uv = self.block.get_top_uv
+        self.get_uv = self.block.get_uv
+
+    def __call__(self):
+        return self.empty
 
 class Voxels(dict):
-    def __init__(self, heights, get_height_type):
+    def __init__(self, heights, get_coord_block):
         self.heights = heights
-        self.get_height_type = get_height_type
+        self.get_coord_block = get_coord_block
+        self.repaint = []
+
+    def __setitem__(self, key, voxel):
+        if self.has_key(key):
+            if item not in self.repaint:
+                self.repaint.append(key)
+        dict.__setitem__(self, key, voxel)
+
+    def check_repaint(self, chunk):
+        center, size, level = chunk
+        # TODO: check chunk for repaint
+        return False
 
     def __getitem__(self, item):
         if self.has_key(item):
             return dict.__getitem__(self, item)
         else:
-            empty = self.heights.check_empty(item)
-            vox = Voxel()
+            x, y, z = item
+            if self.heights[x, y] > z:
+                empty = True
+            else:
+                empty = self.heights.check_empty(item)
+            block = self.get_coord_block(item)
+            vox = Voxel(empty, block)
             self[item] = vox
             return vox
 
@@ -264,8 +286,8 @@ class ChunkModel(NodePath):
     """Chunk for quick render and create voxel-objects
 
     config - config of voxplanet
-    heights - {(X, Y): height, (X2, Y2: height, ... (XN, YN): height}
-    X, Y - center coordinates
+    heights - {(centerX, centerY): height, (X2, Y2: height, ... (XN, YN): height}
+    centerX, centerY - center coordinates
     size - size of chunk (in scene coords)
     chunk_len - count of voxels
     tex_uv_height - function return of uv coordinates for height voxel
@@ -274,16 +296,13 @@ class ChunkModel(NodePath):
 
     dirty = False
 
-    def __init__(self, world, config, heights, X, Y, size, chunk_len, tex_uv_height, tex, water_tex):
+    def __init__(self, config, heights, voxels, X, Y, size, chunk_len, tex, water_tex):
 
         NodePath.__init__(self, 'ChunkModel')
-        self.world = world
-        self.X = X
-        self.Y = Y
-        self.Z = {}
+        self.centerX = X
+        self.centerY = Y
         self.config = config
         self.heights = heights
-        self.tex_uv_height = tex_uv_height
         self.tex = tex
         self.water_tex = water_tex
         self.size = size
@@ -292,10 +311,10 @@ class ChunkModel(NodePath):
         if self.size_voxel <1:
             self.size_voxel = 1
         self.size2 = self.size / 2
-        self.start_x = self.X - self.size2
-        self.start_y = self.Y - self.size2
+        self.start_x = self.centerX - self.size2
+        self.start_y = self.centerY - self.size2
 
-        self.voxels = Voxels(self.heights)
+        self.voxels = voxels
 
         self.v_format = GeomVertexFormat.getV3n3t2()
         self.v_data = GeomVertexData('chunk', self.v_format, Geom.UHStatic)
@@ -316,7 +335,7 @@ class ChunkModel(NodePath):
         t = time.time()
         tri=GeomTriangles(Geom.UHStatic)
 
-        def add_data(n_vert, v0, v1, v2, v3):
+        def add_data(n_vert, v0, v1, v2, v3, voxel):
             vertex.addData3f(v0)
             vertex.addData3f(v1)
             vertex.addData3f(v2)
@@ -334,19 +353,12 @@ class ChunkModel(NodePath):
             normal.addData3f(norm1)
             normal.addData3f(norm2)
 
-            heights = []
-            heights.append(v0[2])
-            heights.append(v1[2])
-            heights.append(v2[2])
-            heights.append(v3[2])
-            maxh = max(heights)
+            u1, v1, u2, v2 = voxel.get_uv()
 
-            u1, v1, u2, v2 = self.tex_uv_height(maxh)
-
-            texcoord.addData2f(u1, v2)
-            texcoord.addData2f(u1, v1)
-            texcoord.addData2f(u2, v1)
-            texcoord.addData2f(u2, v2)
+            texcoord.addData2f(v1, u1)
+            texcoord.addData2f(v2, u1)
+            texcoord.addData2f(v2, u2)
+            texcoord.addData2f(v1, u2)
 
             tri.addConsecutiveVertices(0 + n_vert, 3)
 
@@ -359,8 +371,8 @@ class ChunkModel(NodePath):
 
         for x in xrange(0, self.chunk_len):
             for y in xrange(0, self.chunk_len):
-                X = self.X - self.size2 + (x * self.size_voxel)
-                Y = self.Y - self.size2 + (y * self.size_voxel)
+                X = self.centerX - self.size2 + (x * self.size_voxel)
+                Y = self.centerY - self.size2 + (y * self.size_voxel)
                 dX = X + self.size_voxel
                 dY = Y + self.size_voxel
 
@@ -372,7 +384,7 @@ class ChunkModel(NodePath):
                 v2 = Vec3(dx, y, self.heights[dX, Y])
                 v3 = Vec3(dx, dy, self.heights[dX, dY])
 
-                add_data(n_vert, v0, v1, v2, v3)
+                add_data(n_vert, v0, v1, v2, v3, self.voxels[X, Y, self.heights[X, Y]])
                 n_vert += 4
 
                 if x == 0:
@@ -380,7 +392,7 @@ class ChunkModel(NodePath):
                     v1 = Vec3(x, y, self.heights[X, Y])
                     v2 = Vec3(x, dy, self.heights[X, dY])
                     v3 = Vec3(x, dy, self.heights[X, dY] - self.size_voxel)
-                    add_data(n_vert, v0, v1, v2, v3)
+                    add_data(n_vert, v0, v1, v2, v3, self.voxels[X, Y, self.heights[X, Y]])
                     n_vert += 4
 
                 if y == 0:
@@ -388,7 +400,7 @@ class ChunkModel(NodePath):
                     v1 = Vec3(dx, y, self.heights[dX, Y])
                     v2 = Vec3(x, y, self.heights[X, Y])
                     v3 = Vec3(x, y, self.heights[X, Y] - self.size_voxel)
-                    add_data(n_vert, v0, v1, v2, v3)
+                    add_data(n_vert, v0, v1, v2, v3, self.voxels[X, Y, self.heights[X, Y]])
                     n_vert += 4
 
                 if x == end:
@@ -396,7 +408,7 @@ class ChunkModel(NodePath):
                     v1 = Vec3(dx, dy, self.heights[dX, dY])
                     v2 = Vec3(dx, y, self.heights[dX, Y])
                     v3 = Vec3(dx, y, self.heights[dX, Y] - self.size_voxel)
-                    add_data(n_vert, v0, v1, v2, v3)
+                    add_data(n_vert, v0, v1, v2, v3, self.voxels[X, Y, self.heights[X, Y]])
                     n_vert += 4
 
                 if y == end:
@@ -404,7 +416,7 @@ class ChunkModel(NodePath):
                     v1 = Vec3(x, dy, self.heights[X, dY])
                     v2 = Vec3(dx, dy, self.heights[dX, dY])
                     v3 = Vec3(dx, dy, self.heights[dX, dY] - self.size_voxel)
-                    add_data(n_vert, v0, v1, v2, v3)
+                    add_data(n_vert, v0, v1, v2, v3, self.voxels[X, Y, self.heights[X, Y]])
                     n_vert += 4
 
         self.geom = Geom(self.v_data)
@@ -413,7 +425,7 @@ class ChunkModel(NodePath):
         self.chunk_np = self.attachNewNode('chunk_np')
         self.chunk_np.attachNewNode(self.chunk_geom)
         self.chunk_geom.setIntoCollideMask(BitMask32.bit(1))
-        self.chunk_np.setTag('Chunk', 'Chunk: {0} {1} {2}'.format(self.X, self.Y, self.size))
+        self.chunk_np.setTag('Chunk', 'Chunk: {0} {1} {2}'.format(self.centerX, self.centerY, self.size))
         #self.setTwoSided(True)
         self.water = WaterNode(0, 0, self.size, self.water_tex)
         self.water.setTwoSided(True)

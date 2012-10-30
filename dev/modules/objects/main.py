@@ -5,8 +5,14 @@
 """Main classes"""
 
 class RootObject():
-    def __init__(self):
-        pass
+    """Root object for all objects of game
+
+    id - uniq ID for object
+    game - Main instance
+    """
+    def __init__(self, game, id):
+        self.game = game
+        self.id = id
 
 # vi: ts=4 sw=4
 

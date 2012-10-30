@@ -519,6 +519,9 @@ class Map3d(dict):
         else:
             return False
 
+    def __call__(self, x, y):
+        return self[x, y]
+
     def __getitem__(self, item):
         """If item not in dict, when perlin generate and return
         """

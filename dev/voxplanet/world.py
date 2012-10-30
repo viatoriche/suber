@@ -16,7 +16,7 @@ from panda3d.core import VBase3, VBase2
 from panda3d.core import Vec3, Vec2
 from pandac.PandaModules import Texture, TextureStage
 from pandac.PandaModules import TransparencyAttrib, Texture, TextureStage
-from voxplanet.landplane import LandNode, ChunkModel, LowTreeModel, ForestNode, TreeModel
+from voxplanet.landplane import LandNode, ChunkModel, LowTreeModel, ForestNode, TreeModel, Voxels
 from voxplanet.map2d import Map_generator_2D
 from voxplanet.map3d import Map3d
 from voxplanet.support import profile_decorator
@@ -187,7 +187,7 @@ class ChunksCollection():
 
         print 'remove: ', time.time() - t
 
-    #@profile_decorator
+    @profile_decorator
     def update(self, Force = False):
         """Create and show chunk models
         """
@@ -220,10 +220,10 @@ class ChunksCollection():
                             if length <= far:
                                 if not self.chunks_models.has_key(chunk):
                                     self.mutex.acquire()
-                                    self.chunks_models[chunk] = ChunkModel(self.world, self.config, self.world.map3d,
+                                    self.chunks_models[chunk] = ChunkModel(self.config, self.world.map3d,
+                                                                   self.world.voxels,
                                                                    center[0], center[1], size,
                                                                    self.chunks_map.chunk_len,
-                                                                   self.world.params.tex_uv_height,
                                                                    self.world.params.chunks_tex,
                                                                    self.world.params.water_tex
                                                                    )
@@ -574,6 +574,8 @@ class World():
             self.status(endstr)
 
         create_world()
+
+        self.voxels = Voxels(self.map3d, self.params.get_coord_block)
 
         self.chunks_map = ChunksMap(self, 0, 1)
 

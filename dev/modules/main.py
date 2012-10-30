@@ -19,6 +19,7 @@ from voxplanet.config import Config as VoxConfig
 from voxplanet.params import Params as VoxParams
 from panda3d.core import VBase4
 from pandac.PandaModules import loadPrcFileData, PStatClient, AmbientLight
+from modules.objects.blocks import CoordBlock
 from config import Config
 
 loadPrcFileData("", "window-title {0}".format(Config().name_game))
@@ -119,13 +120,14 @@ class Main():
         self.move_avatar = MoveAvatar(self)
 
         self.vox_config = VoxConfig()
+        self.coord_block = CoordBlock(self, self.vox_config)
         self.vox_params = VoxParams()
         self.vox_params.gui = self.gui
         self.vox_params.avatar = self.cam_manager.node
         self.vox_params.status = self.write
         self.vox_params.root_node = self.gui.render
         self.vox_params.chunks_tex = self.textures['world_blocks']
-        self.vox_params.tex_uv_height = self.textures.get_block_uv_height
+        self.vox_params.get_coord_block = self.coord_block
         self.vox_params.tree_tex = self.textures['tree']
         self.vox_params.water_tex = self.textures['water']
         self.vox_params.leafModel = self.gui.loader.loadModel("res/models/shrubbery")

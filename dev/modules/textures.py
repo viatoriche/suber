@@ -16,6 +16,20 @@ class TextureCollection(dict):
     def __init__(self, game):
         dict.__init__(self)
         self.game = game
+        self.map_size = 16
+        self.map_len = 0
+        self.map_coords = []
+        self.create_map_coords()
+
+    def create_map_coords(self):
+        du = 1. / self.map_size
+        dv = 1. / self.map_size
+        d_uv = 0.0005
+        for u in xrange(self.map_size):
+            for v in xrange(self.map_size):
+                coord = u * du + d_uv, v * dv + d_uv, (u + 1) * du - d_uv, (v + 1) * dv  - d_uv
+                self.map_coords.append(coord)
+                self.map_len += 1
 
     def get_map_2d_tex(self, map2d, factor = 1):
         """Generate texture for map2d, factor - for size [size / factor]
@@ -54,7 +68,7 @@ class TextureCollection(dict):
                                         Config().tex_suffix)))
         d = images[0].getReadXSize()
         # 16 x 16 textures
-        size = d * 16
+        size = d * self.map_size
         image_all = PNMImage(size, size)
         n = 0
         for i in xrange(0, size, d):
@@ -71,19 +85,19 @@ class TextureCollection(dict):
         self['world_blocks'].setMagfilter(Texture.FTLinearMipmapLinear)
         self['world_blocks'].setMinfilter(Texture.FTLinearMipmapLinear)
 
-    def get_block_uv_height(self, z):
+    def get_block_uv(self, id):
         # u1, v1, u2, v2
-        config = self.game.vox_config
-        du = 0.0005
-        tex_coord = 0.0+du, 1.0-du, 0.0625-du, 0.9375+du
-        if z >= config.land_mount_level[0] and z <= config.land_mount_level[1]:
-            tex_coord = 0.0625+du, 1.0-du, 0.125-du, 0.9375+du
-        elif z >= config.low_mount_level[0] and z <= config.low_mount_level[1]:
-            tex_coord = 0.125+du, 1.0-du, 0.1875-du, 0.9375+du
-        elif z >= config.mid_mount_level[0] and z <= config.mid_mount_level[1]:
-            tex_coord = 0.1875+du, 1.0-du, 0.25-du, 0.9375+du
-        elif z >= config.high_mount_level[0]:
-            tex_coord = 0.25+du, 1.0-du, 0.3125-du, 0.9375+du
+        # default - sand
+        # 16 * 16, d_uv
+        tex_coord = self.map_coords[self.map_len - self.map_size]
+        if id == 'grass':
+            tex_coord = self.map_coords[self.map_len - self.map_size + 1]
+        elif id == 'dirt_grass':
+            tex_coord = self.map_coords[self.map_len - self.map_size + 2]
+        elif id == 'stone':
+            tex_coord = self.map_coords[self.map_len - self.map_size + 3]
+        elif id == 'snow':
+            tex_coord = self.map_coords[self.map_len - self.map_size + 4]
 
         return tex_coord
 
@@ -92,17 +106,10 @@ class TextureCollection(dict):
         self['sight'] = loader.loadTexture('res/textures/sight.png')
 
         self['water'] = loader.loadTexture("res/textures/water.png")
-        #self['water'].setMagfilter(Texture.FTLinearMipmapLinear)
-        #self['water'].setMinfilter(Texture.FTLinearMipmapLinear)
 
-        #self['black'] = loader.loadTexture("res/textures/black.png")
         self['tree'] = loader.loadTexture("res/textures/tree.png")
         self['leaf'] = loader.loadTexture("res/textures/leaf.png")
-        #self['black'].setMagfilter(Texture.FTLinearMipmapLinear)
-        #self['black'].setMinfilter(Texture.FTLinearMipmapLinear)
 
 
-
-#textures = TextureCollection()
 # vi: ft=python:tw=0:ts=4
 
