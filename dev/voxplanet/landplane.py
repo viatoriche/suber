@@ -241,6 +241,25 @@ class ForestNode(NodePath):
         print 'flatten all trees: ', time.time() - t
 
 
+class Voxel():
+    def __init__(self, empty, block_type):
+        self.empty = empty
+        self.block_type = block_type
+
+class Voxels(dict):
+    def __init__(self, heights, get_height_type):
+        self.heights = heights
+        self.get_height_type = get_height_type
+
+    def __getitem__(self, item):
+        if self.has_key(item):
+            return dict.__getitem__(self, item)
+        else:
+            empty = self.heights.check_empty(item)
+            vox = Voxel()
+            self[item] = vox
+            return vox
+
 class ChunkModel(NodePath):
     """Chunk for quick render and create voxel-objects
 
@@ -252,6 +271,8 @@ class ChunkModel(NodePath):
     tex_uv_height - function return of uv coordinates for height voxel
     tex - texture map
     """
+
+    dirty = False
 
     def __init__(self, world, config, heights, X, Y, size, chunk_len, tex_uv_height, tex, water_tex):
 
@@ -274,9 +295,16 @@ class ChunkModel(NodePath):
         self.start_x = self.X - self.size2
         self.start_y = self.Y - self.size2
 
-        self.chunk_geom = GeomNode('self.chunk_geom')
+        self.voxels = Voxels(self.heights)
+
         self.v_format = GeomVertexFormat.getV3n3t2()
         self.v_data = GeomVertexData('chunk', self.v_format, Geom.UHStatic)
+
+        self.create()
+
+
+    def create(self):
+        self.chunk_geom = GeomNode('self.chunk_geom')
 
         vertex = GeomVertexWriter(self.v_data, 'vertex')
         normal = GeomVertexWriter(self.v_data, 'normal')

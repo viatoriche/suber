@@ -510,11 +510,11 @@ class Map3d(dict):
 
         #return G
 
-    def check_xyz(self, coord):
-        """Return True, if XYZ - not nil
+    def check_empty(self, coord):
+        """Return True, if XYZ - empty
         """
         x, y, z = coord
-        if self.perlin_3d(x, y, z) >= 0:
+        if self.perlin_3d(x, y, z) <= 0:
             return True
         else:
             return False
