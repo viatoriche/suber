@@ -272,11 +272,7 @@ class Voxels(dict):
         if self.has_key(item):
             return dict.__getitem__(self, item)
         else:
-            x, y, z = item
-            if self.heights[x, y] > z:
-                empty = True
-            else:
-                empty = self.heights.check_empty(item)
+            empty = self.heights.check_empty(item)
             block = self.get_coord_block(item)
             vox = Voxel(empty, block)
             self[item] = vox
@@ -294,27 +290,28 @@ class ChunkModel(NodePath):
     tex - texture map
     """
 
-    dirty = False
+    dirt = []
 
-    def __init__(self, config, heights, voxels, X, Y, size, chunk_len, tex, water_tex):
+    def __init__(self, config, heights, voxels, chunk, tex, water_tex):
 
         NodePath.__init__(self, 'ChunkModel')
-        self.centerX = X
-        self.centerY = Y
         self.config = config
         self.heights = heights
+        self.voxels = voxels
+        self.chunk = chunk
+        self.center, self.size, self.level = chunk
+        self.centerX, self.centerY, self.centerZ = self.center
         self.tex = tex
         self.water_tex = water_tex
-        self.size = size
-        self.chunk_len = chunk_len
+        self.chunk_len = self.config.chunk_len
         self.size_voxel = self.size / self.chunk_len
         if self.size_voxel <1:
             self.size_voxel = 1
         self.size2 = self.size / 2
         self.start_x = self.centerX - self.size2
         self.start_y = self.centerY - self.size2
+        self.level_3d = self.config.level_3d
 
-        self.voxels = voxels
 
         self.v_format = GeomVertexFormat.getV3n3t2()
         self.v_data = GeomVertexData('chunk', self.v_format, Geom.UHStatic)
@@ -322,8 +319,9 @@ class ChunkModel(NodePath):
         self.create()
 
 
+    @profile_decorator
     def create(self):
-        self.chunk_geom = GeomNode('self.chunk_geom')
+        self.chunk_geom = GeomNode('chunk_geom')
 
         vertex = GeomVertexWriter(self.v_data, 'vertex')
         normal = GeomVertexWriter(self.v_data, 'normal')
@@ -367,57 +365,170 @@ class ChunkModel(NodePath):
             tri.addVertex(0 + n_vert)
 
 
-        end = self.chunk_len - 1
+        def deep_z(X, Y, Z, min_z, n_vert):
+            for z in xrange(Z, min_z, -self.size_voxel):
 
+                if self.voxels[X, Y, z].empty:
+                    continue
+
+                if self.voxels[X, Y, z+self.size_voxel].empty:
+                    v0 = Vec3(x, dy, z)
+                    v1 = Vec3(x, y, z)
+                    v2 = Vec3(dx, y, z)
+                    v3 = Vec3(dx, dy, z)
+                    add_data(n_vert, v0, v1, v2, v3, self.voxels[X, Y, z])
+                    n_vert += 4
+
+                if self.voxels[X+self.size_voxel, Y, z].empty:
+                    v0 = Vec3(dx, dy, z - self.size_voxel)
+                    v1 = Vec3(dx, dy, z)
+                    v2 = Vec3(dx, y, z)
+                    v3 = Vec3(dx, y, z - self.size_voxel)
+                    add_data(n_vert, v0, v1, v2, v3, self.voxels[X, Y, z])
+                    n_vert += 4
+
+                if self.voxels[X-self.size_voxel, Y, z].empty:
+                    v0 = Vec3(x, y, z - self.size_voxel)
+                    v1 = Vec3(x, y, z)
+                    v2 = Vec3(x, dy, z)
+                    v3 = Vec3(x, dy, z - self.size_voxel)
+                    add_data(n_vert, v0, v1, v2, v3, self.voxels[X, Y, z])
+                    n_vert += 4
+
+                if self.voxels[X, Y+self.size_voxel, z].empty:
+                    v0 = Vec3(x, dy, z - self.size_voxel)
+                    v1 = Vec3(x, dy, z)
+                    v2 = Vec3(dx, dy, z)
+                    v3 = Vec3(dx, dy, z - self.size_voxel)
+                    add_data(n_vert, v0, v1, v2, v3, self.voxels[X, Y, z])
+                    n_vert += 4
+
+                if self.voxels[X, Y-self.size_voxel, z].empty:
+                    v0 = Vec3(dx, y, z - self.size_voxel)
+                    v1 = Vec3(dx, y, z)
+                    v2 = Vec3(x, y, z)
+                    v3 = Vec3(x, y, z - self.size_voxel)
+                    add_data(n_vert, v0, v1, v2, v3, self.voxels[X, Y, z])
+                    n_vert += 4
+
+                if self.voxels[X, Y, z-self.size_voxel].empty:
+                    v0 = Vec3(dx, dy, z-self.size_voxel)
+                    v1 = Vec3(dx, y, z-self.size_voxel)
+                    v2 = Vec3(x, y, z-self.size_voxel)
+                    v3 = Vec3(x, dy, z-self.size_voxel)
+                    add_data(n_vert, v0, v1, v2, v3, self.voxels[X, Y, z-self.size_voxel])
+                    n_vert += 4
+
+            return n_vert
+
+        end = self.chunk_len - 1
         for x in xrange(0, self.chunk_len):
             for y in xrange(0, self.chunk_len):
                 X = self.centerX - self.size2 + (x * self.size_voxel)
                 Y = self.centerY - self.size2 + (y * self.size_voxel)
+
                 dX = X + self.size_voxel
                 dY = Y + self.size_voxel
 
                 dx = x + 1
                 dy = y + 1
 
-                v0 = Vec3(x, dy, self.heights[X, dY])
-                v1 = Vec3(x, y, self.heights[X, Y])
-                v2 = Vec3(dx, y, self.heights[dX, Y])
-                v3 = Vec3(dx, dy, self.heights[dX, dY])
+                h = []
+                h.append(self.heights[X, dY])
+                h.append(self.heights[X, Y])
+                h.append(self.heights[dX, Y])
+                h.append(self.heights[dX, dY])
 
-                add_data(n_vert, v0, v1, v2, v3, self.voxels[X, Y, self.heights[X, Y]])
-                n_vert += 4
+                Z = min(h)
 
-                if x == 0:
-                    v0 = Vec3(x, y, self.heights[X, Y] - self.size_voxel)
+                if self.level > self.level_3d or not self.voxels[X, Y, Z].empty:
+
+                    v0 = Vec3(x, dy, self.heights[X, dY])
                     v1 = Vec3(x, y, self.heights[X, Y])
-                    v2 = Vec3(x, dy, self.heights[X, dY])
-                    v3 = Vec3(x, dy, self.heights[X, dY] - self.size_voxel)
-                    add_data(n_vert, v0, v1, v2, v3, self.voxels[X, Y, self.heights[X, Y]])
-                    n_vert += 4
-
-                if y == 0:
-                    v0 = Vec3(dx, y, self.heights[dX, Y] - self.size_voxel)
-                    v1 = Vec3(dx, y, self.heights[dX, Y])
-                    v2 = Vec3(x, y, self.heights[X, Y])
-                    v3 = Vec3(x, y, self.heights[X, Y] - self.size_voxel)
-                    add_data(n_vert, v0, v1, v2, v3, self.voxels[X, Y, self.heights[X, Y]])
-                    n_vert += 4
-
-                if x == end:
-                    v0 = Vec3(dx, dy, self.heights[dX, dY] - self.size_voxel)
-                    v1 = Vec3(dx, dy, self.heights[dX, dY])
                     v2 = Vec3(dx, y, self.heights[dX, Y])
-                    v3 = Vec3(dx, y, self.heights[dX, Y] - self.size_voxel)
-                    add_data(n_vert, v0, v1, v2, v3, self.voxels[X, Y, self.heights[X, Y]])
+                    v3 = Vec3(dx, dy, self.heights[dX, dY])
+                    add_data(n_vert, v0, v1, v2, v3, self.voxels[X, Y, Z])
                     n_vert += 4
 
-                if y == end:
-                    v0 = Vec3(x, dy, self.heights[X, dY] - self.size_voxel)
-                    v1 = Vec3(x, dy, self.heights[X, dY])
-                    v2 = Vec3(dx, dy, self.heights[dX, dY])
-                    v3 = Vec3(dx, dy, self.heights[dX, dY] - self.size_voxel)
-                    add_data(n_vert, v0, v1, v2, v3, self.voxels[X, Y, self.heights[X, Y]])
-                    n_vert += 4
+                    if self.level > self.level_3d:
+
+                        if x == 0:
+                            v0 = Vec3(x, y, self.heights[X, Y] - self.size_voxel)
+                            v1 = Vec3(x, y, self.heights[X, Y])
+                            v2 = Vec3(x, dy, self.heights[X, dY])
+                            v3 = Vec3(x, dy, self.heights[X, dY] - self.size_voxel)
+                            add_data(n_vert, v0, v1, v2, v3, self.voxels[X, Y, self.heights[X, Y]])
+                            n_vert += 4
+
+                        if y == 0:
+                            v0 = Vec3(dx, y, self.heights[dX, Y] - self.size_voxel)
+                            v1 = Vec3(dx, y, self.heights[dX, Y])
+                            v2 = Vec3(x, y, self.heights[X, Y])
+                            v3 = Vec3(x, y, self.heights[X, Y] - self.size_voxel)
+                            add_data(n_vert, v0, v1, v2, v3, self.voxels[X, Y, self.heights[X, Y]])
+                            n_vert += 4
+
+                        if x == end:
+                            v0 = Vec3(dx, dy, self.heights[dX, dY] - self.size_voxel)
+                            v1 = Vec3(dx, dy, self.heights[dX, dY])
+                            v2 = Vec3(dx, y, self.heights[dX, Y])
+                            v3 = Vec3(dx, y, self.heights[dX, Y] - self.size_voxel)
+                            add_data(n_vert, v0, v1, v2, v3, self.voxels[X, Y, self.heights[X, Y]])
+                            n_vert += 4
+
+                        if y == end:
+                            v0 = Vec3(x, dy, self.heights[X, dY] - self.size_voxel)
+                            v1 = Vec3(x, dy, self.heights[X, dY])
+                            v2 = Vec3(dx, dy, self.heights[dX, dY])
+                            v3 = Vec3(dx, dy, self.heights[dX, dY] - self.size_voxel)
+                            add_data(n_vert, v0, v1, v2, v3, self.voxels[X, Y, self.heights[X, Y]])
+                            n_vert += 4
+
+                    else:
+
+                        if self.voxels[X+self.size_voxel, Y, Z].empty:
+                            v0 = Vec3(dx, dy, Z - self.size_voxel)
+                            v1 = Vec3(dx, dy, self.heights[dX, dY])
+                            v2 = Vec3(dx, y, self.heights[dX, Y])
+                            v3 = Vec3(dx, y, Z - self.size_voxel)
+                            add_data(n_vert, v0, v1, v2, v3, self.voxels[X, Y, Z])
+                            n_vert += 4
+
+                        if self.voxels[X-self.size_voxel, Y, Z].empty:
+                            v0 = Vec3(x, y, Z - self.size_voxel)
+                            v1 = Vec3(x, y, self.heights[X, Y])
+                            v2 = Vec3(x, dy, self.heights[X, dY])
+                            v3 = Vec3(x, dy, Z - self.size_voxel)
+                            add_data(n_vert, v0, v1, v2, v3, self.voxels[X, Y, Z])
+                            n_vert += 4
+
+                        if self.voxels[X, Y+self.size_voxel, Z].empty:
+                            v0 = Vec3(x, dy, Z - self.size_voxel)
+                            v1 = Vec3(x, dy, self.heights[X, dY])
+                            v2 = Vec3(dx, dy, self.heights[dX, dY])
+                            v3 = Vec3(dx, dy, Z - self.size_voxel)
+                            add_data(n_vert, v0, v1, v2, v3, self.voxels[X, Y, Z])
+                            n_vert += 4
+
+                        if self.voxels[X, Y-self.size_voxel, Z].empty:
+                            v0 = Vec3(dx, y, Z - self.size_voxel)
+                            v1 = Vec3(dx, y, self.heights[dX, Y])
+                            v2 = Vec3(x, y, self.heights[X, Y])
+                            v3 = Vec3(x, y, Z - self.size_voxel)
+                            add_data(n_vert, v0, v1, v2, v3, self.voxels[X, Y, Z])
+                            n_vert += 4
+
+                        if self.voxels[X, Y, Z-self.size_voxel].empty:
+                            v0 = Vec3(dx, dy, Z-self.size_voxel)
+                            v1 = Vec3(dx, y, Z-self.size_voxel)
+                            v2 = Vec3(x, y, Z-self.size_voxel)
+                            v3 = Vec3(x, dy, Z-self.size_voxel)
+                            add_data(n_vert, v0, v1, v2, v3, self.voxels[X, Y, Z-self.size_voxel])
+                            n_vert += 4
+
+
+                        n_vert = deep_z(X, Y, Z, Z - self.config.deep_height, n_vert)
+
 
         self.geom = Geom(self.v_data)
         self.geom.addPrimitive(tri)
@@ -426,7 +537,7 @@ class ChunkModel(NodePath):
         self.chunk_np.attachNewNode(self.chunk_geom)
         self.chunk_geom.setIntoCollideMask(BitMask32.bit(1))
         self.chunk_np.setTag('Chunk', 'Chunk: {0} {1} {2}'.format(self.centerX, self.centerY, self.size))
-        #self.setTwoSided(True)
+        #self.chunk_np.setTwoSided(True)
         self.water = WaterNode(0, 0, self.size, self.water_tex)
         self.water.setTwoSided(True)
         self.water.reparentTo(self)

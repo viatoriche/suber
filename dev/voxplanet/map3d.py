@@ -441,11 +441,36 @@ class Map3d(dict):
         self.perlin[level] = PerlinNoise2(sx = scale, sy = scale,
                                        table_size = 256, seed = seed)
 
+
+        #################################################################
+        #
+        #                  _ _         _____     _ 
+        #  _ __   ___ _ __| (_)_ __   |___ /  __| |
+        # | '_ \ / _ \ '__| | | '_ \    |_ \ / _` |
+        # | |_) |  __/ |  | | | | | |  ___) | (_| |
+        # | .__/ \___|_|  |_|_|_| |_| |____/ \__,_|
+        # |_|
+        #
+        #################################################################
+        self.perlin_3d = {}
+
+        length = 8000
+        size = 16
+
         seed = random.randint(0, sys.maxint)
-        scale = 2 ** (self.config.size_mod/2-3)
-        self.perlin_3d = PerlinNoise3(sx = scale, sy = scale, sz = scale,
+        self.perlin_3d[0] = PerlinNoise3(sx = length, sy = length, sz = length / 8,
                                        table_size = 256, seed = seed)
 
+        seed = random.randint(0, sys.maxint)
+        self.perlin_3d[1] = PerlinNoise3(sx = length, sy = length, sz = length / 8,
+                                       table_size = 256, seed = seed)
+
+        seed = random.randint(0, sys.maxint)
+        self.perlin_3d[2] = PerlinNoise3(sx = length, sy = length, sz = length / 8,
+                                       table_size = 256, seed = seed)
+
+
+        ##################################################
         seed = random.randint(0, sys.maxint)
         self.river_perlin = PerlinNoise2(sx = self.world_size, sy = self.world_size,
                                        table_size = 256, seed = seed)
@@ -456,7 +481,7 @@ class Map3d(dict):
         self.river_perlin_height.setScale(2 ** (self.config.size_mod-20))
 
         t = time.time()
-        random.seed(seed)
+        random.seed(self.seed)
         self.global_template.generate_pre_heights()
         print 'generated pre heights: ', time.time() - t
 
@@ -514,10 +539,20 @@ class Map3d(dict):
         """Return True, if XYZ - empty
         """
         x, y, z = coord
-        if self.perlin_3d(x, y, z) <= 0:
+        if z <= -self.config.max_height:
+            return False
+        if z <= self[x, y] - self.config.deep_height:
+            return False
+        elif z > self[x, y]:
             return True
         else:
-            return False
+            p = 0
+            for i in xrange(3):
+                p = self.perlin_3d[i](x, y, z)
+                if p <= -0.75:
+                    return False
+
+        return True
 
     def __call__(self, x, y):
         return self[x, y]

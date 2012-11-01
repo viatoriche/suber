@@ -42,9 +42,11 @@ class Config():
 
     # detalized
     min_level = 4
+    level_3d = min_level-2
     tree_level = 11
     chunk_len = 2 ** min_level
     #count_chunks = 1
+    #count_levels = 5, 7, 9, 11
     count_levels = 5, 7, 9, 11
     chunk_delay = 0.01
     tree_delay = 0.01
@@ -52,11 +54,14 @@ class Config():
     tree_sleep = 0.4
     tree_far = 400
     freq_tree = 2
+    deep_height = 8
 
     land_mount_level = 1, 200
     low_mount_level = 201, 1000
     mid_mount_level = 1001, 3000
     high_mount_level = 3001, 10000
+
+    max_height = 20000
 
     factor_high_mount = 30
     factor_mid_mount = 40

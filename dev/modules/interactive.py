@@ -253,8 +253,8 @@ class MoveAvatar(DirectObject.DirectObject):
                 avatar_run = True
                 self.avatar.setZ(self.avatar, -Speed)
 
-        if self.avatar.getZ(self.game.world.root_node) < self.game.world.chunks_map.land_z-5:
-            self.avatar.setZ(self.game.world.root_node, self.game.world.chunks_map.land_z)
+        #if self.avatar.getZ(self.game.world.root_node) < self.game.world.chunks_map.land_z-5:
+            #self.avatar.setZ(self.game.world.root_node, self.game.world.chunks_map.land_z)
 
         if avatar_run:
             if not self.isMoving:

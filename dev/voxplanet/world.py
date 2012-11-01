@@ -211,9 +211,12 @@ class ChunksCollection():
                     if self.status_chunks.has_key(chunk):
                         if self.status_chunks[chunk]:
                             center, size, level = chunk
-                            length = VBase2.length(Vec2(center[0], center[1]) - Vec2(self.chunks_map.charX,
-                                                                             self.chunks_map.charY
-                                                                             ))
+                            #length = VBase2.length(Vec2(center[0], center[1]) - Vec2(self.chunks_map.charX,
+                                                                             #self.chunks_map.charY
+                                                                             #))
+                            length = VBase3.length(Vec3(center) - Vec3(self.chunks_map.charX,
+                                                                       self.chunks_map.charY,
+                                                                       self.chunks_map.charZ))
                             # hide mark, if distance for chunk too long
                             if length > far:
                                 self.status_chunks[chunk] = False
@@ -222,8 +225,7 @@ class ChunksCollection():
                                     self.mutex.acquire()
                                     self.chunks_models[chunk] = ChunkModel(self.config, self.world.map3d,
                                                                    self.world.voxels,
-                                                                   center[0], center[1], size,
-                                                                   self.chunks_map.chunk_len,
+                                                                   chunk,
                                                                    self.world.params.chunks_tex,
                                                                    self.world.params.water_tex
                                                                    )
@@ -332,7 +334,6 @@ class ChunksMap():
         self.size = size
         self.size_region = self.config.size_region
         self.size_world = self.config.size_world
-        self.chunk_len = self.config.chunk_len
         self.chunks_clts = {}
         self.charPos = self.world.avatar.getPos(self.world.root_node)
         self.charX = 0
@@ -477,7 +478,8 @@ class ChunksMap():
                 self.chunks_clts[name] = ChunksCollection(self,
                                           self.world, name, self.size_world)
 
-        coord = self.config.size_world/2, self.config.size_world/2, 10000
+        #coord = self.config.size_world/2, self.config.size_world/2, 10000
+        coord = 9926519.0, 9646899.0, 558.0
         self.set_char_coord(coord)
 
         taskMgr.doMethodLater(self.config.chunk_delay, self.regen_task, 'WorldRegen', taskChain = 'world_chain_generate')
