@@ -31,7 +31,7 @@ def profile_decorator(func):
         cprofile.clear()
         returned = cprofile.runcall(func, *args, **kargs)
         cprofile.create_stats()
-        cprofile.print_stats(sort = 1)
+        cprofile.print_stats(sort = 2)
         return returned
     do_profile.__name__ = func.__name__
     do_profile.__dict__ = func.__dict__

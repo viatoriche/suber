@@ -25,7 +25,7 @@ from voxplanet.treegen import TreeLand
 #sys.setrecursionlimit(65535)
 
 
-class QuadroTreeNode:
+class OctreeNode:
     """Node - one cube, which may divide on 4 chunks, when char is near
 
     chunks_clt - ChunksCollection()
@@ -35,8 +35,13 @@ class QuadroTreeNode:
     center - coordinates of center chunk
     """
     # exist = True #make voxel deletable by player
+    d_vecs = (Vec3(-1, -1, -1), Vec3(-1, -1, 1),
+             Vec3(-1, 1, -1),  Vec3(-1, 1, 1),
+             Vec3(1, -1, -1),  Vec3(1, -1, 1),
+             Vec3(1, 1, -1),   Vec3(1, 1, 1)
+             )
     def __init__(self, chunks_clt, size, parent=None,\
-                       level = None, center = (0,0,0)):
+                       level = None, center = Vec3(0,0,0)):
 
         self.parent = parent
         self.chunks_clt = chunks_clt
@@ -45,13 +50,10 @@ class QuadroTreeNode:
         if level == None:
             level = self.config.size_mod
         self.level = level
+        self.center = center
         self.chunks_map = chunks_clt.chunks_map
         self.size = size
         self.childs = {}
-        x = center[0]
-        y = center[1]
-        z = self.world.map3d[x, y]
-        self.center = x, y, z
         self.add()
         self.mark_hide()
 
@@ -61,17 +63,12 @@ class QuadroTreeNode:
         if self.level > level:
             #divide_dist = self.config.chunk_len * (3 ** (25 - self.level))
             #show_dist = self.chunks_map.far
-            s2 = self.size * self.size
-            s2 += s2
-            divide_dist = math.sqrt(s2)
-            length = VBase3.length(Vec3(self.center) - Vec3(self.chunks_map.charX,
-                                                                self.chunks_map.charY,
-                                                                self.chunks_map.charZ))
-            #length = VBase2.length(Vec2(self.center[0], self.center[1]) - Vec2(self.chunks_map.charX,
-                                                                #self.chunks_map.charY))
+            #s2 = self.size * self.size
+            #s2 += s2
+            divide_dist = math.hypot(self.size, self.size)
+            length = VBase3.length(self.center - self.chunks_map.charPos)
 
             if length <= divide_dist:
-                #print 'Divide: ', divide_dist, self.size, self.level, length
                 self.divide(level)
             else:
                 self.mark_show()
@@ -85,26 +82,10 @@ class QuadroTreeNode:
             new_size = self.size/2
             new_center = self.size/4
             new_level = self.level - 1
-            # <- up
-            name = self.center[0] - new_center, self.center[1] - new_center, 0
-            self.childs[name] = QuadroTreeNode(self.chunks_clt, new_size, self, \
+            for name in map(lambda x: (x * new_center) + self.center, self.d_vecs):
+                self.childs[name] = OctreeNode(self.chunks_clt, new_size, self, \
                     new_level, name)
-            self.childs[name].repaint(level)
-            # -> up
-            name = self.center[0] + new_center, self.center[1] - new_center, 0
-            self.childs[name] = QuadroTreeNode(self.chunks_clt, new_size, self, \
-                    new_level, name)
-            self.childs[name].repaint(level)
-            # <- down
-            name = self.center[0] - new_center, self.center[1] + new_center, 0
-            self.childs[name] = QuadroTreeNode(self.chunks_clt, new_size, self, \
-                    new_level, name)
-            self.childs[name].repaint(level)
-            # -> down
-            name = self.center[0] + new_center, self.center[1] + new_center, 0
-            self.childs[name] = QuadroTreeNode(self.chunks_clt, new_size, self, \
-                    new_level, name)
-            self.childs[name].repaint(level)
+                self.childs[name].repaint(level)
         else:
             for child in self.childs:
                 self.childs[child].repaint(level)
@@ -135,7 +116,7 @@ class ChunksCollection():
 
     def __init__(self, chunks_map, world, center, size_world):
 
-        self.center = center
+        self.center = Vec3(center)
         self.config = world.config
 
         self.size_world = size_world
@@ -144,7 +125,7 @@ class ChunksCollection():
         self.world = world
         self.our_chunks = []
 
-        self.root = QuadroTreeNode(self, self.size_world, center = self.center)
+        self.root = OctreeNode(self, self.size_world, center = self.center)
         self.chunks_models = {}
         self.forest = self.world.forest
         self.mutex = self.world.mutex_repaint
@@ -173,9 +154,7 @@ class ChunksCollection():
 
         for chunk in chunks:
             # if chunk was marked for show
-            length = VBase2.length(Vec2(chunk[0][0], chunk[0][1]) - Vec2(self.chunks_map.charX,
-                                                             self.chunks_map.charY
-                                                             ))
+            length = VBase3.length(chunk[0] - self.chunks_map.charPos)
             # hide mark, if distance for chunk too long
             if length >= remove_far:
                 if self.chunks_models.has_key(chunk):
@@ -203,24 +182,22 @@ class ChunksCollection():
                 our_level = i
                 break
 
-
-        def create_chunk(far):
+        @profile_decorator
+        def create_chunks(far):
 
             for our_level in our_levels:
                 for chunk in self.chunks[our_level]:
                     if self.status_chunks.has_key(chunk):
                         if self.status_chunks[chunk]:
                             center, size, level = chunk
-                            #length = VBase2.length(Vec2(center[0], center[1]) - Vec2(self.chunks_map.charX,
-                                                                             #self.chunks_map.charY
-                                                                             #))
-                            length = VBase3.length(Vec3(center) - Vec3(self.chunks_map.charX,
-                                                                       self.chunks_map.charY,
-                                                                       self.chunks_map.charZ))
+                            length = VBase3.length(center - self.chunks_map.charPos)
+                            #length_z = abs(center[2] - self.chunks_map.charPos[2])
                             # hide mark, if distance for chunk too long
                             if length > far:
                                 self.status_chunks[chunk] = False
-                            if length <= far:
+                            #elif length_z > size * 4:
+                                #self.status_chunks[chunk] = False
+                            else:
                                 if not self.chunks_models.has_key(chunk):
                                     self.mutex.acquire()
                                     self.chunks_models[chunk] = ChunkModel(self.config, self.world.map3d,
@@ -260,24 +237,24 @@ class ChunksCollection():
         self.world.params.fog.setLinearRange(0, self.far)
         self.world.gui.camLens.setFar(self.far * 2)
 
-        t = time.time()
-        try:
-            tree_chunks = self.chunks[self.config.tree_level]
-            for chunk in tree_chunks:
-                center, size, level = chunk
-                length = VBase2.length(Vec2(center[0], center[1]) - Vec2(self.chunks_map.charX,
-                                                                 self.chunks_map.charY
-                                                                 ))
-                # hide mark, if distance for chunk too long
-                if length <= size:
-                    self.world.forest.add_trees(chunk)
-        except KeyError, e:
-            pass
+        #t = time.time()
+        #try:
+            #tree_chunks = self.chunks[self.config.tree_level]
+            #for chunk in tree_chunks:
+                #center, size, level = chunk
+                #length = VBase2.length(Vec2(center[0], center[1]) - Vec2(self.chunks_map.charX,
+                                                                 #self.chunks_map.charY
+                                                                 #))
+                ##hide mark, if distance for chunk too long
+                #if length <= size:
+                    #self.world.forest.add_trees(chunk)
+        #except KeyError, e:
+            #pass
 
-        print 'add new trees: ', time.time() - t
+        #print 'add new trees: ', time.time() - t
 
         t = time.time()
-        create_chunk(self.far)
+        create_chunks(self.far)
         print 'create chunks: ', time.time() - t
 
     #@profile_decorator
@@ -335,7 +312,8 @@ class ChunksMap():
         self.size_region = self.config.size_region
         self.size_world = self.config.size_world
         self.chunks_clts = {}
-        self.charPos = self.world.avatar.getPos(self.world.root_node)
+        self.charRPos = self.world.avatar.getPos(self.world.root_node)
+        self.charPos = Vec3(0, 0, 0)
         self.charX = 0
         self.charY = 0
         self.charRX = 0
@@ -398,7 +376,8 @@ class ChunksMap():
         self.charRY = self.charY - newDY
 
         self.land_z = int(self.world.map3d[int(self.charX), int(self.charY)])
-        self.charPos = self.world.avatar.getPos(self.world.root_node)
+        self.charRPos = self.world.avatar.getPos(self.world.root_node)
+        self.charPos = Vec3(self.charX, self.charY, self.charZ)
 
         if newDX != self.DX or newDY != self.DY or Force:
             self.DX = newDX
@@ -414,7 +393,6 @@ class ChunksMap():
         self.charX, self.charY, self.charZ = coord
         self.test_coord(Force = True)
 
-    #@profile_decorator
     def repaint(self):
         """repaint all chunks
         """
@@ -458,7 +436,7 @@ class ChunksMap():
         """check cam for update
 
         """
-        if self.charPos != self.world.avatar.getPos(self.world.root_node):
+        if self.charRPos != self.world.avatar.getPos(self.world.root_node):
             self.get_coords()
             self.world.status('rX: {0}, rY: {1}, Z: {2}, '\
                       'land z: {3} | wX: {4}, wY: {5}'.format(
@@ -479,7 +457,7 @@ class ChunksMap():
                                           self.world, name, self.size_world)
 
         #coord = self.config.size_world/2, self.config.size_world/2, 10000
-        coord = 9926519.0, 9646899.0, 558.0
+        coord = 14050918.0, 15938355.0, 7492.0
         self.set_char_coord(coord)
 
         taskMgr.doMethodLater(self.config.chunk_delay, self.regen_task, 'WorldRegen', taskChain = 'world_chain_generate')

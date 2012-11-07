@@ -593,7 +593,7 @@ class Map3d(dict):
             elif height < 1:
                 if h >= 1:
                     h = 0
-            height = h
+            height = int(h)
 
             # rivers
             #if height > -4.:
@@ -601,8 +601,8 @@ class Map3d(dict):
                 #if r >= 0.1 and r <= 0.101:
                     #height = -10. + (self.river_perlin_height(x, y) * 10.)
 
-            self[item] = int(height)
-            return int(height)
+            self[item] = height
+            return height
 
     def get_map_3d_tex(self, size, filename = None, charPos = None):
         """Generate texture of map

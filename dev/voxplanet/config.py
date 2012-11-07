@@ -50,7 +50,7 @@ class Config():
     count_levels = 5, 7, 9, 11
     chunk_delay = 0.01
     tree_delay = 0.01
-    chunk_sleep = 0.05
+    chunk_sleep = 0.005
     tree_sleep = 0.4
     tree_far = 400
     freq_tree = 2
