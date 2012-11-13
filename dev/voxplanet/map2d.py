@@ -53,15 +53,15 @@ class Maps2D(dict):
         cmap = self[level]
         for e, x in enumerate(xrange(cmap.size)):
             # for square view delete 1/2 line
-            if e % 2 == 0:
-                continue
+            #if e % 2 == 0:
+                #continue
             for y in xrange(cmap.size):
                 if cmap[(y, x)] == 0:
                     # water
-                    s = s + ' '
+                    s = s + '  '
                 else:
                     # land
-                    s = s + '▓'
+                    s = s + '%%'
             s = s + '\n'
         return s
 

@@ -191,12 +191,12 @@ class ChunksCollection():
                         if self.status_chunks[chunk]:
                             center, size, level = chunk
                             length = VBase3.length(center - self.chunks_map.charPos)
-                            #length_z = abs(center[2] - self.chunks_map.charPos[2])
+                            length_z = abs(center[2] - self.chunks_map.charPos[2])
                             # hide mark, if distance for chunk too long
                             if length > far:
                                 self.status_chunks[chunk] = False
-                            #elif length_z > size * 4:
-                                #self.status_chunks[chunk] = False
+                            elif length_z > 256:
+                                self.status_chunks[chunk] = False
                             else:
                                 if not self.chunks_models.has_key(chunk):
                                     self.mutex.acquire()
@@ -541,7 +541,7 @@ class World():
                 print st
                 self.status(st)
                 complete_i = i
-            print global_map_gen.maps.get_ascii(3)
+            print global_map_gen.maps.get_ascii(2)
             st = 'Start convertation 2d -> 3d'
             print st
             self.status(st)

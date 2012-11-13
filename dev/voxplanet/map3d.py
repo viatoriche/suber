@@ -25,13 +25,13 @@ class TileMap(dict):
         self.map2d = map2d
         self.config = config
 
-    def __getitem__(self, item):
+    def __getitem__(self, key):
         """Overload getitem for toroid
         """
-        if self.has_key(item):
-            return dict.__getitem__(self, item)
+        if self.has_key(key):
+            return self.get(key)
         else:
-            x, y = item
+            x, y = key
 
             if x > self.size - 1:
                 x = x - self.size
@@ -539,33 +539,35 @@ class Map3d(dict):
         """Return True, if XYZ - empty
         """
         x, y, z = coord
-        if z <= -self.config.max_height:
-            return False
-        if z <= self[x, y] - self.config.deep_height:
-            return False
-        elif z > self[x, y]:
+        Z = self[x, y]
+        if z > Z:
             return True
+        elif z <= -self.config.max_height:
+            return False
+        elif z <= Z - self.config.deep_height:
+            return False
         else:
-            p = 0
-            for i in xrange(3):
-                p = self.perlin_3d[i](x, y, z)
-                if p <= -0.75:
-                    return False
+            return False
+            #p = 0
+            #for i in xrange(3):
+                #p = self.perlin_3d[i](x, y, z)
+                #if p <= -0.75:
+                    #return False
 
         return True
 
     def __call__(self, x, y):
         return self[x, y]
 
-    def __getitem__(self, item):
-        """If item not in dict, when perlin generate and return
+    def __getitem__(self, key):
+        """If key not in dict, when perlin generate and return
         """
         # TODO: add cache to hard
-        if item in self:
-            return dict.__getitem__(self, item)
+        if self.has_key(key):
+            return self.get(key)
         else:
             # generate perlin height
-            x, y = item
+            x, y = key
             if x < 0:
                 x = x + self.world_size
             if y < 0:
@@ -601,7 +603,7 @@ class Map3d(dict):
                 #if r >= 0.1 and r <= 0.101:
                     #height = -10. + (self.river_perlin_height(x, y) * 10.)
 
-            self[item] = height
+            self[key] = height
             return height
 
     def get_map_3d_tex(self, size, filename = None, charPos = None):
