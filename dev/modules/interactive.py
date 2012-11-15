@@ -156,7 +156,7 @@ class MoveAvatar(DirectObject.DirectObject):
         self.game = game
         self.SpeedCam = 0.05
         self.sleep = 0.01
-        self.fly_mod = 0.01
+        self.fly_mod = 0.001
         self.SpeedMult = 3
         self.isMoving = False
         self.fly = True
@@ -221,6 +221,14 @@ class MoveAvatar(DirectObject.DirectObject):
         self.game.collision_avatar.lastpos = self.avatar.getPos(self.root_node)
 
         z = self.avatar.getZ(self.root_node)
+
+        if z > self.game.vox_config.max_height:
+            z = self.game.vox_config.max_height
+            self.avatar.setZ(self.root_node, z)
+
+        if z < -self.game.vox_config.max_height:
+            z = -self.game.vox_config.max_height
+            self.avatar.setZ(self.root_node, z)
 
         fly_spd = abs(z - self.game.world.chunks_map.land_z) * self.fly_mod
         #

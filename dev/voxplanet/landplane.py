@@ -246,22 +246,48 @@ class Voxel():
         self.empty = empty
         self.block = block
         self.get_top_uv = self.block.get_top_uv
-        self.get_uv = self.block.get_uv
+        self.get_left_uv = self.block.get_left_uv
+        self.get_right_uv = self.block.get_right_uv
+        self.get_front_uv = self.block.get_front_uv
+        self.get_back_uv = self.block.get_back_uv
+        self.get_bottom_uv = self.block.get_bottom_uv
 
     def __call__(self):
         return self.empty
 
+class VoxelsCleaner():
+    def __init__(self, voxels):
+        self.voxels = voxels
+
+    def clean(self, time_clean = 5):
+        curtime = time.time()
+        try:
+            keys = [key for key in self.voxels.cache if curtime - self.voxels.cache[key][1] > time_clean \
+                                                 and not self.voxels.cache[key][2]]
+        except RuntimeError:
+            return
+        for key in keys:
+            del self.voxels.cache[key]
+
 class Voxels(dict):
+    cache = {}
+    count_requests = 0
+    time_clean = 2
+    clean_count = 2 ** 18
     def __init__(self, heights, get_coord_block):
         self.heights = heights
         self.get_coord_block = get_coord_block
         self.repaint = []
+        self.cleaner = VoxelsCleaner(self)
 
     def __setitem__(self, key, voxel):
-        if self.has_key(key):
-            if item not in self.repaint:
-                self.repaint.append(key)
-        dict.__setitem__(self, key, voxel)
+        if key in self.cache:
+            self.repaint.append(key)
+        self.cache[key] = [voxel, time.time(), True]
+        self.count_requests += 1
+        if self.count_requests == self.clean_count:
+            self.count_requests = 0
+            self.cleaner.clean(self.time_clean)
 
     def check_repaint(self, chunk):
         center, size, level = chunk
@@ -269,13 +295,21 @@ class Voxels(dict):
         return False
 
     def __getitem__(self, key):
-        if self.has_key(key):
-            return self.get(key)
+        if key in self.cache:
+            self.cache[key][1] = time.time()
+            if self.count_requests == self.clean_count:
+                self.count_requests = 0
+                self.cleaner.clean(self.time_clean)
+            return self.cache[key][0]
         else:
             empty = self.heights.check_empty(key)
             block = self.get_coord_block(key)
             vox = Voxel(empty, block)
-            self[key] = vox
+            self.cache[key] = [vox, time.time(), False]
+            self.count_requests += 1
+            if self.count_requests == self.clean_count:
+                self.count_requests = 0
+                self.cleaner.clean(self.time_clean)
             return vox
 
 class ChunkModel(NodePath):
@@ -290,13 +324,24 @@ class ChunkModel(NodePath):
     tex - texture map
     """
 
+    v_format = GeomVertexFormat.getV3n3t2()
 
-    def __init__(self, config, heights, voxels, chunk, tex, water_tex, dirt = False):
+    # quads orientations
+    QTOP = 0
+    QLEFT = 1
+    QRIGHT = 2
+    QFRONT = 3
+    QBACK = 4
+    QBOTTOM = 5
+    QSELF = 6
+
+    def __init__(self, config, status_chunks, heights, voxels, chunk, tex, water_tex, dirt = False):
         NodePath.__init__(self, 'ChunkModel')
         self.dirt = dirt
         self.config = config
         self.heights = heights
         self.voxels = voxels
+        self.status_chunks = status_chunks
         self.chunk = chunk
         self.center, self.size, self.level = chunk
         self.centerX, self.centerY, self.centerZ = map(lambda x: int(x), self.center)
@@ -310,201 +355,494 @@ class ChunkModel(NodePath):
         self.start_x = self.centerX - self.size2
         self.start_y = self.centerY - self.size2
         self.start_z = self.centerZ - self.size2
+        self.round_chunks = {}
 
         self.level_3d = self.config.level_3d
 
-
-        self.v_format = GeomVertexFormat.getV3n3t2()
         self.v_data = GeomVertexData('chunk', self.v_format, Geom.UHStatic)
 
-        if self.centerZ == 0:
-            self.water = WaterNode(0, 0, self.size, self.water_tex)
-            self.water.setTwoSided(True)
-            self.water.reparentTo(self)
+        #if self.start_z <= 0:
+            #self.water = WaterNode(0, 0, self.size, self.water_tex)
+            #self.water.setTwoSided(True)
+            #self.water.reparentTo(self)
 
         self.end_z = self.start_z + self.size
+        self.created = False
         if not self.dirt:
             land_in_chunk = False
             for x in xrange(self.start_x, self.start_x + self.size, self.size_voxel):
                 for y in xrange(self.start_y, self.start_y + self.size, self.size_voxel):
-                    if self.end_z > self.heights[x, y] >= self.start_z:
-                        self.create()
+                    if self.end_z >= self.heights[x, y] >= self.start_z:
+                        self.created = self.create()
                         land_in_chunk = True
                         break
                 if land_in_chunk:
                     break
         else:
-            self.create()
+            self.created = self.create()
 
+    def round_chunk_level(self, orientation):
+        if orientation in self.round_chunks:
+            return self.round_chunks[orientation]
+        test_chunks = []
+        chsize = self.size * 2
+        chlevel = self.level + 1
+        if orientation == self.QTOP:
+            test_chunk = self.centerX, self.centerY, self.centerZ - self.size
+            if test_chunk in self.status_chunks:
+                if self.status_chunks[test_chunk]:
+                    self.round_chunks[self.QTOP] = self.level
+                    return self.level
+            test_chunks.append(((self.centerX - self.size, self.centerY - self.size, \
+                    self.centerZ - chsize), chsize, chlevel))
+            test_chunks.append(((self.centerX + self.size, self.centerY - self.size, \
+                    self.centerZ - chsize), chsize, chlevel))
+            test_chunks.append(((self.centerX - self.size, self.centerY + self.size, \
+                    self.centerZ - chsize), chsize, chlevel))
+            test_chunks.append(((self.centerX + self.size, self.centerY + self.size, \
+                    self.centerZ - chsize), chsize, chlevel))
+            for test_chunk in test_chunks:
+                if test_chunk in self.status_chunks:
+                    if self.status_chunks[test_chunk]:
+                        self.round_chunks[orientation] = chlevel
+                        return chlevel
+            return self.level - 1
+        if orientation == self.QLEFT:
+            test_chunk = self.centerX - self.size, self.centerY, self.centerZ
+            if test_chunk in self.status_chunks:
+                if self.status_chunks[test_chunk]:
+                    self.round_chunks[orientation] = self.level
+                    return self.level
+            test_chunks.append(((self.centerX - chsize, self.centerY - self.size, \
+                       self.centerZ - self.size), chsize, chlevel))
+            test_chunks.append(((self.centerX - chsize, self.centerY - self.size, \
+                       self.centerZ + self.size), chsize, chlevel))
+            test_chunks.append(((self.centerX - chsize, self.centerY + self.size, \
+                       self.centerZ - self.size), chsize, chlevel))
+            test_chunks.append(((self.centerX - chsize, self.centerY + self.size, \
+                       self.centerZ + self.size), chsize, chlevel))
+            for test_chunk in test_chunks:
+                if test_chunk in self.status_chunks:
+                    if self.status_chunks[test_chunk]:
+                        self.round_chunks[orientation] = chlevel
+                        return chlevel
+            return self.level - 1
+        if orientation == self.QRIGHT:
+            test_chunk = self.centerX + self.size, self.centerY, self.centerZ
+            if test_chunk in self.status_chunks:
+                if self.status_chunks[test_chunk]:
+                    self.round_chunks[orientation] = self.level
+                    return self.level
+            test_chunks.append(((self.centerX + chsize, self.centerY - self.size, \
+                        self.centerZ - self.size), chsize, chlevel))
+            test_chunks.append(((self.centerX + chsize, self.centerY - self.size, \
+                        self.centerZ + self.size), chsize, chlevel))
+            test_chunks.append(((self.centerX + chsize, self.centerY + self.size, \
+                        self.centerZ - self.size), chsize, chlevel))
+            test_chunks.append(((self.centerX + chsize, self.centerY + self.size, \
+                        self.centerZ + self.size), chsize, chlevel))
+            for test_chunk in test_chunks:
+                if test_chunk in self.status_chunks:
+                    if self.status_chunks[test_chunk]:
+                        self.round_chunks[orientation] = chlevel
+                        return chlevel
+            return self.level - 1
+        if orientation == self.QFRONT:
+            test_chunk = self.centerX, self.centerY - self.size, self.centerZ
+            if test_chunk in self.status_chunks:
+                if self.status_chunks[test_chunk]:
+                    self.round_chunks[orientation] = self.level
+                    return self.level
+            test_chunks.append(((self.centerX - self.size, self.centerY - chsize, \
+                        self.centerZ - self.size), chsize, chlevel))
+            test_chunks.append(((self.centerX - self.size, self.centerY - chsize, \
+                        self.centerZ + self.size), chsize, chlevel))
+            test_chunks.append(((self.centerX + self.size, self.centerY - chsize, \
+                        self.centerZ - self.size), chsize, chlevel))
+            test_chunks.append(((self.centerX + self.size, self.centerY - chsize, \
+                        self.centerZ + self.size), chsize, chlevel))
+            for test_chunk in test_chunks:
+                if test_chunk in self.status_chunks:
+                    if self.status_chunks[test_chunk]:
+                        self.round_chunks[orientation] = chlevel
+                        return chlevel
+            return self.level - 1
+        if orientation == self.QBACK:
+            test_chunk = self.centerX, self.centerY + self.size, self.centerZ
+            if test_chunk in self.status_chunks:
+                if self.status_chunks[test_chunk]:
+                    self.round_chunks[orientation] = self.level
+                    return self.level
+            test_chunks.append(((self.centerX - self.size, self.centerY + chsize, \
+                        self.centerZ - self.size), chsize, chlevel))
+            test_chunks.append(((self.centerX - self.size, self.centerY + chsize, \
+                        self.centerZ + self.size), chsize, chlevel))
+            test_chunks.append(((self.centerX + self.size, self.centerY + chsize, \
+                        self.centerZ - self.size), chsize, chlevel))
+            test_chunks.append(((self.centerX + self.size, self.centerY + chsize, \
+                        self.centerZ + self.size), chsize, chlevel))
+            for test_chunk in test_chunks:
+                if test_chunk in self.status_chunks:
+                    if self.status_chunks[test_chunk]:
+                        self.round_chunks[orientation] = chlevel
+                        return chlevel
+            return self.level - 1
+        if orientation == self.QBOTTOM:
+            test_chunk = self.centerX, self.centerY, self.centerZ + self.size
+            if test_chunk in self.status_chunks:
+                if self.status_chunks[test_chunk]:
+                    self.round_chunks[self.QTOP] = self.level
+                    return self.level
+            test_chunks.append(((self.centerX - self.size, self.centerY - self.size, \
+                        self.centerZ + chsize), chsize, chlevel))
+            test_chunks.append(((self.centerX + self.size, self.centerY - self.size, \
+                        self.centerZ + chsize), chsize, chlevel))
+            test_chunks.append(((self.centerX - self.size, self.centerY + self.size, \
+                        self.centerZ + chsize), chsize, chlevel))
+            test_chunks.append(((self.centerX + self.size, self.centerY + self.size, \
+                        self.centerZ + chsize), chsize, chlevel))
+            for test_chunk in test_chunks:
+                if test_chunk in self.status_chunks:
+                    if self.status_chunks[test_chunk]:
+                        self.round_chunks[orientation] = chlevel
+                        return chlevel
+            return self.level - 1
+
+
+    def add_quad(self, n_vert, orientation, Force, x, y, dx, dy, Z, Z_minus, voxel):
+        end = self.chunk_len - 1
+        if orientation == self.QTOP:
+            vert0 = Vec3(x, dy, Z)
+            vert1 = Vec3(x, y, Z)
+            vert2 = Vec3(dx, y, Z)
+            vert3 = Vec3(dx, dy, Z)
+            if not Force:
+                voxel.block.top_tex = 'tech_top'
+            u1, v1, u2, v2 = voxel.get_top_uv()
+        elif orientation == self.QLEFT:
+            vert0 = Vec3(x, y, Z_minus)
+            vert1 = Vec3(x, y, Z)
+            vert2 = Vec3(x, dy, Z)
+            vert3 = Vec3(x, dy, Z_minus)
+            if not Force:
+                voxel.block.left_tex = 'tech_left'
+            u1, v1, u2, v2 = voxel.get_left_uv()
+        elif orientation == self.QRIGHT:
+            vert0 = Vec3(dx, dy, Z_minus)
+            vert1 = Vec3(dx, dy, Z)
+            vert2 = Vec3(dx, y, Z)
+            vert3 = Vec3(dx, y, Z_minus)
+            if not Force:
+                voxel.block.right_tex = 'tech_right'
+            u1, v1, u2, v2 = voxel.get_right_uv()
+        elif orientation == self.QFRONT:
+            vert0 = Vec3(dx, y, Z_minus)
+            vert1 = Vec3(dx, y, Z)
+            vert2 = Vec3(x, y, Z)
+            vert3 = Vec3(x, y, Z_minus)
+            if not Force:
+                voxel.block.front_tex = 'tech_front'
+            u1, v1, u2, v2 = voxel.get_front_uv()
+        elif orientation == self.QBACK:
+            vert0 = Vec3(x, dy, Z_minus)
+            vert1 = Vec3(x, dy, Z)
+            vert2 = Vec3(dx, dy, Z)
+            vert3 = Vec3(dx, dy, Z_minus)
+            if not Force:
+                voxel.block.back_tex = 'tech_back'
+            u1, v1, u2, v2 = voxel.get_back_uv()
+        elif orientation == self.QBOTTOM:
+            vert0 = Vec3(dx, dy, Z_minus)
+            vert1 = Vec3(dx, y, Z_minus)
+            vert2 = Vec3(x, y, Z_minus)
+            vert3 = Vec3(x, dy, Z_minus)
+            if not Force:
+                voxel.block.bottom_tex = 'tech_top'
+            u1, v1, u2, v2 = voxel.get_bottom_uv()
+        else:
+            return
+
+        self.vertex.addData3f(vert0)
+        self.vertex.addData3f(vert1)
+        self.vertex.addData3f(vert2)
+        self.vertex.addData3f(vert3)
+
+        norm1 = (vert0 - vert1).cross(vert0 - vert3)
+        norm2 = (vert1 - vert2).cross(vert1 - vert3)
+
+        self.normal.addData3f(norm1)
+        self.normal.addData3f(norm1)
+        self.normal.addData3f(norm1)
+        self.normal.addData3f(norm2)
+
+
+        self.texcoord.addData2f(v1, u1)
+        self.texcoord.addData2f(v2, u1)
+        self.texcoord.addData2f(v2, u2)
+        self.texcoord.addData2f(v1, u2)
+
+        self.tri.addConsecutiveVertices(0 + n_vert, 3)
+
+        self.tri.addVertex(2 + n_vert)
+        self.tri.addVertex(3 + n_vert)
+        self.tri.addVertex(0 + n_vert)
+
+    def check_empty(self, orientation, Force, X, Y, Z, X_plus, Y_plus, Z_plus, X_minus, Y_minus, Z_minus):
+        if self.level > self.config.min_level and not Force:
+            X_plus2, Y_plus2, Z_plus2, X_minus2, Y_minus2, Z_minus2 \
+               = X_plus / 2, Y_plus / 2, Z_plus / 2, X_minus / 2, Y_minus / 2, Z_minus / 2
+        if orientation == self.QSELF:
+            return self.voxels[X, Y, Z].empty
+
+        round_level = self.round_chunk_level(orientation)
+        if orientation == self.QTOP:
+            if Force or round_level == self.level:
+                return self.voxels[X, Y, Z_plus].empty
+            else:
+                return True
+                #if self.level > round_level:
+                    #if self.voxels[X, Y, Z_plus].empty:
+                        #return True
+                    #if self.voxels[X_plus2, Y, Z_plus].empty:
+                        #return True
+                    #if self.voxels[X, Y_plus2, Z_plus].empty:
+                        #return True
+                    #if self.voxels[X_plus2, Y_plus2, Z_plus].empty:
+                        #return True
+                    #if self.voxels[X, Y, Z_plus2].empty:
+                        #return True
+                    #if self.voxels[X_plus2, Y, Z_plus2].empty:
+                        #return True
+                    #if self.voxels[X, Y_plus2, Z_plus2].empty:
+                        #return True
+                    #if self.voxels[X_plus2, Y_plus2, Z_plus2].empty:
+                        #return True
+                #else:
+                    #if self.voxels[X, Y, Z_plus].empty:
+                        #return True
+                    #if self.voxels[X_plus, Y, Z_plus + self.size_voxel].empty:
+                        #return True
+        elif orientation == self.QLEFT:
+            if self.level == round_level or Force:
+                return self.voxels[X_minus, Y, Z].empty
+            else:
+                return True
+                #if self.voxels[X_minus, Y, Z].empty:
+                    #return True
+                #if self.voxels[X_minus, Y, Z_minus2].empty:
+                    #return True
+                #if self.voxels[X_minus, Y_plus2, Z].empty:
+                    #return True
+                #if self.voxels[X_minus, Y_plus2, Z_minus2].empty:
+                    #return True
+                #if self.voxels[X_minus2, Y, Z].empty:
+                    #return True
+                #if self.voxels[X_minus2, Y, Z_minus2].empty:
+                    #return True
+                #if self.voxels[X_minus2, Y_plus2, Z].empty:
+                    #return True
+                #if self.voxels[X_minus2, Y_plus2, Z_minus2].empty:
+                    #return True
+        elif orientation == self.QRIGHT:
+            if self.level == round_level or Force:
+                return self.voxels[X_plus, Y, Z].empty
+            else:
+                return True
+                #if self.voxels[X_plus, Y, Z].empty:
+                    #return True
+                #if self.voxels[X_plus2, Y, Z].empty:
+                    #return True
+                #if self.voxels[X_plus2, Y, Z_minus2].empty:
+                    #return True
+                #if self.voxels[X_plus2, Y_plus2, Z].empty:
+                    #return True
+                #if self.voxels[X_plus2, Y_plus2, Z_minus2].empty:
+                    #return True
+                #if self.voxels[X_plus, Y, Z_minus2].empty:
+                    #return True
+                #if self.voxels[X_plus, Y_plus2, Z].empty:
+                    #return True
+                #if self.voxels[X_plus, Y_plus2, Z_minus2].empty:
+                    #return True
+        elif orientation == self.QFRONT:
+            if self.level == round_level or Force:
+                return self.voxels[X, Y_minus, Z].empty
+            else:
+                return True
+                #if self.voxels[X, Y_minus, Z].empty:
+                    #return True
+                #if self.voxels[X, Y_minus2, Z].empty:
+                    #return True
+                #if self.voxels[X, Y_minus2, Z_minus2].empty:
+                    #return True
+                #if self.voxels[X_plus2, Y_minus2, Z].empty:
+                    #return True
+                #if self.voxels[X_plus2, Y_minus2, Z_minus2].empty:
+                    #return True
+                #if self.voxels[X, Y_minus, Z_minus2].empty:
+                    #return True
+                #if self.voxels[X_plus2, Y_minus, Z].empty:
+                    #return True
+                #if self.voxels[X_plus2, Y_minus, Z_minus2].empty:
+                    #return True
+        elif orientation == self.QBACK:
+            if self.level == round_level or Force:
+                return self.voxels[X, Y_plus, Z].empty
+            else:
+                return True
+                #if self.voxels[X, Y_plus, Z].empty:
+                    #return True
+                #if self.voxels[X, Y_plus2, Z].empty:
+                    #return True
+                #if self.voxels[X, Y_plus2, Z_minus2].empty:
+                    #return True
+                #if self.voxels[X_plus2, Y_plus2, Z].empty:
+                    #return True
+                #if self.voxels[X_plus2, Y_plus2, Z_minus2].empty:
+                    #return True
+                #if self.voxels[X, Y_plus, Z_minus2].empty:
+                    #return True
+                #if self.voxels[X_plus2, Y_plus, Z].empty:
+                    #return True
+                #if self.voxels[X_plus2, Y_plus, Z_minus2].empty:
+                    #return True
+        elif orientation == self.QBOTTOM:
+            if self.level == round_level or Force:
+                return self.voxels[X, Y, Z_minus].empty
+            else:
+                return True
+                #if self.voxels[X, Y, Z_minus].empty:
+                    #return True
+                #if self.voxels[X, Y, Z_minus2].empty:
+                    #return True
+                #if self.voxels[X_plus2, Y, Z_minus2].empty:
+                    #return True
+                #if self.voxels[X, Y_plus2, Z_minus2].empty:
+                    #return True
+                #if self.voxels[X_plus2, Y_plus2, Z_minus2].empty:
+                    #return True
+                #if self.voxels[X_plus2, Y, Z_minus].empty:
+                    #return True
+                #if self.voxels[X, Y_plus2, Z_minus].empty:
+                    #return True
+                #if self.voxels[X_plus2, Y_plus2, Z_minus].empty:
+                    #return True
+        return False
 
 
     #@profile_decorator
     def create(self):
         self.chunk_geom = GeomNode('chunk_geom')
 
-        vertex = GeomVertexWriter(self.v_data, 'vertex')
-        normal = GeomVertexWriter(self.v_data, 'normal')
-        texcoord = GeomVertexWriter(self.v_data, 'texcoord')
+        self.vertex = GeomVertexWriter(self.v_data, 'vertex')
+        self.normal = GeomVertexWriter(self.v_data, 'normal')
+        self.texcoord = GeomVertexWriter(self.v_data, 'texcoord')
 
         # make buffer of vertices
-        vertices = []
-        tri=GeomTriangles(Geom.UHStatic)
-
-        def add_data(n_vert, v0, v1, v2, v3, voxel):
-            vertex.addData3f(v0)
-            vertex.addData3f(v1)
-            vertex.addData3f(v2)
-            vertex.addData3f(v3)
-
-            side1 = v0 - v1
-            side2 = v0 - v3
-            norm1 = side1.cross(side2)
-            side1 = v1 - v2
-            side2 = v1 - v3
-            norm2 = side1.cross(side2)
-
-            normal.addData3f(norm1)
-            normal.addData3f(norm1)
-            normal.addData3f(norm1)
-            normal.addData3f(norm2)
-
-            u1, v1, u2, v2 = voxel.get_uv()
-
-            texcoord.addData2f(v1, u1)
-            texcoord.addData2f(v2, u1)
-            texcoord.addData2f(v2, u2)
-            texcoord.addData2f(v1, u2)
-
-            tri.addConsecutiveVertices(0 + n_vert, 3)
-
-            tri.addVertex(2 + n_vert)
-            tri.addVertex(3 + n_vert)
-            tri.addVertex(0 + n_vert)
-
-        def add_top_quad(n_vert, x, y, dx, dy, Z, dZ, voxel):
-            v0 = Vec3(x, dy, Z)
-            v1 = Vec3(x, y, Z)
-            v2 = Vec3(dx, y, Z)
-            v3 = Vec3(dx, dy, Z)
-            add_data(n_vert, v0, v1, v2, v3, voxel)
-
-        def add_left_quad(n_vert, x, y, dx, dy, Z, dZ, voxel):
-            v0 = Vec3(x, y, dZ)
-            v1 = Vec3(x, y, Z)
-            v2 = Vec3(x, dy, Z)
-            v3 = Vec3(x, dy, dZ)
-            add_data(n_vert, v0, v1, v2, v3, voxel)
-
-        def add_front_quad(n_vert, x, y, dx, dy, Z, dZ, voxel):
-            v0 = Vec3(dx, y, dZ)
-            v1 = Vec3(dx, y, Z)
-            v2 = Vec3(x, y, Z)
-            v3 = Vec3(x, y, dZ)
-            add_data(n_vert, v0, v1, v2, v3, voxel)
-
-        def add_right_quad(n_vert, x, y, dx, dy, Z, dZ, voxel):
-            v0 = Vec3(dx, dy, dZ)
-            v1 = Vec3(dx, dy, Z)
-            v2 = Vec3(dx, y, Z)
-            v3 = Vec3(dx, y, dZ)
-            add_data(n_vert, v0, v1, v2, v3, voxel)
-
-        def add_back_quad(n_vert, x, y, dx, dy, Z, dZ, voxel):
-            v0 = Vec3(x, dy, dZ)
-            v1 = Vec3(x, dy, Z)
-            v2 = Vec3(dx, dy, Z)
-            v3 = Vec3(dx, dy, dZ)
-            add_data(n_vert, v0, v1, v2, v3, voxel)
-
-        def add_bottom_quad(n_vert, x, y, dx, dy, X, Y, Z, dZ, voxel):
-            v0 = Vec3(dx, dy, dZ)
-            v1 = Vec3(dx, y, dZ)
-            v2 = Vec3(x, y, dZ)
-            v3 = Vec3(x, dy, dZ)
-            add_data(n_vert, v0, v1, v2, v3, voxel)
+        self.tri = GeomTriangles(Geom.UHStatic)
 
 
         end = self.chunk_len - 1
-        def add_current_verts(n_vert, x, y, dx, dy, X, Y, Z, dZ, hZ, voxel):
+        n_vert = 0
 
-            vert_data = x, y, dx, dy, Z, dZ, voxel
+        xX = {}
+        yY = {}
+        for i in xrange(-1, self.chunk_len + 1):
+            xX[i] = self.start_x + (i * self.size_voxel)
+            yY[i] = self.start_y + (i * self.size_voxel)
 
-            vZ = Z
-            if vZ > hZ:
-                vZ = hZ
+        for x in xrange(0, self.chunk_len):
+            for y in xrange(0, self.chunk_len):
+                X = xX[x]
+                Y = yY[y]
+                hZ = self.heights[X, Y]
+                if self.end_z >= hZ >= self.start_z or self.dirt:
+                    dx = x + 1
+                    dy = y + 1
+                    X_plus = xX[dx]
+                    Y_plus = yY[dy]
+                    X_minus = xX[x - 1]
+                    Y_minus = yY[y - 1]
+                    #if x == 0 or y == 0 or x == end or y == end or self.dirt:
+                        #end_z = self.end_z
+                    #else:
+                    end_z = (hZ / self.size_voxel) * self.size_voxel
+                    for Z in xrange(self.start_z, self.end_z + self.size_voxel, self.size_voxel):
+                        if Z == end_z:
+                            voxel = self.voxels[X, Y, hZ]
+                        else:
+                            voxel = self.voxels[X, Y, Z]
+                        Z_minus = Z - self.size_voxel
+                        Z_plus = Z + self.size_voxel
+                        check_data = X, Y, Z, X_plus, Y_plus, Z_plus, X_minus, Y_minus, Z_minus
+                        if self.check_empty(self.QSELF, False, *check_data) and Z != end_z:
+                            continue
+                        vert_data = x, y, dx, dy, Z, Z_minus, voxel
 
-            if self.voxels[X, Y, Z + self.size_voxel].empty:
-                add_top_quad(n_vert, *vert_data)
-                n_vert += 4
+                        if Z == self.end_z:
+                            Force = False
+                        else:
+                            Force = True
+                        if self.check_empty(self.QTOP, Force, *check_data):
+                            self.add_quad(n_vert, self.QTOP, Force, *vert_data)
+                            n_vert += 4
 
-            if self.voxels[X - self.size_voxel, Y, vZ].empty:
-                add_left_quad(n_vert, *vert_data)
-                n_vert += 4
+                        if x == 0:
+                            Force = False
+                        else:
+                            Force = True
+                        if self.check_empty(self.QLEFT, Force, *check_data):
+                            self.add_quad(n_vert, self.QLEFT, Force, *vert_data)
+                            n_vert += 4
 
-            if self.voxels[X, Y - self.size_voxel, vZ].empty:
-                add_front_quad(n_vert, *vert_data)
-                n_vert += 4
+                        if y == 0:
+                            Force = False
+                        else:
+                            Force = True
+                        if self.check_empty(self.QFRONT, Force, *check_data):
+                            self.add_quad(n_vert, self.QFRONT, Force, *vert_data)
+                            n_vert += 4
 
-            if self.voxels[X + self.size_voxel, Y, vZ].empty:
-                add_right_quad(n_vert, *vert_data)
-                n_vert += 4
+                        if x == end:
+                            Force = False
+                        else:
+                            Force = True
+                        if self.check_empty(self.QRIGHT, Force, *check_data):
+                            self.add_quad(n_vert, self.QRIGHT, Force, *vert_data)
+                            n_vert += 4
 
-            if self.voxels[X, Y + self.size_voxel, vZ].empty:
-                add_back_quad(n_vert, *vert_data)
-                n_vert += 4
+                        if y == end:
+                            Force = False
+                        else:
+                            Force = True
+                        if self.check_empty(self.QBACK, Force, *check_data):
+                            self.add_quad(n_vert, self.QBACK, Force, *vert_data)
+                            n_vert += 4
 
-            if self.level <= self.level_3d:
-                if self.voxels[X, Y, Z - self.size_voxel].empty:
-                    add_bottom_quad(n_vert, *vert_data)
-                    n_vert += 4
+                        if Z == self.start_z:
+                            Force = False
+                        else:
+                            Force = True
+                        if self.check_empty(self.QBOTTOM, Force, *check_data):
+                            self.add_quad(n_vert, self.QBOTTOM, Force, *vert_data)
+                            n_vert += 4
 
-            return n_vert
-
-        def add_all_verts(chunk_len):
-            n_vert = 0
-
-            xX = {}
-            yY = {}
-            for i in xrange(0, chunk_len + 1):
-                xX[i] = self.start_x + (i * self.size_voxel)
-                yY[i] = self.start_y + (i * self.size_voxel)
-
-            for x in xrange(0, chunk_len):
-                for y in xrange(0, chunk_len):
-                    X = xX[x]
-                    Y = yY[y]
-                    if not self.dirt:
-                        hZ = self.heights[X, Y]
-                        if self.end_z >= hZ >= self.start_z:
-                            dx = x + 1
-                            dy = y + 1
-                            Z = self.start_z
-                            for Z in xrange(self.start_z, hZ, self.size_voxel):
-                                dZ = Z - self.size_voxel
-                                vert_data = x, y, dx, dy, X, Y, Z, dZ, hZ, self.voxels[X, Y, Z]
-                                n_vert = add_current_verts(n_vert, *vert_data)
-
-                            if Z != hZ:
-                                dZ = Z
-                                Z = dZ + self.size_voxel
-                                vert_data = x, y, dx, dy, X, Y, Z, dZ, hZ, self.voxels[X, Y, hZ]
-                                n_vert = add_current_verts(n_vert, *vert_data)
-
-            return n_vert
-
-        n_vert = add_all_verts(self.chunk_len)
-        self.chunk_np = self.attachNewNode('chunk_np')
-        self.chunk_np.setTag('Chunk', '{0}'.format(self.chunk))
-        self.geom = Geom(self.v_data)
-        self.geom.addPrimitive(tri)
-        self.chunk_geom.addGeom( self.geom )
-        self.chunk_geom.setIntoCollideMask(BitMask32.bit(1))
-        self.chunk_np.attachNewNode(self.chunk_geom)
-        #self.chunk_np.setTwoSided(True)
-        ts = TextureStage('ts')
-        self.chunk_np.setTexture(ts, self.tex)
-        self.chunk_np.setScale(self.size_voxel, self.size_voxel, 1)
-        self.flattenStrong()
+        if n_vert > 0:
+            self.chunk_np = self.attachNewNode('chunk_np')
+            self.chunk_np.setTag('Chunk', '{0}'.format(self.chunk))
+            self.geom = Geom(self.v_data)
+            self.geom.addPrimitive(self.tri)
+            self.chunk_geom.addGeom( self.geom )
+            self.chunk_geom.setIntoCollideMask(BitMask32.bit(1))
+            self.chunk_np.attachNewNode(self.chunk_geom)
+            #self.chunk_np.setTwoSided(True)
+            ts = TextureStage('ts')
+            self.chunk_np.setTexture(ts, self.tex)
+            self.chunk_np.setScale(self.size_voxel, self.size_voxel, 1)
+            self.flattenStrong()
+            return True
+        else:
+            return False
 
     def setX(self, DX):
         """Set to new X

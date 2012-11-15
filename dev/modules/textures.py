@@ -27,6 +27,11 @@ class TextureCollection(dict):
                 'dirt_grass': start + 2,
                 'stone': start + 3,
                 'snow': start + 4,
+                'tech_top': start + 5,
+                'tech_left': start + 6,
+                'tech_right': start + 7,
+                'tech_front': start + 8,
+                'tech_back': start + 9,
             }
 
     def create_map_coords(self):
@@ -38,24 +43,6 @@ class TextureCollection(dict):
                 coord = u * du + d_uv, v * dv + d_uv, (u + 1) * du - d_uv, (v + 1) * dv  - d_uv
                 self.map_coords.append(coord)
                 self.map_len += 1
-
-    def get_map_2d_tex(self, map2d, factor = 1):
-        """Generate texture for map2d, factor - for size [size / factor]
-        """
-        size = map2d.size / factor
-        image = PNMImage(size, size)
-        for x in xrange(size):
-            for y in xrange(size):
-                px = x * factor
-                py = y * factor
-                if map2d[(px, py)] <= map2d.water_z:
-                    image.setPixel(x, y, (0, 0, 100))
-                else:
-                    image.setPixel(x, y, (0, 100, 0))
-        texture = Texture()
-        texture.load(image)
-        return texture
-
 
     def make_blocks_texmap(self):
         images = []
@@ -73,6 +60,21 @@ class TextureCollection(dict):
                                         Config().tex_suffix)))
         # 4 - high_mount
         images.append(PNMImage("res/textures/{0}snow.png".format(
+                                        Config().tex_suffix)))
+        # 5 - tech temp
+        images.append(PNMImage("res/textures/{0}tech_top.png".format(
+                                        Config().tex_suffix)))
+        # 6 - tech temp
+        images.append(PNMImage("res/textures/{0}tech_left.png".format(
+                                        Config().tex_suffix)))
+        # 7 - tech temp
+        images.append(PNMImage("res/textures/{0}tech_right.png".format(
+                                        Config().tex_suffix)))
+        # 8 - tech temp
+        images.append(PNMImage("res/textures/{0}tech_front.png".format(
+                                        Config().tex_suffix)))
+        # 9 - tech temp
+        images.append(PNMImage("res/textures/{0}tech_back.png".format(
                                         Config().tex_suffix)))
         d = images[0].getReadXSize()
         # 16 x 16 textures

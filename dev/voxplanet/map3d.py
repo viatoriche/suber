@@ -24,12 +24,16 @@ class TileMap(dict):
         self.size = map2d.size
         self.map2d = map2d
         self.config = config
+        self._self = {}
+
+    def __setitem__(self, key, item):
+        self._self[key] = item
 
     def __getitem__(self, key):
         """Overload getitem for toroid
         """
-        if self.has_key(key):
-            return self.get(key)
+        if key in self._self:
+            return self._self[key]
         else:
             x, y = key
 
@@ -42,7 +46,7 @@ class TileMap(dict):
             if x < 0:
                 x = self.size + x
             h = self.map2d[x, y]
-            self[x, y] = h
+            self._self[x, y] = h
             return h
 
     def generate_pre_heights(self):
@@ -52,14 +56,15 @@ class TileMap(dict):
         config = self.config
 
         def get_lands_oceans():
-            oceans, lands = [], []
-            for x in xrange(self.size):
-                for y in xrange(self.size):
-                    coord = x, y
-                    if self[coord] <= 0:
-                        oceans.append(coord)
-                    else:
-                        lands.append(coord)
+            oceans = [coord for coord in self.map2d if self.map2d[coord] <= 0]
+            lands = [coord for coord in self.map2d if self.map2d[coord] > 0]
+            #for x in xrange(self.size):
+                #for y in xrange(self.size):
+                    #coord = x, y
+                    #if self._self[coord] <= 0:
+                        #oceans.append(coord)
+                    #else:
+                        #lands.append(coord)
             return lands, oceans
 
         def add_heights():
@@ -381,6 +386,18 @@ class TileMap(dict):
                         sy = 0,
                         size = self.size, strong=100)
 
+class MapCleaner():
+    def __init__(self, map3d):
+        self.map3d = map3d
+
+    def clean(self, time_clean = 5):
+        curtime = time.time()
+        try:
+            coords = [coord for coord in self.map3d.cache if curtime - self.map3d.cache[coord][1] > time_clean]
+        except RuntimeError:
+            return
+        for coord in coords:
+            del self.map3d.cache[coord]
 
 class Map3d(dict):
     """Class for map with heights
@@ -395,6 +412,10 @@ class Map3d(dict):
     """
     # World size 2 ** 24, in meters
     perlin = {}
+    cache = {}
+    count_requests = 0
+    time_clean = 2
+    clean_count = 2 ** 18
     def __init__(self, config, map2d, seed, *args, **params):
         self.config = config
         print 'create tilemap'
@@ -484,11 +505,12 @@ class Map3d(dict):
         random.seed(self.seed)
         self.global_template.generate_pre_heights()
         print 'generated pre heights: ', time.time() - t
+        self.cleaner = MapCleaner(self)
 
     def cosine_interpolate(self, a, b, x):
         """Cosine interpolate for scale minimap
         """
-        ft = x * 3.1415927
+        ft = x * 3.141592653589793
         f = (1 - math.cos(ft)) * 0.5
         return a * (1 - f) + (b * f)
 
@@ -524,16 +546,6 @@ class Map3d(dict):
         F = self.cosine_interpolate(C, D, dx)
 
         return self.cosine_interpolate(E, F, dy)
-        #if G == 0:
-            #return 0
-        #if G > 0:
-            #G = G ** (1/2.)
-        #else:
-            #G = -(abs(G) ** (1/2.))
-
-        #G = int(round(G
-
-        #return G
 
     def check_empty(self, coord):
         """Return True, if XYZ - empty
@@ -559,12 +571,25 @@ class Map3d(dict):
     def __call__(self, x, y):
         return self[x, y]
 
+
+    def __setitem__(self, key, item):
+        self.cache[key] = [item, time.time()]
+        self.count_requests += 1
+        if self.count_requests >= self.clean_count:
+            self.cleaner.clean(self.time_clean)
+            self.count_requests = 0
+
     def __getitem__(self, key):
         """If key not in dict, when perlin generate and return
         """
         # TODO: add cache to hard
-        if self.has_key(key):
-            return self.get(key)
+        if key in self.cache:
+            self.cache[key][1] = time.time()
+            self.count_requests += 1
+            if self.count_requests >= self.clean_count:
+                self.cleaner.clean(self.time_clean)
+                self.count_requests = 0
+            return self.cache[key][0]
         else:
             # generate perlin height
             x, y = key
@@ -603,7 +628,11 @@ class Map3d(dict):
                 #if r >= 0.1 and r <= 0.101:
                     #height = -10. + (self.river_perlin_height(x, y) * 10.)
 
-            self[key] = height
+            self.cache[key] = [height, time.time()]
+            self.count_requests += 1
+            if self.count_requests >= self.clean_count:
+                self.cleaner.clean(self.time_clean)
+                self.count_requests = 0
             return height
 
     def get_map_3d_tex(self, size, filename = None, charPos = None):
@@ -688,23 +717,38 @@ class Map3d(dict):
         texture.load(image)
         return texture
 
+def main():
+    from support import profile_decorator
+    def get():
+        import map2d, config
+        conf = config.Config()
+        gen = map2d.Map_generator_2D(conf, 38745)
+        for i, desc in gen.start():
+            pass
+
+        print gen.maps.get_ascii(2)
+        map2d = gen.end_map
+
+        map3d = Map3d(conf, map2d, 38745)
+
+        @profile_decorator
+        def test1():
+            for x in xrange(512):
+                for y in xrange(512):
+                    map3d[x, y]
+
+        test1()
+        #map3d.get_map_3d_tex(512, 'map512.png')
+        #print '512 ok'
+        #map3d.get_map_3d_tex(1024, 'map1024.png')
+        #print '1024 ok'
+        #map3d.get_map_3d_tex(2048, 'map2048.png')
+        #print '2048 ok'
+
+    get()
+
 if __name__ == "__main__":
-    import map2d, config
-    conf = config.Config()
-    gen = map2d.Map_generator_2D(conf, 38745)
-    for i, desc in gen.start():
-        pass
-
-    print gen.maps.get_ascii(3)
-    map2d = gen.end_map
-
-    map3d = Map3d(conf, map2d, 38745)
-    map3d.get_map_3d_tex(512, 'map512.png')
-    print '512 ok'
-    map3d.get_map_3d_tex(1024, 'map1024.png')
-    print '1024 ok'
-    map3d.get_map_3d_tex(2048, 'map2048.png')
-    print '2048 ok'
+    main()
 
 # vi: ft=python:tw=0:ts=4
 

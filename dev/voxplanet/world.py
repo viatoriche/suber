@@ -34,7 +34,6 @@ class OctreeNode:
     level - deep level to world
     center - coordinates of center chunk
     """
-    # exist = True #make voxel deletable by player
     d_vecs = (Vec3(-1, -1, -1), Vec3(-1, -1, 1),
              Vec3(-1, 1, -1),  Vec3(-1, 1, 1),
              Vec3(1, -1, -1),  Vec3(1, -1, 1),
@@ -57,38 +56,37 @@ class OctreeNode:
         self.add()
         self.mark_hide()
 
-    def repaint(self, level):
+    def generate(self, min_level, max_level):
         """divide or mark to show this chunk node, depend - distance to char coords
         """
-        if self.level > level:
-            #divide_dist = self.config.chunk_len * (3 ** (25 - self.level))
-            #show_dist = self.chunks_map.far
-            #s2 = self.size * self.size
-            #s2 += s2
-            divide_dist = math.hypot(self.size, self.size)
+        if self.level > min_level:
+            self.mark_hide()
+            size_size = self.size * self.size
+            divide_dist = math.sqrt(size_size + size_size)
             length = VBase3.length(self.center - self.chunks_map.charPos)
 
             if length <= divide_dist:
-                self.divide(level)
-            else:
+                self.divide(min_level, max_level)
+            elif self.level <= max_level:
                 self.mark_show()
         else:
             self.mark_show()
 
-    def divide(self, level):
+    def divide(self, min_level, max_level):
         """divide this chunk on 4 chunks
         """
         if self.childs == {}:
             new_size = self.size/2
             new_center = self.size/4
             new_level = self.level - 1
-            for name in map(lambda x: (x * new_center) + self.center, self.d_vecs):
+            names = ((x * new_center) + self.center for x in self.d_vecs)
+            for name in names:
                 self.childs[name] = OctreeNode(self.chunks_clt, new_size, self, \
                     new_level, name)
-                self.childs[name].repaint(level)
+                self.childs[name].generate(min_level, max_level)
         else:
             for child in self.childs:
-                self.childs[child].repaint(level)
+                self.childs[child].generate(min_level, max_level)
 
     def add(self):
         if not self.chunks_clt.chunks.has_key(self.level):
@@ -131,11 +129,11 @@ class ChunksCollection():
         self.mutex = self.world.mutex_repaint
 
     #@profile_decorator
-    def generate(self, level):
+    def generate(self, min_level, max_level):
         """generate of all childs
         """
         t = time.time()
-        self.root.repaint(level)
+        self.root.generate(min_level, max_level)
         print 'generate: ', time.time() - t
 
     #@profile_decorator
@@ -146,25 +144,33 @@ class ChunksCollection():
 
         # For get minimum size of visible chunks
 
+        return
+
         t = time.time()
         chunks = self.chunks_models.keys()
 
         # calculate distance for remove chunks - LOD
-        remove_far = self.far * 3
+        remove_mod = 6
 
+        removed = 0
+
+        self.mutex.acquire()
         for chunk in chunks:
+            center, size, level = chunk
             # if chunk was marked for show
-            length = VBase3.length(chunk[0] - self.chunks_map.charPos)
+            length = VBase3.length(center - self.chunks_map.charPos)
             # hide mark, if distance for chunk too long
-            if length >= remove_far:
-                if self.chunks_models.has_key(chunk):
-                    self.mutex.acquire()
-                    self.chunks_models[chunk].removeNode()
-                    del self.chunks_models[chunk]
-                    del self.status_chunks[chunk]
-                    self.mutex.release()
+            size_size = size * size
+            detach_far = math.sqrt(size_size + size_size)
+            remove_far = detach_far * remove_mod
+            if length > remove_far:
+                self.chunks_models[chunk].removeNode()
+                del self.chunks_models[chunk]
+                del self.status_chunks[chunk]
+                removed += 1
 
-        print 'remove: ', time.time() - t
+        self.mutex.release()
+        print 'remove: ', time.time() - t, ' removed: ', removed
 
     #@profile_decorator
     def update(self, Force = False):
@@ -182,38 +188,44 @@ class ChunksCollection():
                 our_level = i
                 break
 
-        @profile_decorator
-        def create_chunks(far):
+        print our_height, our_level
 
-            for our_level in our_levels:
-                for chunk in self.chunks[our_level]:
-                    if self.status_chunks.has_key(chunk):
-                        if self.status_chunks[chunk]:
-                            center, size, level = chunk
-                            length = VBase3.length(center - self.chunks_map.charPos)
-                            length_z = abs(center[2] - self.chunks_map.charPos[2])
-                            # hide mark, if distance for chunk too long
-                            if length > far:
-                                self.status_chunks[chunk] = False
-                            elif length_z > 256:
-                                self.status_chunks[chunk] = False
-                            else:
-                                if not self.chunks_models.has_key(chunk):
-                                    self.mutex.acquire()
-                                    self.chunks_models[chunk] = ChunkModel(self.config, self.world.map3d,
-                                                                   self.world.voxels,
-                                                                   chunk,
-                                                                   self.world.params.chunks_tex,
-                                                                   self.world.params.water_tex
-                                                                   )
-                                    self.mutex.release()
-                                    if not Force:
-                                        time.sleep(self.config.chunk_sleep)
+        #@profile_decorator
+        def create_chunks(our_level, Force = False):
+            t = time.time()
 
-        for chunk in self.status_chunks:
-            self.status_chunks[chunk] = False
+            res = True
 
-        self.generate(our_level)
+            created = 0
+
+            for chunk in self.chunks[our_level]:
+                if self.status_chunks.has_key(chunk):
+                    if self.status_chunks[chunk]:
+                        self.mutex.acquire()
+                        if not self.chunks_models.has_key(chunk):
+                            self.chunks_models[chunk] = ChunkModel(self.config, self.status_chunks, self.world.map3d,
+                                                           self.world.voxels,
+                                                           chunk,
+                                                           self.world.params.chunks_tex,
+                                                           self.world.params.water_tex
+                                                           )
+                            if not Force:
+                                if self.chunks_models[chunk].created:
+                                    time.sleep(self.config.chunk_sleep)
+                                    res = False
+                                    created += 1
+
+                        self.chunks_models[chunk].setX(self.chunks_map.DX)
+                        self.chunks_models[chunk].setY(self.chunks_map.DY)
+                        if self.chunks_models[chunk].getParent() != self.world.root_node:
+                            self.chunks_models[chunk].reparentTo(self.world.root_node)
+                        self.mutex.release()
+
+
+            print 'create chunks: ', time.time() - t, ' created: ', created
+            return res
+
+
         land_level = 0
 
         if self.config.low_mount_level[1] >= self.chunks_map.land_z >= self.config.low_mount_level[0]:
@@ -232,10 +244,17 @@ class ChunksCollection():
 
         our_levels = range(our_level, lim_level)
 
+        max_level = max(our_levels)
+
         # calculate distance for show or hide chunks - LOD
-        self.far = (2 ** max(our_levels)) * 2
-        self.world.params.fog.setLinearRange(0, self.far)
+        l_size = 2 ** max_level
+        l_size_size = l_size * l_size
+        self.far = math.sqrt(l_size_size + l_size_size)
+        self.world.params.fog.setLinearRange(self.far * 0.7, self.far * 0.8)
         self.world.gui.camLens.setFar(self.far * 2)
+
+        #for chunk in self.chunks_models:
+            #self.status_chunks[chunk] = False
 
         #t = time.time()
         #try:
@@ -253,33 +272,49 @@ class ChunksCollection():
 
         #print 'add new trees: ', time.time() - t
 
-        t = time.time()
-        create_chunks(self.far)
-        print 'create chunks: ', time.time() - t
-
-    #@profile_decorator
-    def repaint(self):
-        """attach/detach -> hide/show models
-        """
-        t = time.time()
-
         for chunk in self.chunks_models:
-            if self.status_chunks[chunk]:
-                self.chunks_models[chunk].setX(self.chunks_map.DX)
-                self.chunks_models[chunk].setY(self.chunks_map.DY)
-                if self.chunks_models[chunk].getParent() != self.world.root_node:
-                    self.mutex.acquire()
-                    self.chunks_models[chunk].reparentTo(self.world.root_node)
-                    self.mutex.release()
+            self.status_chunks[chunk] = False
 
-        for chunk in self.chunks_models:
-            if not self.status_chunks[chunk]:
+        self.generate(our_level, max_level)
+
+
+        for lvl in our_levels:
+            if lvl > our_level:
+                Force = False
+            res = create_chunks(lvl, Force)
+
+            detached = 0
+            t = time.time()
+
+            self.mutex.acquire()
+            to_detach = (chunk for chunk in self.chunks_models if not self.status_chunks[chunk]\
+                                    and chunk[2] == lvl + 1)
+            for chunk in to_detach:
                 if self.chunks_models[chunk].getParent() == self.world.root_node:
-                    self.mutex.acquire()
                     self.chunks_models[chunk].detachNode()
-                    self.mutex.release()
+                    detached += 1
 
-        print 'repaint: ', time.time() - t
+            self.mutex.release()
+            print 'loop detached: ', detached, ' time: ', time.time() - t
+            if not res:
+                return False
+
+            time.sleep(self.config.chunk_delay)
+
+
+        t = time.time()
+        detached = 0
+        self.mutex.acquire()
+        to_detach = (chunk for chunk in self.chunks_models if not self.status_chunks[chunk])
+        for chunk in to_detach:
+            if self.chunks_models[chunk].getParent() == self.world.root_node:
+                self.chunks_models[chunk].detachNode()
+                detached += 1
+
+        self.mutex.release()
+        print 'post detached: ', detached, ' time: ', time.time() - t
+
+        return True
 
 
     #@profile_decorator
@@ -346,7 +381,6 @@ class ChunksMap():
 
     def charSetPos(self, Force):
         self.regen(Force = True)
-        self.repaint()
         self.world.forest.clear()
         if not Force:
             self.need_forest = True
@@ -393,12 +427,6 @@ class ChunksMap():
         self.charX, self.charY, self.charZ = coord
         self.test_coord(Force = True)
 
-    def repaint(self):
-        """repaint all chunks
-        """
-        for chunks_clt in self.chunks_clts.values():
-            chunks_clt.repaint()
-
     def repaint_forest(self, Force):
         for chunks_clt in self.chunks_clts.values():
             chunks_clt.repaint_forest(Force)
@@ -416,21 +444,23 @@ class ChunksMap():
             chunks_clt.remove_far()
 
     def regen(self, Force = False):
+        res = True
         for chunks_clt in self.chunks_clts.values():
-            chunks_clt.update(Force)
+            if not chunks_clt.update(Force):
+                res = False
+        return res
 
 
     def regen_task(self, task):
+        time.sleep(self.config.chunk_delay)
         if not self.add_done:
-            self.regen()
-            self.repaint()
-            self.add_done = True
+            self.add_done = self.regen()
             self.need_remove = True
             return task.cont
         elif self.need_remove:
             self.remove_far()
             self.need_remove = False
-        return task.again
+        return task.cont
 
     def char_check(self, task):
         """check cam for update
@@ -460,7 +490,7 @@ class ChunksMap():
         coord = 14050918.0, 15938355.0, 7492.0
         self.set_char_coord(coord)
 
-        taskMgr.doMethodLater(self.config.chunk_delay, self.regen_task, 'WorldRegen', taskChain = 'world_chain_generate')
+        taskMgr.add(self.regen_task, 'WorldRegen', taskChain = 'world_chain_generate')
         taskMgr.doMethodLater(self.config.tree_delay, self.repaint_forest_task, 'WorldRepaintForest', taskChain = 'world_forest_repaint')
         taskMgr.doMethodLater(0.01, self.char_check, 'char_check', taskChain = 'char_check_chain')
 

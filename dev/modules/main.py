@@ -17,6 +17,7 @@ from direct.actor.Actor import Actor
 from voxplanet.world import World
 from voxplanet.config import Config as VoxConfig
 from voxplanet.params import Params as VoxParams
+from voxplanet.support import profile_decorator
 from panda3d.core import VBase4
 from pandac.PandaModules import loadPrcFileData, PStatClient, AmbientLight
 from modules.objects.blocks import CoordBlock
@@ -109,7 +110,7 @@ class Main():
         color = (0.28125, 0.53125, 0.80859375)
         fog = Fog("A linear-mode Fog node")
         fog.setColor(*color)
-        fog.setLinearFallback(0,500,550)
+        fog.setLinearFallback(0,510,550)
         self.gui.camera.attachNewNode(fog)
 
         color = (0.28125, 0.53125, 0.80859375)

@@ -4,6 +4,8 @@
 Global config
 """
 
+import math
+
 class Config():
     """Static parameters for voxplanet
 
@@ -41,14 +43,16 @@ class Config():
     #size_region = size_world
 
     # detalized
-    min_level = 4
+    min_level = 3
     level_3d = min_level-2
     tree_level = 11
     chunk_len = 2 ** min_level
     #count_chunks = 1
     #count_levels = 5, 7, 9, 11
-    count_levels = 5, 5, 5, 5
-    chunk_delay = 0.01
+    # length for divide to minimal chunk
+    #far_factor = 1
+    count_levels = 7, 7, 7, 7
+    chunk_delay = 0.005
     tree_delay = 0.01
     chunk_sleep = 0.005
     tree_sleep = 0.4
